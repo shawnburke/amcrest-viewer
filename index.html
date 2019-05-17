@@ -94,7 +94,7 @@
           <div class="dayevents" date="{{.Date}}">
               {{range .Files}}
                   <div class="event" time="{{.StartTime}}" path="/files/{{.Path}}">x</div>
-               
+                  <div class="eventthumb" path="/files/{{.Thumb.Path}}">{{.Thumb.Time}}</div>
               {{end}}
             
           </div>

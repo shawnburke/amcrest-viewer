@@ -9,15 +9,14 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"os"
 	"net/http"
 	"html/template"
 	"github.com/gorilla/mux"
 
 )
 
-
-
-var fileRoot = "./data"
+var fileRoot string
 
 type viewModel struct {
 	Date string
@@ -33,7 +32,7 @@ func newViewModel(fd FileDate) viewModel{
 
 	for _, f := range fd.Files {
 		vm.Files = append(vm.Files,fileViewModel{
-			FileItem: f,
+			FileItem: *f,
 		})
 	}
 	return vm
@@ -90,6 +89,16 @@ func serve(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	if len(os.Args) < 2 {
+		fmt.Println("Error: files path required")
+		os.Exit(1)
+	}
+
+	fileRoot = os.Args[1]
+
+
+
 	portNumber := "9000"
 
 	r := mux.NewRouter()
@@ -103,5 +112,9 @@ func main() {
     http.Handle("/", r)
 	
 	fmt.Println("Server listening on port ", portNumber)
-	http.ListenAndServe(":"+portNumber, nil)
+	err := http.ListenAndServe(":"+portNumber, nil)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
