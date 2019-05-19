@@ -1,4 +1,4 @@
-module github.com/microsoft/vscode-remote-try-go
+module github.com/shawnburke/amcrest-viewer
 
 go 1.12
 
