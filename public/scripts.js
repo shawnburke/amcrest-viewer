@@ -9,7 +9,9 @@ $(document).ready(function() {
        selectDate(selected)
     })
 
-    selectDate($("#dates option:first").val());
+    var lastdate =$("#dates option:last").val();
+    $("#dates").val(lastdate);
+    selectDate(lastdate)
   
 
     $(".event").each(function(i, el){
