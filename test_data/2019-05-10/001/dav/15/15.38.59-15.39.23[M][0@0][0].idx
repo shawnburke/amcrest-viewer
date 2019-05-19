@@ -1,0 +1,11 @@
+EncodeFormat={"Audio":{"Bitrate":64,"Channels":[0],"Compression":"AAC","Depth":16,"Frequency":8000,"Mode":0,"Pack":"MP4"},"AudioEnable":true,"Video":{"BitRate":256,"BitRateControl":"VBR","Compression":"H.264","CustomResolutionName":"1080P","FPS":10,"GOP":20,"Height":480,"Pack":"MP4","Priority":0,"Profile":"High","Quality":3,"QualityRange":6,"SVCTLayer":1,"Width":640},"VideoEnable":true}
+EncodeFormat={"Audio":{"Bitrate":64,"Channels":[0],"Compression":"AAC","Depth":16,"Frequency":8000,"Mode":0,"Pack":"MP4"},"AudioEnable":true,"Video":{"BitRate":256,"BitRateControl":"VBR","Compression":"H.264","CustomResolutionName":"1080P","FPS":10,"GOP":20,"Height":480,"Pack":"MP4","Priority":0,"Profile":"High","Quality":3,"QualityRange":6,"SVCTLayer":1,"Width":640},"VideoEnable":true}
+Frame="I,43473572890,32,65536,0"
+Frame="A,43473575850,65568,65536,0"
+Frame="P,43473578390,131104,28460,0"
+Frame="A,43473580450,159564,26312,0"
+Frame="P,43473582490,186270,26206,0"
+Frame="A,43473584530,212476,26648,0"
+Frame="A,43473586730,242243,23426,0"
+Frame="A,43473588770,265669,26117,0"
+Frame="P,43473590790,317230,470,0"

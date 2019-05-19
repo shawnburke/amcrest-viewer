@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"html/template"
 	"github.com/gorilla/mux"
+	"encoding/json"
+	"sort"
 
 )
 
@@ -21,58 +23,72 @@ var fileRoot string
 type viewModel struct {
 	Date string
 	DayOfWeek string
-	Files  [] fileViewModel
+	Videos  [] fileViewModel
 }
 
-func newViewModel(fd FileDate) viewModel{
+func newViewModel(fd *FileDate) viewModel{
 	vm := viewModel{
 		Date:  fd.Date.Format("2006-01-02"),
 		DayOfWeek:  fd.Date.Weekday().String(),
 	}
 
-	for _, f := range fd.Files {
-		vm.Files = append(vm.Files,fileViewModel{
-			FileItem: *f,
+	for _, f := range fd.Videos {
+		vm.Videos = append(vm.Videos,fileViewModel{
+			CameraVideo: *f,
 		})
 	}
 	return vm
 }
 
 type fileViewModel struct {
-	FileItem
+	CameraVideo
 }
 
+
 func (fvm fileViewModel) Start() string {
-	return fmt.Sprintf("%d.%d", fvm.StartTime.Hour(), int( fvm.StartTime.Minute()/60.0*100))
+	return fmt.Sprintf("%d.%d", fvm.Time.Hour(), int( fvm.Time.Minute()/60.0*100))
 }
 
 func (fvm fileViewModel) End() string {
-	return  fmt.Sprintf("%d.%d", fvm.EndTime.Hour(), int( fvm.EndTime.Minute()/60.0*100))
+	return  fmt.Sprintf("%d.%d", fvm.Time.Hour(), int( fvm.CameraVideo.End().Minute()/60.0*100))
 }
 
 func (fvm fileViewModel) Description() string {
-	return fmt.Sprintf("%s-%s", fvm.StartTime.Format("15:04:05"),fvm.EndTime.Format("15:04:05"))
+	return fmt.Sprintf("%s (%s)", fvm.Time.Format("15:04:05"),fvm.CameraVideo.Duration.String())
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
 
 	var mainPageTemplate = template.Must(template.ParseFiles("index.html"))
 
-	files, err := FindFiles(fileRoot)
+	files, err := FindFiles(fileRoot, true)
 	if err != nil {
 		io.WriteString(w, err.Error())
 	}
-	dates := make([]viewModel, len(files))
-	for i, f := range files {
-		dates[i] =newViewModel(f)
+	dates := make([]viewModel, 0, len(files))
+	for _, f := range files {
+		if len(f.Videos) > 0 {
+			dates = append(dates, newViewModel(f))
+		}
 	}
+
+	sort.Slice(files, func(i,j int)bool {
+		return files[i].Date.Unix() > files[j].Date.Unix()
+	})
+
+
 	d :=  struct {
 		Title string
 		Dates []viewModel
+		Json  string
 	} {
 		Title: "MP4 Files",
 		Dates: dates,
 	}
+
+	jb, _ := json.MarshalIndent(d, "", "  ")
+
+	d.Json = string(jb)
 
 	mainPageTemplate.Execute(w,d )
 }

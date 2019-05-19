@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"strings"
 	"sort"
+	"encoding/json"
+	"io/ioutil"
 
 	"go.uber.org/zap"
 )
@@ -17,23 +19,53 @@ const timeZone = "America/Los_Angeles"
 
 var logger, _ = zap.NewDevelopment();
 
+
+
 type FileDate struct {
 	Date  time.Time
-	Files    []*FileItem
+	Videos    []*CameraVideo
+	date  string
 }
 
-type FileItem struct {
-	StartTime time.Time
-	EndTime   time.Time
-	Path      string
-	Images    []ImageItem
-	Thumb     ImageItem
+func (fd *FileDate) DateString() string {
+	if fd.date == "" {
+		fd.date = fd.Date.Format("2006-01-02")
+	}
+	return fd.date
 }
 
-type ImageItem struct {
+type CameraFile struct {
 	Time time.Time
 	Path string
 }
+
+type CameraStill struct {
+	CameraFile
+}
+
+type CameraVideo struct {
+	CameraFile 
+	Duration   time.Duration
+	Images    []*CameraStill
+	Thumb     *CameraStill
+}
+
+func (cv CameraVideo) End() time.Time {
+	return cv.Time.Add(cv.Duration)
+}
+type CameraItem interface {
+	Timestamp() time.Time
+	FilePath() string
+}
+
+func (cf *CameraFile) Timestamp() time.Time {
+	return cf.Time
+}
+
+func (cf *CameraFile) FilePath() string {
+	return cf.Path
+}
+
 
 var dateRegEx = regexp.MustCompile(`\d{4}-\d{2}-\d{2}`)
 var tsRegEx = regexp.MustCompile(`(\d{2}\.\d{2}\.\d{2})`)
@@ -81,7 +113,7 @@ func jpgPathToTimestamp(p string) time.Time {
 
 	p = strings.Replace(p, "/001/", "/xxx/", -1)
 
-	ts, err := time.Parse("2006-01-02/xxx/jpg/15/04/05", p[0:27])
+	ts, err := time.ParseInLocation("2006-01-02/xxx/jpg/15/04/05", p[0:27],timeLoc)
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +121,12 @@ func jpgPathToTimestamp(p string) time.Time {
 	
 }
 
-func FindFiles(root string) ([]FileDate, error) {
+func cachePath(root, date string) string {
+	file := path.Join(root, fmt.Sprintf("%s-cache.json", date))
+	return file
+}
+
+func FindFiles(root string, cache bool) ([]*FileDate, error) {
 
 	if !path.IsAbs(root) {
 		cwd, _ := os.Getwd()
@@ -101,13 +138,32 @@ func FindFiles(root string) ([]FileDate, error) {
 		return nil, err
 	}
 
-	items := []*FileItem{}
-	jpgs := []ImageItem{}
-
+	dates := []*FileDate{}
+	
+	items := []CameraItem{}
+	
 	filepath.Walk(root, func(p string, info os.FileInfo, err error) error{
 
 		if info.IsDir() {
 			logger.Info("Processing", zap.String("dir", p))
+			dirname := path.Base((p))
+			if cache && dateRegEx.MatchString(dirname) {
+					file := cachePath(root, dirname)
+					if _, err := os.Stat(file); err == nil {
+						logger.Info("Loading cache file", zap.String("path", file))
+						b, err := ioutil.ReadFile(file)
+						if err != nil {
+							panic(err)
+						}
+						loaded := &FileDate{}
+
+						err = json.Unmarshal(b, loaded)
+
+						dates = append(dates, loaded)
+						return filepath.SkipDir
+					}
+			
+			}
 		}
 
 		ext := path.Ext(p)
@@ -117,6 +173,8 @@ func FindFiles(root string) ([]FileDate, error) {
 			panic(err)
 		}
 
+		var item CameraItem
+
 		switch ext {
 		case ".mp4":
 
@@ -124,73 +182,108 @@ func FindFiles(root string) ([]FileDate, error) {
 		ts := pathToTimestamps(p)
 	
 	
-		items = append(items, &FileItem{
-			StartTime: ts[0],
-			EndTime: ts[1],
-			Path: rel,
-		})
+		item = &CameraVideo{
+			CameraFile: CameraFile{
+				Time: ts[0],
+				Path: rel,
+			},
+			Duration: ts[1].Sub(ts[0]),
+		}
 
-		logger.Info("Found MP4", zap.String("start-time", ts[0].String()))
+		logger.Info("Found MP4", zap.Time("start-time", item.Timestamp()))
 	
 
 		case ".jpg":
 
 			ts := jpgPathToTimestamp(rel)
-			jpgs = append(jpgs, ImageItem{
-				Time: ts,
-				Path: rel,
-			})
+			logger.Info("Found JPG", zap.Time("time", ts))
+	
+
+			item = &CameraStill{
+				CameraFile: CameraFile{
+					Time: ts,
+					Path: rel,
+				},
+			}
+		default:
+			return nil
 		}
 	
+		items = append(items, item)
 
 		return nil
 	})
 
 
+	// sort
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].StartTime.Unix() < items[j].StartTime.Unix()
+		return items[i].Timestamp().Unix() < items[j].Timestamp().Unix()
 	})
 
-	sort.Slice(jpgs, func(i, j int) bool {
-		return jpgs[i].Time.Unix() < jpgs[i].Time.Unix()
-	})
+	// bucket into days, then into videos
+	
+	var curVideo *CameraVideo
+	var curDate  *FileDate
 
-	dates := []FileDate{}
+	for _, item := range items {
 
-	var curDate string
-	var imgPos = 0
-	for i, item := range items {
-
-		date := item.StartTime.Format("2006-01-02")
+		date := item.Timestamp().Format("2006-01-02")
 		
-		if curDate != date {
-			dates = append(dates, FileDate{
-				Date: item.StartTime,
-			})
-			curDate = date
+		if curDate == nil || curDate.DateString() != date {
+
+			if curDate != nil && cache && time.Now().Sub(curDate.Date).Hours() > 24{
+
+				b, err := json.MarshalIndent(curDate, "  ", "")
+				if err != nil {
+					panic(err)
+				}
+
+				file := cachePath(root, curDate.date)
+				err = ioutil.WriteFile(file, b, 666)
+				if err != nil  {
+					panic(err)
+				}
+				logger.Info("Wrote cache", zap.Int("len", len(b)), zap.String("date", curDate.date), zap.String("path", file))
+			}
+			curDate = &FileDate{
+				Date: item.Timestamp(),
+			}
+			dates = append(dates, curDate)
+			logger.Debug("Starting date bucket", zap.String("date", date))
 		}
 
-		d := &dates[len(dates)-1]
+		if curVideo != nil && item.Timestamp().After(curVideo.End()) {
+			logger.Debug("Ending video bucket", 
+			zap.Time("timestamp", item.Timestamp()),
+			zap.String("path", curVideo.FilePath()),
+		)
+		curVideo = nil
+			
+		}
 
-		for ; imgPos < len(jpgs); imgPos++ {
-			img := jpgs[imgPos]
-			if item.StartTime.Before(img.Time) &&
-			   item.EndTime.After(img.Time) {
-				   item.Images = append(item.Images, img)
-				   continue
-			   }
-
-			if item.EndTime.Before(img.Time) {
-				imgPos--
+		switch i:= item.(type) {
+		case *CameraStill:
+			if curVideo == nil {
 				break
 			}
+			curVideo.Images = append(curVideo.Images, i)
+			logger.Debug("Adding image", 
+				zap.Time("image-time", i.Timestamp()),
+				zap.Time("video-bucket", curVideo.Timestamp()),
+			)
+			if len(curVideo.Images) == 1 {
+				curVideo.Thumb = i
+			}
+		case *CameraVideo:
+			curVideo = i
+			curDate.Videos = append(curDate.Videos, i)
+			logger.Debug("Adding video", 
+				zap.Time("timestamp", i.Timestamp()),
+				zap.String("date-bucket", curDate.date),
+			)
 		}
-
-		if len(item.Images) > 0 {
-			items[i].Thumb = item.Images[len(item.Images)/2]
-		}
-		d.Files = append(d.Files, item)	
 	}
 
 	return dates, nil
 }
+

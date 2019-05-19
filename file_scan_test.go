@@ -32,15 +32,15 @@ func TestJpgTimeStamps(t *testing.T) {
 func TestWalk(t *testing.T) {
 
 
-	files, err := FindFiles("./data")
+	files, err := FindFiles("./test_data", false)
 
 	require.NoError(t, err)
 
 	require.NotEqual(t, 0, len(files))
 
 	for _, d := range files {
-		for _, f := range d.Files {
-			fmt.Println(f.Path, f.StartTime, f.EndTime, f.Thumb.Path, f.Thumb.Time)
+		for _, f := range d.Videos {
+			fmt.Println(f.Path, f.Time, f.Duration, f.Thumb.Path, f.Thumb.Time)
 			for _, i := range f.Images {
 				fmt.Println("\t", i.Time, i.Path)
 			}

@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="/public/bootstrap.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
 
 
     <title>Cam Recorder</title>
@@ -17,31 +17,9 @@
     
         var dates = {}
         var dateOrder = []
-        var v;
-        
-        {{range $i, $value := .Dates}}
-            v  = {
-                    date: "{{$value.Date}}",
-                    weekday: "{{$value.DayOfWeek}}",
-                    files:[ 
-                        {{range $value.Files}}
-                        {
-        
-                            start: {{.Start}},
-                            end: {{.End}},
-                            start_time: "{{.StartTime}}",
-                            end_time: "{{.EndTime}}",
-                            path: "/files/{{.Path}}",
-                            desc:"{{.Description}}",
-                        },
-                        {{end}}
-                    ]
-                },
-            dates["{{$value.Date}}"] = v;
-            dateOrder.push(v);
-        {{end}}
+        var v = JSON.parse({{.Json}});
     
-        </script>
+    </script>
         
     <style>
     
@@ -69,6 +47,9 @@
       overflow-x: scroll;
     }
     
+    .imgthumb {
+      height:100px;
+    }
     </style>
 
 
@@ -84,19 +65,37 @@
             </video>
       </div>
     </div>
+    <div class="row mb-2">
+      <div class="col-md-12">
+        <select id="dates">
+          {{range .Dates}}
+            <option value="{{.Date}}">{{.DayOfWeek}} {{.Date}}</option>
+         
+          {{end}}
+        </select>
+      </div>
+    </div>
  {{range .Dates}}
     
           
-    <div class="row mb-3">
+    <div class="row mb-3 date" date="{{.Date}}">
         <div class="col-md-12 themed-grid-col">
   
           <h4>{{.Date}} - {{.DayOfWeek}}</h4>
-          <div class="dayevents" date="{{.Date}}">
-              {{range .Files}}
-                  <div class="event" time="{{.StartTime}}" path="/files/{{.Path}}">x</div>
-                  <div class="eventthumb" path="/files/{{.Thumb.Path}}">{{.Thumb.Time}}</div>
-              {{end}}
-            
+         
+          <div class="dayevents row mb-3" date="{{.Date}}">
+             <div class="col-md-12">
+              {{range .Videos}}
+              <div class="row mb-3">
+                   
+                     <div class="event col-md-4" time="{{.Time}}" path="/files/{{.Path}}">{{.Description}}</div>
+                     <div class="col-md-4 ">
+                      <img class="imgthumb" src="/files/{{.Thumb.Path}}"/>
+             
+                    </div>
+              </div>
+                {{end}}
+            </div>
           </div>
         </div>
           
@@ -112,6 +111,6 @@
 	<script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src="/public/scripts.js?1" type="text/javascript"></script>
+    <script src="/public/scripts.js?2" type="text/javascript"></script>
   </body>
 </html>

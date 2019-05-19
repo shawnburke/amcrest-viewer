@@ -1,6 +1,15 @@
 $(document).ready(function() {
 
 
+    $(".date").hide();
+
+    $("#dates").change(function(el) {
+        var selected = $(el.target).val()
+
+       selectDate(selected)
+    })
+
+    selectDate($("#dates option:first").val());
   
 
     $(".event").each(function(i, el){
@@ -10,7 +19,7 @@ $(document).ready(function() {
         var path = e.attr("path")
         var time = e.attr("time")
 
-        e.text(new Date(time).toLocaleTimeString())
+        //e.text(new Date(time).toLocaleTimeString())
 
         e.click(function(){
             $(".event").removeClass("event-selected")
@@ -23,6 +32,18 @@ $(document).ready(function() {
 
 
 })
+
+function selectDate(d) {
+    $(".date").hide();
+
+    $(".date").each(function(i, el){
+        var sd = $(el);
+        var dateVal = sd.attr("date")
+        if (dateVal == d) {
+            sd.show();
+        }
+    })
+}
    
     function eventClickWrapper(path){
         
