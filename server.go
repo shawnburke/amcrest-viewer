@@ -33,7 +33,12 @@ func newViewModel(fd *FileDate) viewModel{
 	}
 
 	for _, f := range fd.Videos {
+
+                if f.Thumb == nil {
+                  f.Thumb = &CameraStill{}
+                }
 		vm.Videos = append(vm.Videos,fileViewModel{
+
 			CameraVideo: *f,
 		})
 	}
