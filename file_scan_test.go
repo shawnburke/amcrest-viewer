@@ -40,7 +40,7 @@ func TestWalk(t *testing.T) {
 
 	for _, d := range files {
 		for _, f := range d.Videos {
-			fmt.Println(f.Path, f.Time, f.Duration, f.Thumb.Path, f.Thumb.Time)
+			fmt.Println(f.Path, f.Time, f.Duration)
 			for _, i := range f.Images {
 				fmt.Println("\t", i.Time, i.Path)
 			}

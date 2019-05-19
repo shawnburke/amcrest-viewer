@@ -16,6 +16,8 @@ import (
 	"encoding/json"
 	"sort"
 
+
+	"go.uber.org/zap"
 )
 
 var fileRoot string
@@ -33,10 +35,7 @@ func newViewModel(fd *FileDate) viewModel{
 	}
 
 	for _, f := range fd.Videos {
-
-                if f.Thumb == nil {
-                  f.Thumb = &CameraStill{}
-                }
+		
 		vm.Videos = append(vm.Videos,fileViewModel{
 
 			CameraVideo: *f,
@@ -59,7 +58,37 @@ func (fvm fileViewModel) End() string {
 }
 
 func (fvm fileViewModel) Description() string {
-	return fmt.Sprintf("%s (%s)", fvm.Time.Format("15:04:05"),fvm.CameraVideo.Duration.String())
+	return fmt.Sprintf("%s (%s)", fvm.Time.Format("03:04:05 PM"),fvm.CameraVideo.Duration.String())
+}
+
+func (fvm fileViewModel) Thumbs() []*CameraStill {
+	return fvm.thumbs(3)
+}
+
+func (fvm fileViewModel) thumbs(count int) []*CameraStill {
+	imgCount := len(fvm.Images)
+
+
+	if imgCount <= count {
+		ret := make([]*CameraStill, 0, imgCount)
+		copy(ret, fvm.Images)
+		return ret
+	}
+
+	skip := imgCount / count
+
+	thumbs := make([]*CameraStill, count)
+	pos := 0
+	for	index := 0; index < count; index++ {
+		if pos >= imgCount {
+			thumbs[index] = fvm.Images[imgCount-1]
+			break
+		}
+
+		thumbs[index] = fvm.Images[pos]
+		pos += skip
+	}
+	return thumbs
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -70,17 +99,18 @@ func index(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		io.WriteString(w, err.Error())
 	}
+	
+
+	sort.Slice(files, func(i,j int)bool {
+		return files[i].Date.Unix() > files[j].Date.Unix()
+	})
+
 	dates := make([]viewModel, 0, len(files))
 	for _, f := range files {
 		if len(f.Videos) > 0 {
 			dates = append(dates, newViewModel(f))
 		}
 	}
-
-	sort.Slice(files, func(i,j int)bool {
-		return files[i].Date.Unix() > files[j].Date.Unix()
-	})
-
 
 	d :=  struct {
 		Title string
@@ -91,11 +121,16 @@ func index(w http.ResponseWriter, r *http.Request) {
 		Dates: dates,
 	}
 
-	jb, _ := json.MarshalIndent(d, "", "  ")
+	if r.URL.Query().Get("debug") != "" {
+		jb, _ := json.MarshalIndent(d, "", "  ")
 
-	d.Json = string(jb)
+		d.Json = string(jb)
+	}
 
-	mainPageTemplate.Execute(w,d )
+	err = mainPageTemplate.Execute(w,d )
+	if err != nil {
+		logger.Error("Error rendering", zap.Error(err))
+	}
 }
 
 func serve(w http.ResponseWriter, r *http.Request) {

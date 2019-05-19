@@ -13,9 +13,22 @@
     <title>Cam Recorder</title>
 
        
+
+    <script type="text/javascript">
+    
+        var dates = {}
+        var dateOrder = []
+        var json = {{.Json}}
+
+        if (json) {
+         var v = JSON.parse(json);
+        }
+    
+    </script>
+        
     <style>
     
-    .event {
+    .event-label {
       display:inline;
       border:thin solid yellow;
       background:blue;
@@ -41,23 +54,44 @@
     .imgthumb {
       height:100px;
     }
+
+    video {
+      height: 300px;
+      width: 100%;
+    }
+
+    
+    .toppart {
+      position:fixed;
+      top:0px;
+      width:100%;
+      height:350px;
+      z-index: 100;
+      background:black;
+    }
+
+    .bottompart {
+      margin-top:360px;
+      z-index:1;
+    }
     </style>
 
 
   </head>
   <body>
 
-  <div class="container">
 
+    <div class="toppart">
     <div class="row mb-3">
-      <div class="col-md-12">
-          <video width="100%" height="300" controls>
+      
+      <div class="col-md-8 offset-md-2">
+          <video controls>
               <source id="videosrc" type="video/mp4"/>
             </video>
       </div>
     </div>
     <div class="row mb-2">
-      <div class="col-md-12">
+      <div class="col-md-10">
         <select id="dates">
           {{range .Dates}}
             <option value="{{.Date}}">{{.DayOfWeek}} {{.Date}}</option>
@@ -66,6 +100,8 @@
         </select>
       </div>
     </div>
+  </div>
+  <div class="bottompart container">
  {{range .Dates}}
     
           
@@ -77,13 +113,16 @@
           <div class="dayevents row mb-3" date="{{.Date}}">
              <div class="col-md-12">
               {{range .Videos}}
-              <div class="row mb-3">
+              <div class="row mb-3 event" path="/files/{{.Path}}">
                    
-                     <div class="event col-md-4" time="{{.Time}}" path="/files/{{.Path}}">{{.Description}}</div>
-                     <div class="col-md-4 ">
-                      <img class="imgthumb" src="/files/{{.Thumb.Path}}"/>
-             
-                    </div>
+                     <div class="col-md-3 event-label" time="{{.Time}}" >{{.Description}}</div>
+                      {{ range .Thumbs}}
+                      <div class="col-md-2 ">
+                      
+                      <img class="imgthumb" src="/files/{{.Path}}"/>
+                      </div>
+                      {{end}}
+                    
               </div>
                 {{end}}
             </div>
@@ -93,7 +132,7 @@
     </div>
  {{end}}
 
-
+</div>
 </div> <!-- /container -->
 
     <!-- Optional JavaScript -->

@@ -9,29 +9,18 @@ $(document).ready(function() {
        selectDate(selected)
     })
 
-    var lastdate =$("#dates option:last").val();
+    var lastdate =$("#dates option:first").val();
     $("#dates").val(lastdate);
     selectDate(lastdate)
   
 
-    $(".event").each(function(i, el){
-
-        var e = $(el)
-
-        var path = e.attr("path")
-        var time = e.attr("time")
-
-        //e.text(new Date(time).toLocaleTimeString())
-
-        e.click(function(){
-            $(".event").removeClass("event-selected")
-            e.addClass("event-selected")
-            playVideo(path)
-        });
-
-
-    })
-
+    $(".event").click(function(el){
+        var e = $(el.currentTarget)
+        var path = e.attr('path')
+        $(".event-label").removeClass("event-selected")
+        e.children(".event-label").addClass("event-selected")
+        playVideo(path)
+    });
 
 })
 

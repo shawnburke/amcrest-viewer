@@ -47,12 +47,13 @@ type CameraVideo struct {
 	CameraFile 
 	Duration   time.Duration
 	Images    []*CameraStill
-	Thumb     *CameraStill
 }
 
 func (cv CameraVideo) End() time.Time {
 	return cv.Time.Add(cv.Duration)
 }
+
+
 type CameraItem interface {
 	Timestamp() time.Time
 	FilePath() string
@@ -271,9 +272,6 @@ func FindFiles(root string, cache bool) ([]*FileDate, error) {
 				zap.Time("image-time", i.Timestamp()),
 				zap.Time("video-bucket", curVideo.Timestamp()),
 			)
-			if len(curVideo.Images) == 1 {
-				curVideo.Thumb = i
-			}
 		case *CameraVideo:
 			curVideo = i
 			curDate.Videos = append(curDate.Videos, i)
