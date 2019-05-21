@@ -60,6 +60,14 @@
       width: 100%;
     }
 
+    .media-container {
+      height:300px;
+    }
+
+    .still {
+      height:300px;
+    }
+
     
     .toppart {
       position:fixed;
@@ -84,10 +92,11 @@
     <div class="toppart">
     <div class="row mb-3">
       
-      <div class="col-md-8 offset-md-2">
-          <video controls>
+      <div class="col-md-8 offset-md-2 media-container">
+          <video controls  style="display:none;">
               <source id="videosrc" type="video/mp4"/>
             </video>
+          <img class="still" style="display:none;"/>
       </div>
     </div>
     <div class="row mb-2">
@@ -113,9 +122,9 @@
           <div class="dayevents row mb-3" date="{{.Date}}">
              <div class="col-md-12">
               {{range .Videos}}
-              <div class="row mb-3 event" path="/files/{{.Path}}">
+              <div class="row mb-3 " path="/files/{{.Path}}">
                    
-                     <div class="col-md-3 event-label" time="{{.Time}}" >{{.Description}}</div>
+                     <div class="col-md-3 event event-label" time="{{.Time}}" >{{.Description}}</div>
                       {{ range .Thumbs}}
                       <div class="col-md-2 ">
                       

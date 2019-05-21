@@ -18,9 +18,19 @@ $(document).ready(function() {
         var e = $(el.currentTarget)
         var path = e.attr('path')
         $(".event-label").removeClass("event-selected")
-        e.children(".event-label").addClass("event-selected")
+        e.parent().children(".event-label").addClass("event-selected")
         playVideo(path)
     });
+
+    $(".imgthumb").click(function(el){
+        var e = $(el.target)
+        var path = e.attr('src')
+        if (path) {
+            showThumb(path);
+            el.preventDefault();
+            return false
+        }
+    })
 
 })
 
@@ -45,13 +55,19 @@ function selectDate(d) {
     }
 
   
-
+function showThumb(href) {
+    $("video").hide();
+    $(".still").attr("src", href).show()
+}
     
 function playVideo(href){
 
     var v = $("video").get(0)
     var vs = $("#videosrc")
+    $('.still').hide();
 
+    $(v).show();
+   
     v.pause()
     vs.attr("src",href)
     v.load()
