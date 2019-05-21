@@ -16,7 +16,7 @@ $(document).ready(function() {
 
     $(".event").click(function(el){
         var e = $(el.currentTarget)
-        var path = e.attr('path')
+        var path = e.parent().attr('path')
         $(".event-label").removeClass("event-selected")
         e.parent().children(".event-label").addClass("event-selected")
         playVideo(path)

@@ -70,7 +70,7 @@ func (fvm fileViewModel) thumbs(count int) []*CameraStill {
 
 
 	if imgCount <= count {
-		ret := make([]*CameraStill, 0, imgCount)
+		ret := make([]*CameraStill, imgCount)
 		copy(ret, fvm.Images)
 		return ret
 	}
