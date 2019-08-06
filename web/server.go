@@ -4,6 +4,7 @@ package web
 import (
 	"encoding/json"
 	"io"
+	"os"
 	"net/http"
 	"path"
 	"sort"
@@ -77,6 +78,17 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, fn)
 }
 
+func (s *Server) health(w http.ResponseWriter, r *http.Request) {
+	// make sure the path exists
+        if _, err := os.Stat(s.FileRoot); err != nil {
+        	w.Write([]byte("Bad file path"))
+  		w.WriteHeader(500)
+		return
+	}
+
+	
+}
+
 func (s *Server) Setup(public string) http.Handler {
 	s.r = mux.NewRouter()
 
@@ -84,6 +96,7 @@ func (s *Server) Setup(public string) http.Handler {
 	s.r.PathPrefix("/public/").Handler(
 		http.StripPrefix("/public/",
 			http.FileServer(http.Dir(public))))
+	s.r.HandleFunc("/health", s.health)
 	s.r.HandleFunc("/", s.index)
 	return s.r
 }
