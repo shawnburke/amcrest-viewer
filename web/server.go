@@ -81,12 +81,12 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	// make sure the path exists
         if _, err := os.Stat(s.FileRoot); err != nil {
-        	w.Write([]byte("Bad file path"))
   		w.WriteHeader(500)
+        	w.Write([]byte("Bad file path"))
 		return
 	}
 
-	
+        w.Write([]byte("OK"))	
 }
 
 func (s *Server) Setup(public string) http.Handler {
