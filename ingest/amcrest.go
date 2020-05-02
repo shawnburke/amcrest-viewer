@@ -13,10 +13,10 @@ type MediaFileType int
 var ErrorUnknownFile = errors.New("UnknownFileType")
 const badVideoPath = "BadVideoPath"
 
-const (
+const  (
 	Unknown MediaFileType = 0
-	MP4 = 1
-	JPG = 2
+	MP4 MediaFileType= 1
+	JPG MediaFileType= 2
 ) 
 
 type MediaFile struct {
@@ -44,14 +44,10 @@ type amcrestIngester struct {
 
 func (ai *amcrestIngester) OnNewFile(path string) (*MediaFile, error) {
 
-	isVideo := strings.Contains(path, "/dav/")
-	isImage := strings.Contains(path, "/jpg/")
 
-	if !isVideo && !isImage {
-		return nil, ErrorUnknownFile
-	}
 
-	if isVideo {
+
+	if strings.Contains(path, "/dav/") {
 		// "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4"
 		ts := pathToTimestamps(path, ai.tz)
 		if len(ts)!=2  {
@@ -65,7 +61,19 @@ func (ai *amcrestIngester) OnNewFile(path string) (*MediaFile, error) {
 		}, nil
 	}
 
-	return nil, nil
+	if strings.Contains(path, "/jpg/") {
+		// 2019-05-09/001/jpg/06/07/27[M][0@0][0].jpg
+		ts, err := jpgPathToTimestamp(path, ai.tz)
+		if err != nil {
+			return nil, err
+		}
+		return &MediaFile{
+			Type:JPG,
+			Timestamp: ts,
+		}, nil
+	}
+
+	return nil, ErrorUnknownFile
 }
 
 
@@ -101,4 +109,13 @@ func pathToTimestamps(p string, tz *time.Location) []time.Time {
 		s,
 		e,
 	}
+}
+
+
+func jpgPathToTimestamp(p string, tz *time.Location) (time.Time, error) {
+
+	// todo replace with regex
+	p = strings.Replace(p, "/001/", "/xxx/", -1)
+
+	return time.ParseInLocation("2006-01-02/xxx/jpg/15/04/05", p[0:27], tz)
 }
