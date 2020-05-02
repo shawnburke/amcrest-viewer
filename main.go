@@ -12,6 +12,8 @@
 	
 	 "go.uber.org/zap"
 
+	 "github.com/shawnburke/amcrest-viewer/cmd"
+
 	 "github.com/shawnburke/amcrest-viewer/web"
 	
  )
@@ -21,7 +23,14 @@
  
  func main() {
  
-	 if len(os.Args) < 2 {
+	
+	cmd.Execute()
+
+	if os.Getenv("OLD") == "" {
+		return 
+	}
+
+	if len(os.Args) < 2 {
 		 fmt.Println("Error: files path required")
 		 os.Exit(1)
 	 }
@@ -50,5 +59,7 @@
 		 fmt.Println(err)
 		 os.Exit(1)
 	 }
+
+	 
  }
  

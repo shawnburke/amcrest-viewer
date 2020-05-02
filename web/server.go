@@ -4,25 +4,66 @@ package web
 import (
 	"encoding/json"
 	"io"
-	"os"
 	"net/http"
+	"os"
 	"path"
 	"sort"
+	"time"
+	"fmt"
+	"strconv"
 
-	"go.uber.org/zap"
-	"github.com/gorilla/mux"
 	"html/template"
 
+	"github.com/gorilla/mux"
+	"go.uber.org/zap"
+
+	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/scanner"
 )
 
+
+
+
+func New(args *common.Params, logger *zap.Logger) interface{} {
+	
+
+	server := &Server{
+		 FileRoot: args.DataDir,
+		 Logger:   logger,
+		 args: args,
+	 }
+ 
+	 r := server.Setup("./public/")
+ 
+	 http.Handle("/", r)
+ 
+	 
+	return server
+} 
 
 type Server struct {
 	FileRoot string
 	Logger   *zap.Logger
 	r        *mux.Router
+	args	*common.Params
 }
 
+func (s *Server) Start() error {
+	portNumber := strconv.Itoa(s.args.WebPort)
+	s.Logger.Info("Server listening", zap.String("port", portNumber))
+	var err error
+	go func () {
+	 err = http.ListenAndServe(":"+portNumber, nil)
+	}()
+
+	time.Sleep(time.Millisecond * 100)
+	if err != nil {
+		 fmt.Println(err)
+	 }
+	
+	 return err
+
+}
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 
