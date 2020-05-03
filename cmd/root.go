@@ -32,6 +32,7 @@ var (
 					return &p
 				}),
 				fx.Provide(zap.NewDevelopment),
+				fx.Invoke(register),
 				fx.Invoke(ftp.New),
 				fx.Invoke(web.New),
 			)
@@ -41,6 +42,24 @@ var (
 		},
 	}
 )
+
+func register(lifecycle fx.Lifecycle, ftps ftp.FtpServer) {
+   
+    lifecycle.Append(
+        fx.Hook{
+            OnStart: func(context.Context) error {
+                if err := ftps.Start(); err != nil {
+					return err
+				}
+            },
+            OnStop: func(ctx context.Context) error {
+               if ftps != nil {
+				   ftps.Stop()
+			   }
+            }
+        }
+    )
+}
 
 // Execute executes the root command.
 func Execute() error {
