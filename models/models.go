@@ -1,11 +1,8 @@
 package models
 
-
-import(
+import (
 	"time"
-	
 )
-
 
 type FileDate struct {
 	Date   time.Time

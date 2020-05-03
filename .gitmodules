@@ -1,3 +1,0 @@
-[submodule "ftp-server"]
-	path = ftp-server
-	url = https://github.com/shawnburke/server.git

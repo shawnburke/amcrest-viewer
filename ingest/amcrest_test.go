@@ -3,10 +3,11 @@ package ingest
 import (
 	"testing"
 	"time"
+
 	"github.com/stretchr/testify/require"
 )
 
-var tz *time.Location 
+var tz *time.Location
 
 func init() {
 	var err error
@@ -24,7 +25,7 @@ func TestOnNewMP4(t *testing.T) {
 
 	f, err := ingester.OnNewFile(path)
 
-	start := time.Date(2019, time.May,9,21,04,49,0,tz)
+	start := time.Date(2019, time.May, 9, 21, 04, 49, 0, tz)
 
 	require.NoError(t, err)
 	require.Equal(t, MP4, f.Type)
@@ -41,7 +42,7 @@ func TestOnNewJPG(t *testing.T) {
 
 	f, err := ingester.OnNewFile(path)
 
-	time := time.Date(2019, time.May,9,06,07,27,0,tz)
+	time := time.Date(2019, time.May, 9, 06, 07, 27, 0, tz)
 
 	require.NoError(t, err)
 	require.Equal(t, JPG, f.Type)

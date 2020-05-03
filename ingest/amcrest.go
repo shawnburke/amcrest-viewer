@@ -8,20 +8,21 @@ import (
 	"time"
 )
 
-type MediaFileType int 
+type MediaFileType int
 
 var ErrorUnknownFile = errors.New("UnknownFileType")
+
 const badVideoPath = "BadVideoPath"
 
-const  (
+const (
 	Unknown MediaFileType = 0
-	MP4 MediaFileType= 1
-	JPG MediaFileType= 2
-) 
+	MP4     MediaFileType = 1
+	JPG     MediaFileType = 2
+)
 
 type MediaFile struct {
-	Type MediaFileType
-	Path string
+	Type      MediaFileType
+	Path      string
 	Timestamp time.Time
 	Duration  *time.Duration
 }
@@ -30,13 +31,11 @@ type Ingester interface {
 	OnNewFile(path string) (*MediaFile, error)
 }
 
-
 func New(tz *time.Location) (Ingester, error) {
 	return &amcrestIngester{
 		tz: tz,
 	}, nil
 }
-
 
 type amcrestIngester struct {
 	tz *time.Location
@@ -44,20 +43,17 @@ type amcrestIngester struct {
 
 func (ai *amcrestIngester) OnNewFile(path string) (*MediaFile, error) {
 
-
-
-
 	if strings.Contains(path, "/dav/") {
 		// "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4"
 		ts := pathToTimestamps(path, ai.tz)
-		if len(ts)!=2  {
+		if len(ts) != 2 {
 			return nil, fmt.Errorf("%s: %v", badVideoPath, path)
 		}
 		d := ts[1].Sub(ts[0])
 		return &MediaFile{
-			Type: MP4,
+			Type:      MP4,
 			Timestamp: ts[0],
-			Duration: &d,
+			Duration:  &d,
 		}, nil
 	}
 
@@ -68,16 +64,13 @@ func (ai *amcrestIngester) OnNewFile(path string) (*MediaFile, error) {
 			return nil, err
 		}
 		return &MediaFile{
-			Type:JPG,
+			Type:      JPG,
 			Timestamp: ts,
 		}, nil
 	}
 
 	return nil, ErrorUnknownFile
 }
-
-
-
 
 var dateRegEx = regexp.MustCompile(`\d{4}-\d{2}-\d{2}`)
 var tsRegEx = regexp.MustCompile(`(\d{2}\.\d{2}\.\d{2})`)
@@ -110,7 +103,6 @@ func pathToTimestamps(p string, tz *time.Location) []time.Time {
 		e,
 	}
 }
-
 
 func jpgPathToTimestamp(p string, tz *time.Location) (time.Time, error) {
 

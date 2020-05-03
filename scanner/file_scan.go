@@ -19,8 +19,6 @@ import (
 
 const timeZone = "America/Los_Angeles"
 
-
-
 var dateRegEx = regexp.MustCompile(`\d{4}-\d{2}-\d{2}`)
 var tsRegEx = regexp.MustCompile(`(\d{2}\.\d{2}\.\d{2})`)
 var timeFormat = "2006-01-02T15.04.05"

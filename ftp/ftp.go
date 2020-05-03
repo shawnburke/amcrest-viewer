@@ -1,25 +1,22 @@
 package ftp
 
 import (
-	"io"
+	"fmt"
+	"time"
 
-	filedriver "github.com/goftp/file-driver"
 	"github.com/shawnburke/amcrest-viewer/common"
 	"go.uber.org/zap"
 
-	"fmt"
-
-	ftps "github.com/shawnburke/amcrest-viewer/ftp-server"
+	ftps "github.com/goftp/server"
 )
 
-
 type ftpFileSystem struct {
-	server *ftps.Server
-	dir string
+	server   *ftps.Server
+	dir      string
 	password string
-	port int
-	host string
-	logger *zap.Logger
+	port     int
+	host     string
+	logger   *zap.Logger
 }
 
 type FtpServer interface {
@@ -30,13 +27,13 @@ type FtpServer interface {
 func New(args *common.Params, logger *zap.Logger) FtpServer {
 	fmt.Println("Created FTP server")
 	return &ftpFileSystem{
-		dir: args.DataDir,
-		port: args.FtpPort,
-		host: args.Host,
+		dir:      args.DataDir,
+		port:     args.FtpPort,
+		host:     args.Host,
 		password: args.FtpPassword,
-		logger: logger,
+		logger:   logger,
 	}
-} 
+}
 
 func (fs *ftpFileSystem) Start() error {
 	if fs.server != nil {
@@ -51,18 +48,26 @@ func (fs *ftpFileSystem) Start() error {
 		Factory:  factory,
 		Port:     fs.port,
 		Hostname: fs.host,
-		//Auth:     &ftps.SimpleAuth{Name: , Password: *pass},
+		Auth:     createAuth(),
 	}
 
 	fs.server = ftps.NewServer(opts)
 
+	// TODO: Clean up this mess with a better way to detect
+	// clean startup
+	var err error
+	var ok bool
 	go func() {
-	err := fs.server.ListenAndServe()
-		if err != nil {
-			fs.logger.Fatal("Error starting server:", err)
+		err = fs.server.ListenAndServe()
+		if err != nil && !ok {
+			fs.logger.Fatal("Error starting server:", zap.Error(err))
 		}
 	}()
-	return nil
+	time.Sleep(100 * time.Millisecond)
+	if err == nil {
+		ok = true
+	}
+	return err
 }
 
 func (fs *ftpFileSystem) Stop() error {
@@ -73,27 +78,3 @@ func (fs *ftpFileSystem) Stop() error {
 	}
 	return nil
 }
-
-type fileDriverFactory struct {
-	RootPath string
-	ftps.Perm
-}
-
-func (factory *fileDriverFactory) NewDriver() (ftps.Driver, error) {
-	fd := &filedriver.FileDriver{
-		factory.RootPath,
-		factory.Perm,
-	}
-	return &fileDriver{FileDriver:fd}, nil
-}
-
-type fileDriver struct {
-	filedriver.FileDriver
-}
-
-func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) (int64, error) {
-	return fd.FileDriver.PutFile(destPath, data, appendData)
-}
-
-
-// AUTH

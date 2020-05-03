@@ -1,16 +1,14 @@
-
 package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path"
 	"sort"
 	"time"
-	"fmt"
-	"strconv"
 
 	"html/template"
 
@@ -21,48 +19,63 @@ import (
 	"github.com/shawnburke/amcrest-viewer/scanner"
 )
 
-
-
-
-func New(args *common.Params, logger *zap.Logger) interface{} {
-	
+func New(args *common.Params, logger *zap.Logger) HttpServer {
 
 	server := &Server{
-		 FileRoot: args.DataDir,
-		 Logger:   logger,
-		 args: args,
-	 }
- 
-	 r := server.Setup("./public/")
- 
-	 http.Handle("/", r)
- 
-	 
+		FileRoot: args.DataDir,
+		Logger:   logger,
+		args:     args,
+	}
+
+	r := server.Setup("./public/")
+
+	http.Handle("/", r)
+
 	return server
-} 
+}
+
+type HttpServer interface {
+	Start() error
+	Stop() error
+}
 
 type Server struct {
 	FileRoot string
 	Logger   *zap.Logger
 	r        *mux.Router
-	args	*common.Params
+	args     *common.Params
+	server   *http.Server
 }
 
 func (s *Server) Start() error {
-	portNumber := strconv.Itoa(s.args.WebPort)
-	s.Logger.Info("Server listening", zap.String("port", portNumber))
 	var err error
-	go func () {
-	 err = http.ListenAndServe(":"+portNumber, nil)
+
+	s.server = &http.Server{
+		Addr: fmt.Sprintf("%s:%d", s.args.Host, s.args.WebPort),
+	}
+
+	go func() {
+		s.Logger.Info("Server listening", zap.Int("port", s.args.WebPort))
+		err = s.server.ListenAndServe()
+
 	}()
 
 	time.Sleep(time.Millisecond * 100)
 	if err != nil {
-		 fmt.Println(err)
-	 }
-	
-	 return err
+		fmt.Println(err)
+	}
 
+	return err
+
+}
+
+func (s *Server) Stop() error {
+	if s.server != nil {
+		svr := s.server
+		s.server = nil
+		return svr.Close()
+	}
+	return nil
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
@@ -121,13 +134,13 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	// make sure the path exists
-        if _, err := os.Stat(s.FileRoot); err != nil {
-  		w.WriteHeader(500)
-        	w.Write([]byte("Bad file path"))
+	if _, err := os.Stat(s.FileRoot); err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte("Bad file path"))
 		return
 	}
 
-        w.Write([]byte("OK"))	
+	w.Write([]byte("OK"))
 }
 
 func (s *Server) Setup(public string) http.Handler {
@@ -141,5 +154,3 @@ func (s *Server) Setup(public string) http.Handler {
 	s.r.HandleFunc("/", s.index)
 	return s.r
 }
-
-
