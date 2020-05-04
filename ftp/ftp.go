@@ -42,6 +42,7 @@ func (fs *ftpFileSystem) Start() error {
 	factory := &fileDriverFactory{
 		RootPath: fs.dir,
 		Perm:     ftps.NewSimplePerm("user", "group"),
+		logger: fs.logger,
 	}
 
 	opts := &ftps.ServerOpts{
