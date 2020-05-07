@@ -1,7 +1,6 @@
 package ftp
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/shawnburke/amcrest-viewer/common"
@@ -17,6 +16,7 @@ type ftpFileSystem struct {
 	port     int
 	host     string
 	logger   *zap.Logger
+	auth     common.Auth
 }
 
 type FtpServer interface {
@@ -24,14 +24,14 @@ type FtpServer interface {
 	Stop() error
 }
 
-func New(args *common.Params, logger *zap.Logger) FtpServer {
-	fmt.Println("Created FTP server")
+func New(args *common.Params, auth common.Auth, logger *zap.Logger) FtpServer {
 	return &ftpFileSystem{
 		dir:      args.DataDir,
 		port:     args.FtpPort,
 		host:     args.Host,
 		password: args.FtpPassword,
 		logger:   logger,
+		auth:     auth,
 	}
 }
 
@@ -42,14 +42,14 @@ func (fs *ftpFileSystem) Start() error {
 	factory := &fileDriverFactory{
 		RootPath: fs.dir,
 		Perm:     ftps.NewSimplePerm("user", "group"),
-		logger: fs.logger,
+		logger:   fs.logger,
 	}
 
 	opts := &ftps.ServerOpts{
 		Factory:  factory,
 		Port:     fs.port,
 		Hostname: fs.host,
-		Auth:     createAuth(),
+		Auth:     createAuth(fs.auth),
 	}
 
 	fs.server = ftps.NewServer(opts)

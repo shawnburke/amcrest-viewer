@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
@@ -28,6 +29,8 @@ var (
 				fx.Provide(func() *common.Params {
 					return &p
 				}),
+				fx.Provide(yamlConfig),
+				fx.Provide(common.NewConfigAuth),
 				fx.Provide(zap.NewDevelopment),
 				fx.Provide(ftp.New),
 				fx.Provide(web.New),
@@ -71,6 +74,11 @@ func register(lifecycle fx.Lifecycle, ftps ftp.FtpServer, web web.HttpServer, lo
 			},
 		},
 	)
+}
+
+func yamlConfig() (config.Provider, error) {
+
+	return config.NewYAMLProviderFromFiles("./config/base.yaml")
 }
 
 // Execute executes the root command.

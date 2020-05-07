@@ -13,6 +13,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
+	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.12.0
 	go.uber.org/zap v1.10.0
 )

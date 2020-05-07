@@ -1,40 +1,24 @@
 package ftp
 
 import (
-	"strings"
+	"github.com/shawnburke/amcrest-viewer/common"
 
 	ftps "github.com/goftp/server"
 )
 
-type User struct {
-	Name     string
-	Password string
-}
-
 type ftpAuth struct {
-	users []User
+	auth common.Auth
 }
 
-func createAuth() ftps.Auth {
+func createAuth(auth common.Auth) ftps.Auth {
 
-	auth := &ftpAuth{
-		users: []User{
-			{
-				"user1", "password1",
-			},
-			{
-				"user2", "password2",
-			},
-		},
+	a := &ftpAuth{
+		auth: auth,
 	}
-	return auth
+	return a
 }
 
 func (fa *ftpAuth) CheckPasswd(user string, pass string) (bool, error) {
-	for _, u := range fa.users {
-		if strings.EqualFold(u.Name, user) && u.Password == pass {
-			return true, nil
-		}
-	}
-	return false, nil
+	ok := fa.auth.IsAllowed(user, pass)
+	return ok, nil
 }
