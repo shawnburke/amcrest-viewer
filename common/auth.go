@@ -2,6 +2,7 @@ package common
 
 import (
 	"strings"
+	"time"
 
 	fxcfg "go.uber.org/config"
 )
@@ -39,4 +40,26 @@ func (ca *configAuth) IsAllowed(user, pwd string) bool {
 	user = strings.ToLower(user)
 	pass, ok := ca.users[user]
 	return ok && pass == pwd
+}
+
+const EventUserLogin = "User_auth"
+const EventUserLoginFail = "user_auth_fail"
+
+type UserAuthFailEvent struct {
+	EventBase
+	User string
+}
+
+func NewAuthFailEvent(user string) *UserAuthFailEvent {
+	return &UserAuthFailEvent{
+		EventBase: NewEventBase(EventUserLoginFail, time.Now()),
+		User:      user,
+	}
+}
+
+func NewAuthEvent(user string) *UserAuthFailEvent {
+	return &UserAuthFailEvent{
+		EventBase: NewEventBase(EventUserLogin, time.Now()),
+		User:      user,
+	}
 }

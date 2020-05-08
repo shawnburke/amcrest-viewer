@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/config"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/ftp"
+	"github.com/shawnburke/amcrest-viewer/ingest"
 	"github.com/shawnburke/amcrest-viewer/web"
 )
 
@@ -34,6 +36,9 @@ var (
 				fx.Provide(zap.NewDevelopment),
 				fx.Provide(ftp.New),
 				fx.Provide(web.New),
+				fx.Provide(common.NewEventBus),
+				ingest.Module,
+				fx.Provide(tz),
 				fx.Invoke(register),
 			)
 			app.Run()
@@ -42,6 +47,14 @@ var (
 		},
 	}
 )
+
+func tz() *time.Location {
+	loc, err := time.LoadLocation("Local")
+	if err != nil {
+		panic(err)
+	}
+	return loc
+}
 
 func register(lifecycle fx.Lifecycle, ftps ftp.FtpServer, web web.HttpServer, logger *zap.Logger) {
 

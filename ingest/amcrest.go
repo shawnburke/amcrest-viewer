@@ -6,65 +6,95 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/shawnburke/amcrest-viewer/common"
+	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
-type MediaFileType int
+const amcrestIngesterType = "amcrest"
 
 var ErrorUnknownFile = errors.New("UnknownFileType")
 
 const badVideoPath = "BadVideoPath"
 
-const (
-	Unknown MediaFileType = 0
-	MP4     MediaFileType = 1
-	JPG     MediaFileType = 2
-)
-
-type MediaFile struct {
-	Type      MediaFileType
-	Path      string
-	Timestamp time.Time
-	Duration  *time.Duration
+// todo: move this into its own package and load with ingest manager
+// but solve Ingester circular dep
+type AmcrestParams struct {
+	fx.In
+	TZ     *time.Location `optoinal:"true"`
+	Logger *zap.Logger
 }
 
-type Ingester interface {
-	OnNewFile(path string) (*MediaFile, error)
+type AmcrestResult struct {
+	fx.Out
+	Ingester Ingester `group:"ingester"`
 }
 
-func New(tz *time.Location) (Ingester, error) {
-	return &amcrestIngester{
-		tz: tz,
+func Amcrest(p AmcrestParams) (AmcrestResult, error) {
+
+	amcrest := &amcrestIngester{
+		tz:     p.Timezone(),
+		logger: p.Logger,
+	}
+
+	return AmcrestResult{
+		Ingester: amcrest,
 	}, nil
 }
 
-type amcrestIngester struct {
-	tz *time.Location
+func (p AmcrestParams) Timezone() *time.Location {
+	if p.TZ != nil {
+		return p.TZ
+	}
+
+	loc, err := time.LoadLocation("Local")
+	if err != nil {
+		panic(err)
+	}
+	return loc
 }
 
-func (ai *amcrestIngester) OnNewFile(path string) (*MediaFile, error) {
+type amcrestIngester struct {
+	tz     *time.Location
+	logger *zap.Logger
+}
 
-	if strings.Contains(path, "/dav/") {
+func (ai *amcrestIngester) Name() string {
+	return amcrestIngesterType
+}
+func (ai *amcrestIngester) IngestFile(f *common.File) *common.MediaFile {
+	mf, err := ai.pathToFile(f.FullName)
+	if err != nil {
+		return nil
+	}
+	return mf
+}
+
+func (ai *amcrestIngester) pathToFile(path string) (*common.MediaFile, error) {
+
+	if strings.HasSuffix(path, ".mp4") && strings.Contains(path, "/dav/") {
 		// "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4"
 		ts := pathToTimestamps(path, ai.tz)
 		if len(ts) != 2 {
 			return nil, fmt.Errorf("%s: %v", badVideoPath, path)
 		}
 		d := ts[1].Sub(ts[0])
-		return &MediaFile{
-			Type:      MP4,
+		return &common.MediaFile{
+			Type:      common.MP4,
 			Timestamp: ts[0],
 			Duration:  &d,
 		}, nil
 	}
 
-	if strings.Contains(path, "/jpg/") {
+	if strings.HasSuffix(path, ".jpg") && strings.Contains(path, "/jpg/") {
 		// 2019-05-09/001/jpg/06/07/27[M][0@0][0].jpg
 		ts, err := jpgPathToTimestamp(path, ai.tz)
 		if err != nil {
 			return nil, err
 		}
-		return &MediaFile{
-			Type:      JPG,
+		return &common.MediaFile{
+			Type:      common.JPG,
 			Timestamp: ts,
 		}, nil
 	}

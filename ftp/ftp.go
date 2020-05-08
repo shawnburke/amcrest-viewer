@@ -17,6 +17,7 @@ type ftpFileSystem struct {
 	host     string
 	logger   *zap.Logger
 	auth     common.Auth
+	bus      common.EventBus
 }
 
 type FtpServer interface {
@@ -24,7 +25,12 @@ type FtpServer interface {
 	Stop() error
 }
 
-func New(args *common.Params, auth common.Auth, logger *zap.Logger) FtpServer {
+func New(
+	args *common.Params,
+	auth common.Auth,
+	logger *zap.Logger,
+	bus common.EventBus,
+) FtpServer {
 	return &ftpFileSystem{
 		dir:      args.DataDir,
 		port:     args.FtpPort,
@@ -32,6 +38,7 @@ func New(args *common.Params, auth common.Auth, logger *zap.Logger) FtpServer {
 		password: args.FtpPassword,
 		logger:   logger,
 		auth:     auth,
+		bus:      bus,
 	}
 }
 
@@ -43,13 +50,14 @@ func (fs *ftpFileSystem) Start() error {
 		RootPath: fs.dir,
 		Perm:     ftps.NewSimplePerm("user", "group"),
 		logger:   fs.logger,
+		bus:      fs.bus,
 	}
 
 	opts := &ftps.ServerOpts{
 		Factory:  factory,
 		Port:     fs.port,
 		Hostname: fs.host,
-		Auth:     createAuth(fs.auth),
+		Auth:     createAuth(fs.auth, fs.bus),
 	}
 
 	fs.server = ftps.NewServer(opts)
