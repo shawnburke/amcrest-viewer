@@ -53,7 +53,7 @@ func newFileDriver(logger *zap.Logger, bus common.EventBus) ftps.Driver {
 }
 
 func (fd *fileDriver) Init(c *ftps.Conn) {
-	fd.logger.Info("INIT", zap.String("user", c.LoginUser()))
+	fd.logger.Info("Connection initiated", zap.String("user", c.LoginUser()))
 	fd.conn = c
 }
 

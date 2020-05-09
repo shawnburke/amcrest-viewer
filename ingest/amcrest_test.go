@@ -1,9 +1,14 @@
 package ingest
 
 import (
+	"fmt"
+	"path"
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
+	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,36 +22,49 @@ func init() {
 	}
 }
 
-func TestOnNewMP4(t *testing.T) {
-	path := "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4"
+func TestIngestParse(t *testing.T) {
 
-	ingester, err := New(tz)
+	ingester, err := Amcrest(AmcrestParams{
+		TZ:     tz,
+		Logger: zap.NewNop(),
+	})
 	require.NoError(t, err)
 
-	f, err := ingester.OnNewFile(path)
+	cases := []struct {
+		P        string
+		TS       time.Time
+		Type     common.MediaFileType
+		Duration time.Duration
+	}{
+		{
+			P:        "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4",
+			Type:     common.MP4,
+			Duration: time.Duration(25 * time.Second),
+			TS:       time.Date(2019, time.May, 9, 21, 04, 49, 0, tz),
+		},
+		{
+			P:    "2019-05-09/001/jpg/06/07/27[M][0@0][0].jpg",
+			Type: common.JPG,
+			TS:   time.Date(2019, time.May, 9, 06, 07, 27, 0, tz),
+		},
+	}
 
-	start := time.Date(2019, time.May, 9, 21, 04, 49, 0, tz)
+	for i, tt := range cases {
+		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
+			f := &common.File{
+				User:     "amcrest",
+				Data:     []byte("abc"),
+				Name:     path.Base(tt.P),
+				FullName: tt.P,
+			}
 
-	require.NoError(t, err)
-	require.Equal(t, MP4, f.Type)
-	require.Equal(t, f.Timestamp, start)
+			mf := ingester.Ingester.IngestFile(f)
+			require.Equal(t, tt.Type, mf.Type)
+			require.Equal(t, tt.TS, mf.Timestamp)
+			if mf.Type == common.MP4 {
+				require.Equal(t, tt.Duration, *mf.Duration)
+			}
+		})
+	}
 
-	require.Equal(t, f.Duration.Seconds(), 25.0)
-}
-
-func TestOnNewJPG(t *testing.T) {
-	path := "2019-05-09/001/jpg/06/07/27[M][0@0][0].jpg"
-
-	ingester, err := New(tz)
-	require.NoError(t, err)
-
-	f, err := ingester.OnNewFile(path)
-
-	time := time.Date(2019, time.May, 9, 06, 07, 27, 0, tz)
-
-	require.NoError(t, err)
-	require.Equal(t, JPG, f.Type)
-	require.Equal(t, f.Timestamp, time)
-
-	require.Nil(t, f.Duration)
 }

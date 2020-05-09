@@ -40,6 +40,7 @@ func (ca *configAuth) IsAllowed(user, pwd string) bool {
 	user = strings.ToLower(user)
 	pass, ok := ca.users[user]
 	return ok && pass == pwd
+
 }
 
 const EventUserLogin = "User_auth"

@@ -22,7 +22,7 @@ const badVideoPath = "BadVideoPath"
 // but solve Ingester circular dep
 type AmcrestParams struct {
 	fx.In
-	TZ     *time.Location `optoinal:"true"`
+	TZ     *time.Location `optional:"true"`
 	Logger *zap.Logger
 }
 

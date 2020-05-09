@@ -57,7 +57,7 @@ func (fs *ftpFileSystem) Start() error {
 		Factory:  factory,
 		Port:     fs.port,
 		Hostname: fs.host,
-		Auth:     createAuth(fs.auth, fs.bus),
+		Auth:     createAuth(fs.auth, fs.bus, fs.logger),
 	}
 
 	fs.server = ftps.NewServer(opts)
