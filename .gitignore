@@ -333,7 +333,7 @@ ASALocalRun/
 
 out
 debug
-data
+test_data
 amcrest-viewer
 amcrest-viewer-pi
 __debug_bin
