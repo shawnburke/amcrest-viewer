@@ -75,7 +75,7 @@ func createDB(t *testing.T) (*sqlx.DB, func()) {
 	yaml := `
 database:
   dsn: ":memory:"
-  schemas: ./schema`
+`
 
 	if debugDb {
 		dbName := fmt.Sprintf("testdb-%d.db", int(time.Now().Unix()/1000))

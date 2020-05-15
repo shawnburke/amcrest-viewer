@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"path"
+
 
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/config"
@@ -20,7 +19,6 @@ type DBConfig struct {
 	Database string
 	DSN      string
 	File     string
-	Schemas  string
 }
 
 func NewDB(cfg config.Provider, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
@@ -70,14 +68,16 @@ func initDB(cfg DBConfig, db *sqlx.DB) error {
 
 	driver, err := migratesql.WithInstance(db.DB, &migratesql.Config{})
 
-	if _, err = os.Stat(cfg.Schemas); err != nil {
-		pwd, _ := os.Getwd()
-		fullDir := path.Join(pwd, cfg.Schemas)
-		return fmt.Errorf("Can't find schemas: %v (dir=%s)", err, fullDir)
+	schemaPath, done, err := getSchemaDir()
+	defer done()
+
+	if err != nil {
+		return fmt.Errorf("Failed to write schema files: %v", err)
 	}
 
+	
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://"+cfg.Schemas,
+		"file://"+schemaPath,
 		"main",
 		driver,
 	)
