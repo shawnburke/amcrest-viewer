@@ -8,17 +8,17 @@ import (
 )
 
 type ftpAuth struct {
-	auth common.Auth
-	bus  common.EventBus
+	auth   common.Auth
+	bus    common.EventBus
 	logger *zap.Logger
 }
 
 func createAuth(auth common.Auth, bus common.EventBus, logger *zap.Logger) ftps.Auth {
 
 	a := &ftpAuth{
-		auth: auth,
-		bus:  bus,
-		logger:logger,
+		auth:   auth,
+		bus:    bus,
+		logger: logger,
 	}
 	return a
 }
@@ -31,12 +31,12 @@ func (fa *ftpAuth) CheckPasswd(user string, pass string) (bool, error) {
 		msg = "Login success"
 	}
 	fa.logger.Info(msg, zap.String("user", user))
-	
 
 	if !ok {
 		fa.bus.Send(common.NewAuthFailEvent(user))
 		return false, nil
-	
+	}
+
 	fa.bus.Send(common.NewAuthEvent(user))
-	return ok, nil
+	return true, nil
 }

@@ -90,10 +90,16 @@ func (im *ingestManager) ingest(f *common.File) error {
 
 	im.logger.Info("Would ingest", zap.Reflect("media-file", mf))
 
-	// err := im.fileManager.Process(mf, f)
+	// filePath, err := im.fileManager.Add(mf)
 	// if err != nil {
-	// 	im.logger.Error("Error processing file",
-	// 		zap.String("file", fn.File.FullName), zap.String("type", ingesterType), zap.Error(err))
+	// 	im.logger.Error("Error saving file",
+	// 		zap.String("file", f.FullName), zap.String("type", ingesterType), zap.Error(err))
+	// }
+
+	// err = im.mediaManager.Add(mf, filePath)
+	// if err != nil {
+	// 	im.logger.Error("Error storing file info",
+	// 		zap.String("file", f.FullName), zap.String("type", ingesterType), zap.Error(err))
 	// }
 
 	f.Finish()

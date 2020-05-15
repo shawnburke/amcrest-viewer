@@ -14,6 +14,7 @@ import (
 
 const amcrestIngesterType = "amcrest"
 
+// ErrorUnknownFile is standard
 var ErrorUnknownFile = errors.New("UnknownFileType")
 
 const badVideoPath = "BadVideoPath"
