@@ -8,7 +8,7 @@ type Camera struct {
 	Type     string     `db:"Type"`
 	Host     *string    `db:"Host"`
 	LastSeen *time.Time `db:"LastSeen"`
-	Enabled  bool       `db:"Enabled"`
+	Enabled  *bool       `db:"Enabled"`
 }
 
 type File struct {

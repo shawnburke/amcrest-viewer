@@ -3,8 +3,11 @@ package data
 import (
 	"fmt"
 	"os"
+	"reflect"
+	"time"
 
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 )
 
@@ -14,19 +17,36 @@ type Repository interface {
 	DeleteCamera(id int) (bool, error)
 	UpdateCamera(id int, name *string, host *string, enabled *bool) (*entities.Camera, error)
 	SeenCamera(id int) error
+	ListCameras() ([]*entities.Camera, error)
+
 }
 
-func NewRepository(db *sqlx.DB) (Repository, error) {
+func NewRepository(db *sqlx.DB, logger *zap.Logger) (Repository, error) {
 	return &sqlRepository{
 		db: db,
+		logger: logger,
 	}, nil
 }
 
 type sqlRepository struct {
 	db *sqlx.DB
+	logger *zap.Logger
 }
 
 func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entities.Camera, error) {
+
+	tx, err :=  sr.db.Begin()
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to start txn: %w", err)
+	}
+
+	rollback := func() {
+		
+		if rbErr := tx.Rollback(); rbErr != nil{
+			sr.logger.Error("Error canceling transaction", zap.Error(rbErr))
+		}
+	}
 
 	result, err := sr.db.Exec(
 		`INSERT INTO cameras 
@@ -35,11 +55,13 @@ func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entiti
 		($1,$2)`, name, t)
 
 	if err != nil {
+		rollback()
 		return nil, err
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
+		rollback()
 		return nil, err
 	}
 
@@ -49,10 +71,16 @@ func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entiti
 		SET Host=$1 
 		WHERE ID=$2`, *host, id)
 		if err != nil {
+			rollback()
 			return nil, err
 		}
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+	
 	return sr.GetCamera(int(id))
 }
 
@@ -60,7 +88,7 @@ func (sr *sqlRepository) GetCamera(id int) (*entities.Camera, error) {
 	result, err := sr.db.Queryx(`SELECT * FROM cameras WHERE ID=$1`, id)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching cam %d: %v", id, err)
+		return nil, fmt.Errorf("Error fetching cam %d: %w", id, err)
 	}
 
 	defer result.Close()
@@ -76,14 +104,101 @@ func (sr *sqlRepository) GetCamera(id int) (*entities.Camera, error) {
 	return nil, os.ErrNotExist
 }
 
+func (sr *sqlRepository) 	ListCameras() ([]*entities.Camera, error){
+
+	result, err := sr.db.Queryx(`SELECT * FROM cameras`)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching cams: %w", err)
+	}
+
+	defer result.Close()
+
+	cams := make([]*entities.Camera, 0, 8)
+	for result.Next() {
+		cam := &entities.Camera{}
+		if err = result.StructScan(cam); err != nil {
+			return nil, err
+		}
+		cams = append(cams, cam)
+	}
+
+	return cams,nil
+
+}
+
 func (sr *sqlRepository) DeleteCamera(id int) (bool, error) {
-	panic("not implemented") // TODO: Implement
+	result, err := sr.db.Exec(`DELETE FROM cameras WHERE ID=$1`, id)
+
+	if err != nil {
+		return false, fmt.Errorf("Error deleting camera %d: %w", id, err)
+	}
+
+	rows, err := result.RowsAffected()
+	if rows > 0 {
+		if err != nil {
+			sr.logger.Error("Error getting Rows affected", zap.Error(err))
+		}
+		return true, nil
+	}
+
+	return false, fmt.Errorf("Error deleting camera %d: %w", id, err)
 }
 
 func (sr *sqlRepository) UpdateCamera(id int, name *string, host *string, enabled *bool) (*entities.Camera, error) {
-	panic("not implemented") // TODO: Implement
+	
+	tx, err := sr.db.Begin()
+
+	update := func(field string, value interface{}) error {
+		_, err := sr.db.Exec(fmt.Sprintf("UPDATE cameras SET %s = $1", field), value)
+		if err != nil {
+			return fmt.Errorf("Error updating field %s: %w", field, err)
+		}
+		return nil
+	}
+
+	updates := []struct{
+		Field string
+		Value interface{}
+	}{
+		{
+			Field: "Name",
+			Value: name,
+		},
+		{
+			Field: "Host",
+			Value: host,
+		},
+		{
+			Field: "Enabled",
+			Value: enabled,
+		},
+	}
+
+	for _, u := range updates {
+		if u.Value == nil || reflect.ValueOf(u.Value).IsNil(){
+			continue
+		}
+
+		err := update(u.Field, u.Value)
+
+		if err != nil {
+			if e2 := tx.Rollback(); e2 != nil {
+				sr.logger.Error("Failed to rollback", zap.Error(e2))
+			}
+			return nil, err
+		}
+	}
+
+	if err = tx.Commit(); err != nil  {
+		return nil, fmt.Errorf("Faield to commit: %w", err)
+	}
+
+	return sr.GetCamera(id)
+
 }
 
 func (sr *sqlRepository) SeenCamera(id int) error {
-	panic("not implemented") // TODO: Implement
+	 _, err := sr.db.Exec(`UPDATE cameras SET LastSeen=$1 WHERE ID=$2`, time.Now(), id)
+	 return err
 }

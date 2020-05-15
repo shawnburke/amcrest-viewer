@@ -3,20 +3,20 @@ package data
 import (
 	"context"
 	"fmt"
-	"strings"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/config"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 func TestNewDB(t *testing.T) {
 
-	db, done := createDB(t)
+	db, _, done := createDB(t)
 	defer done()
 
 	// ensure the constraint is right
@@ -25,17 +25,19 @@ func TestNewDB(t *testing.T) {
 
 }
 
-func TestAddGet(t *testing.T) {
-	db, done := createDB(t)
+func TestAddGetList(t *testing.T) {
+	_, rep, done := createDB(t)
 	defer done()
 
-	rep, err := NewRepository(db)
-	require.NoError(t, err)
-	require.NotNil(t, rep)
-
+	
 	host := "1.2.34.4"
 
 	cams := []*entities.Camera{
+		{
+			Name: time.Now().String(),
+			Type: "amcrest",
+			Host: &host,
+		},
 		{
 			Name: "foobar",
 			Type: "amcrest",
@@ -44,57 +46,151 @@ func TestAddGet(t *testing.T) {
 			Name: "foobar",
 			Type: "fail",
 		},
-		{
-			Name: time.Now().String(),
-			Type: "amcrest",
-			Host: &host,
-		},
+		
 	}
 
+	
 	for i, cam := range cams {
 		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
 			cam2, err := rep.AddCamera(cam.Name, cam.Type, cam.Host)
-
 			if cam.Type == "fail" {
+				require.Nil(t, cam2)
 				require.Error(t, err)
 				return
 			}
 
 			require.NoError(t, err)
+			require.NotNil(t, cam2)
+
 			require.Greater(t, cam2.ID, 0)
 			require.Equal(t, cam.Name, cam2.Name)
 			require.Equal(t, cam.Type, cam2.Type)
 		})
 	}
+
+	res, err := rep.ListCameras()
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res, 2)
+
+	require.Equal(t, *cams[0].Host, *res[0].Host)
+	require.Equal(t, cams[1].Name, res[1].Name)
+}
+
+
+
+func TestAddUpdateDelete(t *testing.T) {
+	_, rep, done := createDB(t)
+	defer done()
+
+	host := "1.2.34.4"
+
+	cam := &entities.Camera{
+			Name: "foobar",
+			Type: "amcrest",
+			Host: &host,
+		}
+
+	cam2, err := rep.AddCamera(cam.Name, cam.Type, cam.Host)
+	
+	require.NoError(t, err)
+	require.NotNil(t, cam2)
+
+	newName := "newbar"
+	cam3, err := rep.UpdateCamera(cam2.ID, &newName, nil, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cam3)
+
+	require.Equal(t, newName, cam3.Name)
+
+
+	newHost := "1.1.1.1"
+	enabled := false
+	cam3, err = rep.UpdateCamera(cam2.ID, nil, &newHost, &enabled)
+	require.NoError(t, err)
+	require.NotNil(t, cam3)
+
+
+	require.Equal(t, newHost, *cam3.Host)
+	require.Equal(t, false, *cam3.Enabled)
+
+	found, err := rep.DeleteCamera(cam3.ID)
+	require.True(t, found)
+	require.NoError(t, err)
+
+	cam3, err = rep.GetCamera(cam2.ID)
+	require.Equal(t, os.ErrNotExist, err)
+	require.Nil(t, cam3)
+}
+
+
+
+func TestLastSeen(t *testing.T) {
+	_, rep, done := createDB(t)
+	defer done()
+
+	
+	cam := &entities.Camera{
+			Name: "foobar",
+			Type: "amcrest",
+	}
+
+	cam2, err := rep.AddCamera(cam.Name, cam.Type, nil)
+	
+	require.NoError(t, err)
+	require.NotNil(t, cam2)
+	require.Nil(t,cam2.LastSeen)
+
+	err = rep.SeenCamera(cam2.ID)
+	require.NoError(t, err)
+
+	cam2, err = rep.GetCamera(cam2.ID)
+	require.NoError(t, err)
+	require.NotNil(t, cam2)
+	require.NotNil(t,cam2.LastSeen)
+}
+
+
+func dumpTables(db *sqlx.DB) {
+	fmt.Println("Tables\n", "========")
+	res, _ := db.Queryx("SELECT name FROM sqlite_master WHERE type='table'")
+
+	for res.Next() {
+		name := ""
+		res.Scan(&name)
+		fmt.Println(name)
+	}
+	res.Close()
 }
 
 const debugDb = false
 
-func createDB(t *testing.T) (*sqlx.DB, func()) {
+func createDB(t *testing.T) (*sqlx.DB, Repository, func()) {
 
-	yaml := `
-database:
-  dsn: ":memory:"
-`
 
-	if debugDb {
-		dbName := fmt.Sprintf("testdb-%d.db", int(time.Now().Unix()/1000))
-		yaml = strings.Replace(yaml, ":memory:", dbName, 1)
-
+	cfg := &DBConfig{
+		DSN: fmt.Sprintf("file:%s-%d.sqlite?cache=shared", t.Name(), time.Now().Unix()),
 	}
 
-	cfg, err := config.NewYAMLProviderFromBytes([]byte(yaml))
+	if !debugDb {
+		cfg.DSN += "&mode=memory"
+	}
 
-	require.NoError(t, err)
 	lc := &testLifecycle{}
 
-	db, err := NewDB(cfg, lc)
+	db, err := New(cfg, lc)
 	require.NoError(t, err)
 
 	err = lc.lc.OnStart(context.Background())
 	require.NoError(t, err)
 
-	return db, func() {
+
+	rep, err := NewRepository(db, zap.NewNop())
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+
+
+	return db, rep, func() {
 		err := lc.lc.OnStop(context.Background())
 		require.NoError(t, err)
 

@@ -21,7 +21,7 @@ type DBConfig struct {
 	File     string
 }
 
-func NewDB(cfg config.Provider, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
+func NewFromConfig(cfg config.Provider, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
 
 	dbCfg := &DBConfig{
 		Database: "sqlite3",
@@ -32,7 +32,13 @@ func NewDB(cfg config.Provider, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error getting DB config: %v", err)
 	}
+	return New(dbCfg, lifecycle)
+}
+func New(dbCfg *DBConfig, lifecycle fx.Lifecycle) (*sqlx.DB, error) { 
 
+	if dbCfg.Database == "" {
+		dbCfg.Database = "sqlite3"
+	}
 	db, err := sqlx.Connect(dbCfg.Database, dbCfg.DSN)
 
 	if err != nil {
