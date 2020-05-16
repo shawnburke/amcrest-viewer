@@ -28,6 +28,9 @@ CREATE TABLE [files] (
     [DurationSeconds] INTEGER,
     FOREIGN KEY([CameraID]) REFERENCES [cameras]([ID])
 );
+
+CREATE  INDEX idx_file_cameraid_timestamp 
+ON files (CameraID, TimeStamp);
 `
 
 // Rather than dealing with loose files on disk (which just adds complication

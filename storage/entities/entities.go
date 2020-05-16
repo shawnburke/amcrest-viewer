@@ -11,15 +11,25 @@ type Camera struct {
 	Enabled  *bool       `db:"Enabled"`
 }
 
+
+const (
+	FileTypeJpg int = 0
+	FileTypeMp4 int = 1
+)
+
 type File struct {
-	ID              int       `db:"LastSeen"`
+	ID              int       `db:"ID"`
 	CameraID        int       `db:"CameraID"`
 	Path            string    `db:"Path"`
 	Type            int       `db:"Type"`
 	Timestamp       time.Time `db:"Timestamp"`
-	DurationSeconds int       `db:"DurationSeconds"`
+	Received		*time.Time `db:"Received"`
+	DurationSeconds *int       `db:"DurationSeconds"`
 }
 
 func (f File) Duration() time.Duration {
-	return time.Second * time.Duration(f.DurationSeconds)
+	if f.DurationSeconds == nil {
+		return time.Duration(0)
+	}
+	return time.Second * time.Duration(*f.DurationSeconds)
 }

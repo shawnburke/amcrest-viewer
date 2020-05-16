@@ -25,7 +25,7 @@ func TestNewDB(t *testing.T) {
 
 }
 
-func TestAddGetList(t *testing.T) {
+func TestCamAddGetList(t *testing.T) {
 	_, rep, done := createDB(t)
 	defer done()
 
@@ -79,7 +79,7 @@ func TestAddGetList(t *testing.T) {
 
 
 
-func TestAddUpdateDelete(t *testing.T) {
+func TestCamAddUpdateDelete(t *testing.T) {
 	_, rep, done := createDB(t)
 	defer done()
 
@@ -125,7 +125,7 @@ func TestAddUpdateDelete(t *testing.T) {
 
 
 
-func TestLastSeen(t *testing.T) {
+func TestCamLastSeen(t *testing.T) {
 	_, rep, done := createDB(t)
 	defer done()
 
@@ -151,6 +151,48 @@ func TestLastSeen(t *testing.T) {
 }
 
 
+
+func TestFileAddGetList(t *testing.T) {
+	_, rep, done := createDB(t)
+	defer done()
+
+
+	cam, err := rep.AddCamera("mycam", "amcrest", nil)
+	require.NoError(t, err)
+	require.NotNil(t, cam)
+	
+	start := time.Now()
+
+	// add 10 files
+	for i := 0; i < 10; i++ {
+		ts := start.Add(time.Minute * time.Duration(i))
+		d := time.Second * time.Duration(i)
+		file, err := rep.AddFile(fmt.Sprintf("root/file-%d.mp4", i), entities.FileTypeMp4, cam.ID, ts, &d)
+		require.NoError(t, err)
+		require.NotNil(t, file)
+	}
+	
+
+	res, err := rep.ListFiles(cam.ID, nil, nil,  nil)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res, 10)
+
+	s := start.Add(time.Minute)
+	e := start.Add(time.Minute * 5)
+	res, err = rep.ListFiles(cam.ID, &s, &e,  nil)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res, 4)
+
+	fileType := entities.FileTypeJpg
+	res, err = rep.ListFiles(cam.ID, nil, nil, &fileType )
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res, 0)
+}
+
+
 func dumpTables(db *sqlx.DB) {
 	fmt.Println("Tables\n", "========")
 	res, _ := db.Queryx("SELECT name FROM sqlite_master WHERE type='table'")
@@ -163,7 +205,7 @@ func dumpTables(db *sqlx.DB) {
 	res.Close()
 }
 
-const debugDb = false
+var debugDb = false
 
 func createDB(t *testing.T) (*sqlx.DB, Repository, func()) {
 
@@ -172,6 +214,9 @@ func createDB(t *testing.T) (*sqlx.DB, Repository, func()) {
 		DSN: fmt.Sprintf("file:%s-%d.sqlite?cache=shared", t.Name(), time.Now().Unix()),
 	}
 
+	if os.Getenv("DEBUGDB") != "" {
+		debugDb = true
+	}
 	if !debugDb {
 		cfg.DSN += "&mode=memory"
 	}
