@@ -13,6 +13,8 @@ import (
 
 
 type Repository interface {
+
+	// Camera operations
 	AddCamera(name string, t string, host *string) (*entities.Camera, error)
 	GetCamera(id int) (*entities.Camera, error)
 	DeleteCamera(id int) (bool, error)
@@ -20,7 +22,7 @@ type Repository interface {
 	SeenCamera(id int) error
 	ListCameras() ([]*entities.Camera, error)
 
-
+	// File operations
 	AddFile(path string, t int, cameraID int, timestamp time.Time, duration *time.Duration) (*entities.File, error)
 	GetFile(id int) (*entities.File, error)
 	ListFiles(cameraID int, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error)
