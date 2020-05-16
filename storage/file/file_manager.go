@@ -22,6 +22,8 @@ type Manager interface {
 	AddFile(camera string, data []byte, timestamp time.Time, fileType int) (string, error)
 	GetFile(path string) (io.ReadCloser, error)
 	ListFiles(camera string, start *time.Time, end *time.Time, fileType *int) ([]string, error)
+	DeleteFile(path string) (bool, error)
+	DeleteFiles(camera string, start *time.Time, end *time.Time) ([]string, error)
 }
 
 type Config struct {
@@ -92,8 +94,7 @@ func (fm *fileManager) GetFile(p string) (io.ReadCloser, error) {
 	return os.Open(fullPath)
 }
 
-func (fm *fileManager) ListFiles(camera string, start *time.Time, end *time.Time, fileType *int) ([]string, error) {
-
+func (fm *fileManager) getRange(camera string, start *time.Time, end *time.Time, fileType *int) ([]string, error) {
 	dir := path.Join(fm.rootDir, subdir, camera)
 
 	pattern := "*.*"
@@ -146,5 +147,45 @@ func (fm *fileManager) ListFiles(camera string, start *time.Time, end *time.Time
 		matches = append(matches, f[rootDirLen:])
 
 	}
-	return matches, nil
+	return matches, err
+}
+
+func (fm *fileManager) ListFiles(camera string, start *time.Time, end *time.Time, fileType *int) ([]string, error) {
+
+	return fm.getRange(camera, start, end, fileType)
+
+}
+
+func (fm *fileManager) DeleteFile(p string) (bool, error) {
+	fullPath := path.Join(fm.rootDir, p)
+	_, err := os.Stat(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	err = os.Remove(fullPath)
+	return err == nil, err
+}
+
+func (fm *fileManager) DeleteFiles(camera string, start *time.Time, end *time.Time) ([]string, error) {
+
+	matches, err := fm.getRange(camera, start, end, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	confirmed := make([]string, 0, len(matches))
+
+	for _, match := range matches {
+		fullPath := path.Join(fm.rootDir, match)
+		err = os.Remove(fullPath)
+		if err != nil {
+			return confirmed, err
+		}
+		confirmed = append(confirmed, match)
+	}
+	return confirmed, nil
 }
