@@ -8,7 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/shawnburke/amcrest-viewer/common"
+	"github.com/shawnburke/amcrest-viewer/ftp"
+	"github.com/shawnburke/amcrest-viewer/storage/models"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,25 +34,25 @@ func TestIngestParse(t *testing.T) {
 	cases := []struct {
 		P        string
 		TS       time.Time
-		Type     common.MediaFileType
+		Type     models.MediaFileType
 		Duration time.Duration
 	}{
 		{
 			P:        "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4",
-			Type:     common.MP4,
+			Type:     models.MP4,
 			Duration: time.Duration(25 * time.Second),
 			TS:       time.Date(2019, time.May, 9, 21, 04, 49, 0, tz),
 		},
 		{
 			P:    "2019-05-09/001/jpg/06/07/27[M][0@0][0].jpg",
-			Type: common.JPG,
+			Type: models.JPG,
 			TS:   time.Date(2019, time.May, 9, 06, 07, 27, 0, tz),
 		},
 	}
 
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			f := &common.File{
+			f := &ftp.File{
 				User:     "amcrest",
 				Data:     []byte("abc"),
 				Name:     path.Base(tt.P),
@@ -61,7 +62,7 @@ func TestIngestParse(t *testing.T) {
 			mf := ingester.Ingester.IngestFile(f)
 			require.Equal(t, tt.Type, mf.Type)
 			require.Equal(t, tt.TS, mf.Timestamp)
-			if mf.Type == common.MP4 {
+			if mf.Type == models.MP4 {
 				require.Equal(t, tt.Duration, *mf.Duration)
 			}
 		})

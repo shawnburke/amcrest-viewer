@@ -29,7 +29,6 @@ func TestCamAddGetList(t *testing.T) {
 	_, rep, done := createDB(t)
 	defer done()
 
-	
 	host := "1.2.34.4"
 
 	cams := []*entities.Camera{
@@ -46,10 +45,8 @@ func TestCamAddGetList(t *testing.T) {
 			Name: "foobar",
 			Type: "fail",
 		},
-		
 	}
 
-	
 	for i, cam := range cams {
 		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
 			cam2, err := rep.AddCamera(cam.Name, cam.Type, cam.Host)
@@ -77,8 +74,6 @@ func TestCamAddGetList(t *testing.T) {
 	require.Equal(t, cams[1].Name, res[1].Name)
 }
 
-
-
 func TestCamAddUpdateDelete(t *testing.T) {
 	_, rep, done := createDB(t)
 	defer done()
@@ -86,112 +81,102 @@ func TestCamAddUpdateDelete(t *testing.T) {
 	host := "1.2.34.4"
 
 	cam := &entities.Camera{
-			Name: "foobar",
-			Type: "amcrest",
-			Host: &host,
-		}
+		Name: "foobar",
+		Type: "amcrest",
+		Host: &host,
+	}
 
 	cam2, err := rep.AddCamera(cam.Name, cam.Type, cam.Host)
-	
+
 	require.NoError(t, err)
 	require.NotNil(t, cam2)
 
 	newName := "newbar"
-	cam3, err := rep.UpdateCamera(cam2.ID, &newName, nil, nil)
+	cam3, err := rep.UpdateCamera(cam2.CameraID(), &newName, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, cam3)
 
 	require.Equal(t, newName, cam3.Name)
 
-
 	newHost := "1.1.1.1"
 	enabled := false
-	cam3, err = rep.UpdateCamera(cam2.ID, nil, &newHost, &enabled)
+	cam3, err = rep.UpdateCamera(cam2.CameraID(), nil, &newHost, &enabled)
 	require.NoError(t, err)
 	require.NotNil(t, cam3)
-
 
 	require.Equal(t, newHost, *cam3.Host)
 	require.Equal(t, false, *cam3.Enabled)
 
-	found, err := rep.DeleteCamera(cam3.ID)
+	found, err := rep.DeleteCamera(cam3.CameraID())
 	require.True(t, found)
 	require.NoError(t, err)
 
-	cam3, err = rep.GetCamera(cam2.ID)
+	cam3, err = rep.GetCamera(cam2.CameraID())
 	require.Equal(t, os.ErrNotExist, err)
 	require.Nil(t, cam3)
 }
-
-
 
 func TestCamLastSeen(t *testing.T) {
 	_, rep, done := createDB(t)
 	defer done()
 
-	
 	cam := &entities.Camera{
-			Name: "foobar",
-			Type: "amcrest",
+		Name: "foobar",
+		Type: "amcrest",
 	}
 
 	cam2, err := rep.AddCamera(cam.Name, cam.Type, nil)
-	
+
 	require.NoError(t, err)
 	require.NotNil(t, cam2)
-	require.Nil(t,cam2.LastSeen)
+	require.Nil(t, cam2.LastSeen)
 
-	err = rep.SeenCamera(cam2.ID)
+	err = rep.SeenCamera(cam2.CameraID())
 	require.NoError(t, err)
 
-	cam2, err = rep.GetCamera(cam2.ID)
+	cam2, err = rep.GetCamera(cam2.CameraID())
 	require.NoError(t, err)
 	require.NotNil(t, cam2)
-	require.NotNil(t,cam2.LastSeen)
+	require.NotNil(t, cam2.LastSeen)
 }
-
-
 
 func TestFileAddGetList(t *testing.T) {
 	_, rep, done := createDB(t)
 	defer done()
 
-
 	cam, err := rep.AddCamera("mycam", "amcrest", nil)
 	require.NoError(t, err)
 	require.NotNil(t, cam)
-	
+
 	start := time.Now()
 
 	// add 10 files
 	for i := 0; i < 10; i++ {
 		ts := start.Add(time.Minute * time.Duration(i))
 		d := time.Second * time.Duration(i)
-		file, err := rep.AddFile(fmt.Sprintf("root/file-%d.mp4", i), entities.FileTypeMp4, cam.ID, ts, &d)
+		file, err := rep.AddFile(fmt.Sprintf("root/file-%d.mp4", i), entities.FileTypeMp4, cam.CameraID(), ts, &d)
 		require.NoError(t, err)
 		require.NotNil(t, file)
 	}
-	
 
-	res, err := rep.ListFiles(cam.ID, nil, nil,  nil)
+	res, err := rep.ListFiles(cam.CameraID(), nil, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 10)
 
 	s := start.Add(time.Minute)
 	e := start.Add(time.Minute * 5)
-	res, err = rep.ListFiles(cam.ID, &s, &e,  nil)
+	res, err = rep.ListFiles(cam.CameraID(), &s, &e, nil)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 4)
 
 	fileType := entities.FileTypeJpg
-	res, err = rep.ListFiles(cam.ID, nil, nil, &fileType )
+	res, err = rep.ListFiles(cam.CameraID(), nil, nil, &fileType)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 0)
 }
-
 
 func dumpTables(db *sqlx.DB) {
 	fmt.Println("Tables\n", "========")
@@ -208,7 +193,6 @@ func dumpTables(db *sqlx.DB) {
 var debugDb = false
 
 func createDB(t *testing.T) (*sqlx.DB, Repository, func()) {
-
 
 	cfg := &DBConfig{
 		DSN: fmt.Sprintf("file:%s-%d.sqlite?cache=shared", t.Name(), time.Now().Unix()),
@@ -229,11 +213,9 @@ func createDB(t *testing.T) (*sqlx.DB, Repository, func()) {
 	err = lc.lc.OnStart(context.Background())
 	require.NoError(t, err)
 
-
 	rep, err := NewRepository(db, zap.NewNop())
 	require.NoError(t, err)
 	require.NotNil(t, rep)
-
 
 	return db, rep, func() {
 		err := lc.lc.OnStop(context.Background())

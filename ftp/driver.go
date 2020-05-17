@@ -108,14 +108,14 @@ func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
 // params  - path
 // returns - nil if the directory was deleted or any error encountered
 func (fd *fileDriver) DeleteDir(p string) error {
-	fd.logger.Panic("RMDIR", zap.String("path", p))
+	fd.logger.Error("RMDIR", zap.String("path", p))
 	return os.ErrInvalid
 }
 
 // params  - path
 // returns - nil if the file was deleted or any error encountered
 func (fd *fileDriver) DeleteFile(p string) error {
-	fd.logger.Panic("RM", zap.String("path", p))
+	fd.logger.Error("RM", zap.String("path", p))
 	return os.ErrInvalid
 }
 
@@ -140,7 +140,7 @@ func (fd *fileDriver) Rename(s string, d string) error {
 	fd.files[destPath] = file
 	delete(fd.files, srcPath)
 
-	fd.bus.Send(common.NewFileRenameEvent(file.asFile(), srcPath))
+	fd.bus.Send(NewFileRenameEvent(file.asFile(), srcPath))
 
 	return nil
 }
@@ -193,7 +193,7 @@ func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) 
 		file = &ftpFile{
 			dir:  path.Dir(fullPath),
 			name: path.Base(fullPath),
-			user: fd.conn.LoginUser(),
+			conn: *fd.conn,
 		}
 	}
 	fd.Lock()
@@ -225,7 +225,7 @@ func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) 
 
 	if fd.bus != nil {
 		f := file.asFile()
-		fd.bus.Send(common.NewFileCreateEvent(f))
+		fd.bus.Send(NewFileCreateEvent(f))
 	}
 
 	return int64(read), nil
@@ -238,18 +238,19 @@ type ftpFile struct {
 	mode  os.FileMode
 	isDir bool
 	ts    time.Time
-	user  string
+	conn  ftps.Conn
 
 	owner, group string
 }
 
-func (fi *ftpFile) asFile() *common.File {
+func (fi *ftpFile) asFile() *File {
 	fullPath := path.Join(fi.dir, fi.name)
-	f := &common.File{
+	f := &File{
 		Name:       path.Base(fullPath),
 		FullName:   fullPath,
 		Data:       fi.data,
-		User:       fi.user,
+		User:       fi.conn.LoginUser(),
+		IP:         fi.conn.PublicIp(),
 		ReceivedAt: fi.ts,
 	}
 	return f

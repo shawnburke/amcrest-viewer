@@ -4,53 +4,62 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
+	"go.uber.org/zap"
 )
-
 
 type Repository interface {
 
 	// Camera operations
 	AddCamera(name string, t string, host *string) (*entities.Camera, error)
-	GetCamera(id int) (*entities.Camera, error)
-	DeleteCamera(id int) (bool, error)
-	UpdateCamera(id int, name *string, host *string, enabled *bool) (*entities.Camera, error)
-	SeenCamera(id int) error
+	GetCamera(id string) (*entities.Camera, error)
+	DeleteCamera(id string) (bool, error)
+	UpdateCamera(id string, name *string, host *string, enabled *bool) (*entities.Camera, error)
+	SeenCamera(id string) error
 	ListCameras() ([]*entities.Camera, error)
 
 	// File operations
-	AddFile(path string, t int, cameraID int, timestamp time.Time, duration *time.Duration) (*entities.File, error)
+	AddFile(path string, t int, cameraID string, timestamp time.Time, duration *time.Duration) (*entities.File, error)
 	GetFile(id int) (*entities.File, error)
-	ListFiles(cameraID int, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error)
+	ListFiles(cameraID string, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error)
 }
 
 func NewRepository(db *sqlx.DB, logger *zap.Logger) (Repository, error) {
 	return &sqlRepository{
-		db: db,
+		db:     db,
 		logger: logger,
 	}, nil
 }
 
 type sqlRepository struct {
-	db *sqlx.DB
+	db     *sqlx.DB
 	logger *zap.Logger
 }
 
 func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entities.Camera, error) {
 
-	tx, err :=  sr.db.Begin()
+	if name == "" {
+		return nil, fmt.Errorf("Name required")
+	}
+
+	if t == "" {
+		return nil, fmt.Errorf("Type required")
+	}
+
+	tx, err := sr.db.Begin()
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to start txn: %w", err)
 	}
 
 	rollback := func() {
-		
-		if rbErr := tx.Rollback(); rbErr != nil{
+
+		if rbErr := tx.Rollback(); rbErr != nil {
 			sr.logger.Error("Error canceling transaction", zap.Error(rbErr))
 		}
 	}
@@ -87,11 +96,39 @@ func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entiti
 	if err != nil {
 		return nil, err
 	}
-	
-	return sr.GetCamera(int(id))
+
+	cam := entities.Camera{
+		ID:   int(id),
+		Type: t,
+	}
+
+	return sr.GetCamera(cam.CameraID())
 }
 
-func (sr *sqlRepository) GetCamera(id int) (*entities.Camera, error) {
+var camIDRegEx = regexp.MustCompile(`([^-]+)-(\d+)`)
+
+func parseCameraID(cameraID string) (int, error) {
+	match := camIDRegEx.FindStringSubmatch(cameraID)
+
+	if match == nil {
+		return -1, fmt.Errorf("Invalid cameraID: %s", cameraID)
+	}
+
+	id, err := strconv.Atoi(match[2])
+	if err != nil {
+		return -1, err
+	}
+
+	return id, err
+}
+
+func (sr *sqlRepository) GetCamera(cameraID string) (*entities.Camera, error) {
+
+	id, err := parseCameraID(cameraID)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := sr.db.Queryx(`SELECT * FROM cameras WHERE ID=$1`, id)
 
 	if err != nil {
@@ -111,7 +148,7 @@ func (sr *sqlRepository) GetCamera(id int) (*entities.Camera, error) {
 	return nil, os.ErrNotExist
 }
 
-func (sr *sqlRepository) 	ListCameras() ([]*entities.Camera, error){
+func (sr *sqlRepository) ListCameras() ([]*entities.Camera, error) {
 
 	result, err := sr.db.Queryx(`SELECT * FROM cameras`)
 
@@ -130,11 +167,17 @@ func (sr *sqlRepository) 	ListCameras() ([]*entities.Camera, error){
 		cams = append(cams, cam)
 	}
 
-	return cams,nil
+	return cams, nil
 
 }
 
-func (sr *sqlRepository) DeleteCamera(id int) (bool, error) {
+func (sr *sqlRepository) DeleteCamera(cameraID string) (bool, error) {
+
+	id, err := parseCameraID(cameraID)
+	if err != nil {
+		return false, err
+	}
+
 	result, err := sr.db.Exec(`DELETE FROM cameras WHERE ID=$1`, id)
 
 	if err != nil {
@@ -152,19 +195,24 @@ func (sr *sqlRepository) DeleteCamera(id int) (bool, error) {
 	return false, fmt.Errorf("Error deleting camera %d: %w", id, err)
 }
 
-func (sr *sqlRepository) UpdateCamera(id int, name *string, host *string, enabled *bool) (*entities.Camera, error) {
-	
+func (sr *sqlRepository) UpdateCamera(cameraID string, name *string, host *string, enabled *bool) (*entities.Camera, error) {
+
+	camID, err := parseCameraID(cameraID)
+	if err != nil {
+		return nil, err
+	}
+
 	tx, err := sr.db.Begin()
 
 	update := func(field string, value interface{}) error {
-		_, err := sr.db.Exec(fmt.Sprintf("UPDATE cameras SET %s = $1", field), value)
+		_, err := sr.db.Exec(fmt.Sprintf("UPDATE cameras SET %s = $1 WHERE ID=$2", field), value, camID)
 		if err != nil {
 			return fmt.Errorf("Error updating field %s: %w", field, err)
 		}
 		return nil
 	}
 
-	updates := []struct{
+	updates := []struct {
 		Field string
 		Value interface{}
 	}{
@@ -183,7 +231,7 @@ func (sr *sqlRepository) UpdateCamera(id int, name *string, host *string, enable
 	}
 
 	for _, u := range updates {
-		if u.Value == nil || reflect.ValueOf(u.Value).IsNil(){
+		if u.Value == nil || reflect.ValueOf(u.Value).IsNil() {
 			continue
 		}
 
@@ -197,23 +245,32 @@ func (sr *sqlRepository) UpdateCamera(id int, name *string, host *string, enable
 		}
 	}
 
-	if err = tx.Commit(); err != nil  {
+	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("Faield to commit: %w", err)
 	}
 
-	return sr.GetCamera(id)
-
+	return sr.GetCamera(cameraID)
 }
 
-func (sr *sqlRepository) SeenCamera(id int) error {
-	 _, err := sr.db.Exec(`UPDATE cameras SET LastSeen=$1 WHERE ID=$2`, time.Now(), id)
-	 return err
+func (sr *sqlRepository) SeenCamera(cameraID string) error {
+
+	id, err := parseCameraID(cameraID)
+	if err != nil {
+		return err
+	}
+	_, err = sr.db.Exec(`UPDATE cameras SET LastSeen=$1 WHERE ID=$2`, time.Now(), id)
+	return err
 }
 
 //  Files
 
-func (sr *sqlRepository) AddFile(path string, t int, cameraID int, timestamp time.Time, duration *time.Duration) (*entities.File, error) {
-	
+func (sr *sqlRepository) AddFile(path string, t int, cameraID string, timestamp time.Time, duration *time.Duration) (*entities.File, error) {
+
+	camID, err := parseCameraID(cameraID)
+	if err != nil {
+		return nil, err
+	}
+
 	query := `
 	INSERT INTO files
 		(Path, Type, CameraID, Timestamp)
@@ -224,22 +281,21 @@ func (sr *sqlRepository) AddFile(path string, t int, cameraID int, timestamp tim
 	args := []interface{}{
 		path,
 		t,
-		cameraID,
+		camID,
 		timestamp,
 	}
 
 	if duration != nil {
-query = `
+		query = `
 	INSERT INTO files
 		(Path, Type, CameraID, Timestamp, DurationSeconds)
 		VALUES
 		($1,$2,$3,$4,$5)
 	`
-	args = append(args, int(duration.Seconds()))
+		args = append(args, int(duration.Seconds()))
 
 	}
 
-	
 	res, err := sr.db.Exec(query, args...)
 
 	if err != nil {
@@ -252,7 +308,7 @@ query = `
 	return sr.GetFile(int(id))
 }
 
-func (sr *sqlRepository) GetFile(id int) (*entities.File,error) {
+func (sr *sqlRepository) GetFile(id int) (*entities.File, error) {
 	result, err := sr.db.Queryx(`SELECT * FROM files WHERE ID=$1`, id)
 
 	if err != nil {
@@ -271,12 +327,17 @@ func (sr *sqlRepository) GetFile(id int) (*entities.File,error) {
 
 	return nil, os.ErrNotExist
 }
-func (sr *sqlRepository) ListFiles(cameraID int, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error) {
+func (sr *sqlRepository) ListFiles(cameraID string, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error) {
+
+	camID, err := parseCameraID(cameraID)
+	if err != nil {
+		return nil, err
+	}
+
 	query := `SELECT * FROM files WHERE CameraID=$1 `
 
-
 	args := []interface{}{
-		cameraID,
+		camID,
 	}
 
 	if start != nil {
@@ -311,5 +372,5 @@ func (sr *sqlRepository) ListFiles(cameraID int, start *time.Time, end *time.Tim
 		files = append(files, file)
 	}
 
-	return files,nil
+	return files, nil
 }

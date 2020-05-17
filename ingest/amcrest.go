@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shawnburke/amcrest-viewer/common"
+	"github.com/shawnburke/amcrest-viewer/ftp"
+	"github.com/shawnburke/amcrest-viewer/storage/models"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -64,7 +65,7 @@ type amcrestIngester struct {
 func (ai *amcrestIngester) Name() string {
 	return amcrestIngesterType
 }
-func (ai *amcrestIngester) IngestFile(f *common.File) *common.MediaFile {
+func (ai *amcrestIngester) IngestFile(f *ftp.File) *models.MediaFile {
 	mf, err := ai.pathToFile(f.FullName)
 	if err != nil {
 		return nil
@@ -72,7 +73,7 @@ func (ai *amcrestIngester) IngestFile(f *common.File) *common.MediaFile {
 	return mf
 }
 
-func (ai *amcrestIngester) pathToFile(path string) (*common.MediaFile, error) {
+func (ai *amcrestIngester) pathToFile(path string) (*models.MediaFile, error) {
 
 	if strings.HasSuffix(path, ".mp4") && strings.Contains(path, "/dav/") {
 		// "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4"
@@ -81,8 +82,8 @@ func (ai *amcrestIngester) pathToFile(path string) (*common.MediaFile, error) {
 			return nil, fmt.Errorf("%s: %v", badVideoPath, path)
 		}
 		d := ts[1].Sub(ts[0])
-		return &common.MediaFile{
-			Type:      common.MP4,
+		return &models.MediaFile{
+			Type:      models.MP4,
 			Timestamp: ts[0],
 			Duration:  &d,
 		}, nil
@@ -94,8 +95,8 @@ func (ai *amcrestIngester) pathToFile(path string) (*common.MediaFile, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &common.MediaFile{
-			Type:      common.JPG,
+		return &models.MediaFile{
+			Type:      models.JPG,
 			Timestamp: ts,
 		}, nil
 	}
