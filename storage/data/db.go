@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/config"
 	"go.uber.org/fx"
@@ -34,7 +33,7 @@ func NewFromConfig(cfg config.Provider, lifecycle fx.Lifecycle) (*sqlx.DB, error
 	}
 	return New(dbCfg, lifecycle)
 }
-func New(dbCfg *DBConfig, lifecycle fx.Lifecycle) (*sqlx.DB, error) { 
+func New(dbCfg *DBConfig, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
 
 	if dbCfg.Database == "" {
 		dbCfg.Database = "sqlite3"
@@ -81,16 +80,15 @@ func initDB(cfg DBConfig, db *sqlx.DB) error {
 		return fmt.Errorf("Failed to write schema files: %v", err)
 	}
 
-	
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://"+schemaPath,
 		"main",
 		driver,
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
-	if err := m.Up(); err != nil {
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatal(err)
 	}
 

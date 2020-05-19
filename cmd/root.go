@@ -14,6 +14,8 @@ import (
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/ftp"
 	"github.com/shawnburke/amcrest-viewer/ingest"
+	"github.com/shawnburke/amcrest-viewer/storage/data"
+	"github.com/shawnburke/amcrest-viewer/storage/file"
 	"github.com/shawnburke/amcrest-viewer/web"
 )
 
@@ -27,26 +29,34 @@ var (
 		Short: "A private viewer and storage system for home cameras",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			app := fx.New(
-				fx.Provide(func() *common.Params {
-					return &p
-				}),
-				fx.Provide(yamlConfig),
-				fx.Provide(common.NewConfigAuth),
-				fx.Provide(zap.NewDevelopment),
-				fx.Provide(ftp.New),
-				fx.Provide(web.New),
-				fx.Provide(common.NewEventBus),
-				ingest.Module,
-				fx.Provide(tz),
-				fx.Invoke(register),
-			)
+			app := fx.New(buildGraph())
+
 			app.Run()
 			return app.Err()
 
 		},
 	}
 )
+
+func buildGraph() fx.Option {
+	return fx.Options(
+		fx.Provide(func() *common.Params {
+			return &p
+		}),
+		fx.Provide(yamlConfig),
+		fx.Provide(common.NewConfigAuth),
+		fx.Provide(zap.NewDevelopment),
+		fx.Provide(common.NewEventBus),
+		fx.Provide(file.NewWithConfig),
+		fx.Provide(data.NewFromConfig),
+		fx.Provide(data.NewRepository),
+		ingest.Module,
+		fx.Provide(tz),
+		fx.Provide(ftp.New),
+		fx.Provide(web.New),
+		fx.Invoke(register),
+	)
+}
 
 func tz() *time.Location {
 	loc, err := time.LoadLocation("Local")

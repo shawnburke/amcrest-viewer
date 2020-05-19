@@ -14,8 +14,8 @@ import (
 )
 
 var Module = fx.Options(
-	fx.Invoke(NewIngestManager),
 	fx.Provide(Amcrest),
+	fx.Invoke(NewIngestManager),
 )
 
 type IngestManagerParams struct {
