@@ -70,6 +70,7 @@ func (ai *amcrestIngester) IngestFile(f *ftp.File) *models.MediaFile {
 	if err != nil {
 		return nil
 	}
+	mf.CameraID = f.User
 	return mf
 }
 

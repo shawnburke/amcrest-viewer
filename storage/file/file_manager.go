@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
+	"go.uber.org/config"
 	"go.uber.org/zap"
 )
 
@@ -27,7 +28,17 @@ type Manager interface {
 }
 
 type Config struct {
-	RootDir string
+	RootDir string `yaml:"root_dir"`
+}
+
+func NewWithConfig(logger *zap.Logger, cfg config.Provider) (Manager, error) {
+
+	ccfg := &Config{}
+	err := cfg.Get("files").Populate(ccfg)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load yaml config: %w", err)
+	}
+	return New(logger, ccfg)
 }
 
 func New(logger *zap.Logger, cfg *Config) (Manager, error) {

@@ -6,6 +6,7 @@ import (
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/ftp"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
+	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/file"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 	"go.uber.org/fx"
@@ -100,33 +101,43 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 
 	im.logger.Info("Would ingest", zap.Reflect("media-file", mf))
 
-	// fileType := entities.FileTypeMp4
+	// TODO: make manager interfaces speak models
+	fileType := entities.FileTypeMp4
 
-	// switch mf.Type {
-	// case common.MP4:
-	// case common.JPG:
-	// 	fileType = entities.FileTypeJpg
-	// default:
-	// 	return fmt.Errorf("Unknown file type: %v", mf.Type)
-	// }
+	switch mf.Type {
+	case models.MP4:
+	case models.JPG:
+		fileType = entities.FileTypeJpg
+	default:
+		return fmt.Errorf("Unknown file type: %v", mf.Type)
+	}
 
-	// relPath, err := im.fm.AddFile(mf.Camera.ID, f.Data, mf.Timestamp, fileType)
+	relPath, err := im.fm.AddFile(mf.CameraID, f.Data, mf.Timestamp, fileType)
 
-	// if err != nil {
-	// 	im.logger.Error("Failed to save file",
-	// 		zap.String("name", f.Name), zap.String("camera", mf.Camera.ID), zap.Error(err))
-	// 	return fmt.Errorf("Failed to safe file %v: %w", f.FullName, err)
-	// }
+	if err != nil {
+		im.logger.Error("Failed to save file",
+			zap.String("name", f.Name), zap.String("camera", mf.CameraID), zap.Error(err))
+		return fmt.Errorf("Failed to safe file %v: %w", f.FullName, err)
+	}
 
-	// fileData, err := im.dm.AddFile(relPath, fileType, mf.Camera.ID, mf.Timestamp, mf.Duration)
+	fileData, err := im.dm.AddFile(relPath, fileType, mf.CameraID, mf.Timestamp, mf.Duration)
 
-	// if err != nil {
-	// 	im.logger.Error("Failed to save file data", zap.Error(err),
-	// 		zap.String("name", f.Name), zap.String("camera", mf.Camera.ID))
-	// 	return fmt.Errorf("Failed to save file data: %w", err)
-	// }
+	if err != nil {
+		f2 := *f
+		f2.Data = nil
+		im.logger.Error("Failed to save file data",
+			zap.Error(err),
+			zap.String("name", f.Name),
+			zap.String("camera", mf.CameraID),
+			zap.String("disk-path", relPath),
+			zap.Reflect("file", f2))
+		return fmt.Errorf("Failed to save file data: %w", err)
+	}
 
-	// im.logger.Info("Ingested file", zap.String("camera", mf.Camera.ID), zap.String("path", mf.Path))
+	im.logger.Info("Ingested file",
+		zap.Int("file-id", fileData.ID),
+		zap.String("camera", mf.CameraID),
+		zap.String("path", mf.Path))
 
 	f.Close()
 	return nil
