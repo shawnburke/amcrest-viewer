@@ -1,8 +1,10 @@
 ftp:
+    password: pwd
     users:
       user_a: pwd
 
+files:
+  root_dir: test_data/files
 
 database:
-  dsn: cam.db
-  schemas: ./storage/data/schema
+  dsn: test_data/cam.db

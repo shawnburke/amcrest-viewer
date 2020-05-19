@@ -137,7 +137,7 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 	im.logger.Info("Ingested file",
 		zap.Int("file-id", fileData.ID),
 		zap.String("camera", mf.CameraID),
-		zap.String("path", mf.Path))
+		zap.String("path", relPath))
 
 	f.Close()
 	return nil

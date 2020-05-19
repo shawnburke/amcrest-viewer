@@ -14,6 +14,7 @@ import (
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/ftp"
 	"github.com/shawnburke/amcrest-viewer/ingest"
+	"github.com/shawnburke/amcrest-viewer/storage"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
 	"github.com/shawnburke/amcrest-viewer/storage/file"
 	"github.com/shawnburke/amcrest-viewer/web"
@@ -44,13 +45,13 @@ func buildGraph() fx.Option {
 			return &p
 		}),
 		fx.Provide(yamlConfig),
-		fx.Provide(common.NewConfigAuth),
 		fx.Provide(zap.NewDevelopment),
 		fx.Provide(common.NewEventBus),
 		fx.Provide(file.NewWithConfig),
 		fx.Provide(data.NewFromConfig),
 		fx.Provide(data.NewRepository),
 		ingest.Module,
+		storage.Module,
 		fx.Provide(tz),
 		fx.Provide(ftp.New),
 		fx.Provide(web.New),
