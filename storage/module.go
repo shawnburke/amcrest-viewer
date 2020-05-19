@@ -5,12 +5,16 @@ import (
 
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
+	"github.com/shawnburke/amcrest-viewer/storage/file"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-var Module = fx.Option(
+var Module = fx.Options(
 	fx.Provide(newCameraAuth),
+	fx.Provide(file.NewWithConfig),
+	fx.Provide(data.NewFromConfig),
+	fx.Provide(data.NewRepository),
 )
 
 func newCameraAuth(logger *zap.Logger, data data.Repository) (common.Auth, error) {
