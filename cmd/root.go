@@ -28,7 +28,7 @@ var (
 		Short: "A private viewer and storage system for home cameras",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			app := fx.New(buildGraph())
+			app := fx.New(buildGraph(nil))
 
 			app.Run()
 			return app.Err()
@@ -37,13 +37,22 @@ var (
 	}
 )
 
-func buildGraph() fx.Option {
+func buildGraph(cfg config.Provider) fx.Option {
+
+	configFunc := yamlConfig
+
+	if cfg != nil {
+		configFunc = func() (config.Provider, error) {
+			return cfg, nil
+		}
+	}
+
 	return fx.Options(
 		fx.Provide(func() *common.Params {
 			return &p
 		}),
 		// basics
-		fx.Provide(yamlConfig),
+		fx.Provide(configFunc),
 		fx.Provide(zap.NewDevelopment),
 		fx.Provide(tz),
 		fx.Provide(common.NewEventBus),
