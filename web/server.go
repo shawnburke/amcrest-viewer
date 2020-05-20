@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
+	"github.com/shawnburke/amcrest-viewer/storage/models"
 )
 
 func New(args *common.Params, logger *zap.Logger, data data.Repository) HttpServer {
@@ -140,7 +142,7 @@ func (s *Server) Stop() error {
 // 	w.Write([]byte("OK"))
 // }
 
-func (s *Server) writeJson(obj interface{}, w http.ResponseWriter, status int) {
+func (s *Server) writeJson(obj interface{}, w http.ResponseWriter, status int, headers ...string) {
 
 	j, err := json.MarshalIndent(obj, "", "  ")
 
@@ -154,6 +156,9 @@ func (s *Server) writeJson(obj interface{}, w http.ResponseWriter, status int) {
 	}
 
 	w.Header().Add("Content-Type", "application/json")
+	for i := 0; i < len(headers); i += 2 {
+		w.Header().Add(headers[i], headers[i+1])
+	}
 	w.WriteHeader(status)
 	w.Write(j)
 
@@ -177,6 +182,36 @@ func (s *Server) writeError(err error, w http.ResponseWriter, status int) bool {
 	}
 	s.writeJson(info, w, status)
 	return true
+}
+
+func (s *Server) createCamera(w http.ResponseWriter, r *http.Request) {
+
+	cam := &models.Camera{}
+
+	bytes, err := ioutil.ReadAll(r.Body)
+
+	if s.writeError(err, w, 500) {
+		return
+	}
+
+	err = json.Unmarshal(bytes, cam)
+
+	if s.writeError(err, w, 400) {
+		return
+	}
+
+	var host *string
+	if cam.Host != "" {
+		*host = cam.Host
+	}
+	camEntity, err := s.data.AddCamera(cam.Name, cam.Type, host)
+
+	if s.writeError(err, w, 400) {
+		return
+	}
+
+	s.writeJson(cam, w, 201, "Location", "cameras/"+camEntity.CameraID())
+
 }
 
 func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
@@ -220,7 +255,8 @@ func (s *Server) Setup(public string) http.Handler {
 	// s.r.HandleFunc("/health", s.health)
 	// s.r.HandleFunc("/", s.index)
 
-	s.r.HandleFunc("/cameras", s.listCameras)
-	s.r.HandleFunc("/cameras/{id}", s.getCamera)
+	s.r.Methods("POST").Path("/cameras").HandlerFunc(s.createCamera)
+	s.r.Methods("GET").Path("/cameras").HandlerFunc(s.listCameras)
+	s.r.Methods("GET").Path("/cameras/{id}").HandlerFunc(s.getCamera)
 	return s.r
 }
