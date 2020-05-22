@@ -154,7 +154,7 @@ func TestFileAddGetList(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		ts := start.Add(time.Minute * time.Duration(i))
 		d := time.Second * time.Duration(i)
-		file, err := rep.AddFile(fmt.Sprintf("root/file-%d.mp4", i), entities.FileTypeMp4, cam.CameraID(), ts, &d)
+		file, err := rep.AddFile(fmt.Sprintf("root/file-%d.mp4", i), entities.FileTypeMp4, cam.CameraID(), 110+i, ts, &d)
 		require.NoError(t, err)
 		require.NotNil(t, file)
 	}
@@ -163,6 +163,7 @@ func TestFileAddGetList(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 10)
+	require.Equal(t, 112, res[2].Length)
 
 	s := start.Add(time.Minute)
 	e := start.Add(time.Minute * 5)

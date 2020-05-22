@@ -67,7 +67,7 @@ func (mr *mockRepo) ListCameras() ([]*entities.Camera, error) {
 }
 
 // File operations
-func (mr *mockRepo) AddFile(path string, t int, cameraID string, timestamp time.Time, duration *time.Duration) (*entities.File, error) {
+func (mr *mockRepo) AddFile(path string, t int, cameraID string, l int, timestamp time.Time, duration *time.Duration) (*entities.File, error) {
 	panic("not implemented") // TODO: Implement
 }
 

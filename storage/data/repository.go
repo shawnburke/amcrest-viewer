@@ -24,8 +24,9 @@ type Repository interface {
 	ListCameras() ([]*entities.Camera, error)
 
 	// File operations
-	AddFile(path string, t int, cameraID string, timestamp time.Time, duration *time.Duration) (*entities.File, error)
+	AddFile(path string, t int, cameraID string, length int, timestamp time.Time, duration *time.Duration) (*entities.File, error)
 	GetFile(id int) (*entities.File, error)
+
 	ListFiles(cameraID string, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error)
 }
 
@@ -264,7 +265,14 @@ func (sr *sqlRepository) SeenCamera(cameraID string) error {
 
 //  Files
 
-func (sr *sqlRepository) AddFile(path string, t int, cameraID string, timestamp time.Time, duration *time.Duration) (*entities.File, error) {
+func (sr *sqlRepository) AddFile(
+	path string,
+	t int,
+	cameraID string,
+	length int,
+	timestamp time.Time,
+	duration *time.Duration,
+) (*entities.File, error) {
 
 	camID, err := parseCameraID(cameraID)
 	if err != nil {
@@ -273,9 +281,9 @@ func (sr *sqlRepository) AddFile(path string, t int, cameraID string, timestamp 
 
 	query := `
 	INSERT INTO files
-		(Path, Type, CameraID, Timestamp)
+		(Path, Type, CameraID, Timestamp, Length)
 		VALUES
-		($1,$2,$3,$4)
+		($1,$2,$3,$4,$5)
 	`
 
 	args := []interface{}{
@@ -283,14 +291,15 @@ func (sr *sqlRepository) AddFile(path string, t int, cameraID string, timestamp 
 		t,
 		camID,
 		timestamp,
+		length,
 	}
 
 	if duration != nil {
 		query = `
 	INSERT INTO files
-		(Path, Type, CameraID, Timestamp, DurationSeconds)
+		(Path, Type, CameraID, Timestamp, Length, DurationSeconds)
 		VALUES
-		($1,$2,$3,$4,$5)
+		($1,$2,$3,$4,$5,$6)
 	`
 		args = append(args, int(duration.Seconds()))
 
@@ -327,6 +336,7 @@ func (sr *sqlRepository) GetFile(id int) (*entities.File, error) {
 
 	return nil, os.ErrNotExist
 }
+
 func (sr *sqlRepository) ListFiles(cameraID string, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error) {
 
 	camID, err := parseCameraID(cameraID)
