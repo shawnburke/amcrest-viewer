@@ -30,27 +30,27 @@ function App() {
                     </Navbar.Collapse>
                 </Navbar>
 
-                    <Row>
-                        <Col>
-                            <div style={{
-                                width: "100%",
-                                background: "black",
-                                height: "200px",
-                            }}></div>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col></Col>
-                        <Col>
-                            <Button style={{ width: "100%;" }}><span>📅 Today </span></Button>
-                        </Col>
-                        <Col style={{ textAlign: "center" }}>
-                            <Button><span>⚙</span></Button>
-                        </Col>
-                    </Row>
+                <Row>
+                    <Col>
+                        <div style={{
+                            width: "100%",
+                            background: "black",
+                            height: "200px",
+                        }}></div>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col></Col>
+                    <Col>
+                        <Button style={{ width: "100%;" }}><span>📅 Today </span></Button>
+                    </Col>
+                    <Col style={{ textAlign: "center" }}>
+                        <Button><span>⚙</span></Button>
+                    </Col>
+                </Row>
             </Container>
         </div >
-            );
-        }
-        
-        export default App;
+    );
+}
+
+export default App;
