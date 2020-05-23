@@ -15,7 +15,7 @@ import (
 	"github.com/shawnburke/amcrest-viewer/ftp"
 	"github.com/shawnburke/amcrest-viewer/ingest"
 	"github.com/shawnburke/amcrest-viewer/storage"
-	"github.com/shawnburke/amcrest-viewer/web"
+	web "github.com/shawnburke/amcrest-viewer/web/backend"
 )
 
 var (
