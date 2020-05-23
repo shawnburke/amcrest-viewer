@@ -1,7 +1,9 @@
 package entities
 
-import "time"
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Camera struct {
 	ID       int        `db:"ID"`
@@ -29,6 +31,7 @@ type File struct {
 	Timestamp       time.Time  `db:"Timestamp"`
 	Received        *time.Time `db:"Received"`
 	DurationSeconds *int       `db:"DurationSeconds"`
+	Length          int        `db:"Length"`
 }
 
 func (f File) Duration() time.Duration {

@@ -120,7 +120,7 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		return fmt.Errorf("Failed to safe file %v: %w", f.FullName, err)
 	}
 
-	fileData, err := im.dm.AddFile(relPath, fileType, mf.CameraID, mf.Timestamp, mf.Duration)
+	fileData, err := im.dm.AddFile(relPath, fileType, mf.CameraID, len(f.Data), mf.Timestamp, mf.Duration)
 
 	if err != nil {
 		f2 := *f
