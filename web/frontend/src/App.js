@@ -3,54 +3,103 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
-import CameraList from "./CameraDropdown"
+import CameraList from "./CameraDropdown";
+import CameraView from "./CameraView";
+import CameraSummary from "./CameraSummary";
 import { Container, Button, Navbar, NavDropdown, Nav, Form, FormControl } from 'react-bootstrap';
 import { Row, Col } from 'react-bootstrap';
 
+import {
+    BrowserRouter as Router,
+    Switch,
+    Route,
+    Link,
+    useParams,
+} from "react-router-dom";
+
 function App() {
+
+
+    const cameras =
+        [
+            { name: "Garage Cam", type: "amcrest", id: "amcrest-1" },
+            { name: "Front Cam", type: "amcrest", id: "amcrest-2" },
+        ]
+
     return (
-        <div className="App">
-            <Container>
-                <Navbar bg="light" expand="lg">
-                    <Navbar.Brand href="#home">Camera Viewer</Navbar.Brand>
-                    <CameraList cameras={
-                        [
-                            { name: "Garage Cam", type: "amcrest", id: "amcrest-1" },
-                            { name: "Frond Cam", type: "amcrest", id: "amcrest-2" },
-                        ]
-                    } />
-                    <Navbar.Toggle aria-controls="basic-navbar-nav" />
-                    <Navbar.Collapse id="basic-navbar-nav">
-                        <Nav className="mr-auto">
-                            <Nav.Link href="#settings">Settings</Nav.Link>
-                            <Nav.Link href="#logs">Logs</Nav.Link>
+        <Router>
+            <div className="App">
+                <Container>
+                    <Navbar bg="light" expand="lg">
+                        <Navbar.Brand href="/">Camera Viewer</Navbar.Brand>
+                        <CameraList cameras={cameras} />
+                        <Navbar.Toggle aria-controls="basic-navbar-nav" />
+                        <Navbar.Collapse id="basic-navbar-nav">
+                            <Nav className="mr-auto">
+                                <Nav.Link href="#settings">Settings</Nav.Link>
+                                <Nav.Link href="#logs">Logs</Nav.Link>
 
-                        </Nav>
+                            </Nav>
 
-                    </Navbar.Collapse>
-                </Navbar>
+                        </Navbar.Collapse>
+                    </Navbar>
 
-                <Row>
-                    <Col>
-                        <div style={{
-                            width: "100%",
-                            background: "black",
-                            height: "200px",
-                        }}></div>
-                    </Col>
-                </Row>
-                <Row>
-                    <Col></Col>
-                    <Col>
-                        <Button style={{ width: "100%;" }}><span>📅 Today </span></Button>
-                    </Col>
-                    <Col style={{ textAlign: "center" }}>
-                        <Button><span>⚙</span></Button>
-                    </Col>
-                </Row>
-            </Container>
-        </div >
+                    <Switch>
+                        <Route exact path="/">
+                            <CameraSummary cameras={cameras} />
+                        </Route>
+                        <Route path="/cameras/:id" children={<Camera />} />
+                    </Switch>
+                </Container>
+            </div >
+        </Router>
     );
 }
+
+
+
+function Camera() {
+    // We can use the `useParams` hook here to access
+    // the dynamic pieces of the URL.
+    let { id } = useParams();
+
+    return (
+        <CameraView camera={id} />
+    );
+}
+
+/*
+class Router extends React.Component {
+
+    render() {
+
+
+        var routes = [
+            {
+                prefix: "cameras/",
+                render: function (value) {
+                    return <CameraView camera={value} />
+                }
+            }
+        ]
+
+        const path = this.props.path;
+
+        for (var i = 0; i < routes.length; i++) {
+            var r = routes[i];
+            if (!path.startsWith(r.prefix)) {
+                continue;
+            }
+
+            var value = path.substring(r.prefix.length);
+            return r.render(value);
+        }
+
+        return <div>Unknown path: {path}</div>
+
+
+    }
+
+}*/
 
 export default App;

@@ -1,0 +1,1 @@
+console.error("\n/workspace/amcrest-viewer/web/frontend/src/App.js:1\nimport 'bootstrap/dist/css/bootstrap.min.css';\n^\nParseError: 'import' and 'export' may appear only with 'sourceType: module'");
