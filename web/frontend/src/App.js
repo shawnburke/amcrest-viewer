@@ -68,38 +68,5 @@ function Camera() {
     );
 }
 
-/*
-class Router extends React.Component {
-
-    render() {
-
-
-        var routes = [
-            {
-                prefix: "cameras/",
-                render: function (value) {
-                    return <CameraView camera={value} />
-                }
-            }
-        ]
-
-        const path = this.props.path;
-
-        for (var i = 0; i < routes.length; i++) {
-            var r = routes[i];
-            if (!path.startsWith(r.prefix)) {
-                continue;
-            }
-
-            var value = path.substring(r.prefix.length);
-            return r.render(value);
-        }
-
-        return <div>Unknown path: {path}</div>
-
-
-    }
-
-}*/
 
 export default App;
