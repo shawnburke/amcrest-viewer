@@ -1,59 +1,81 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
 import CameraList from "./CameraDropdown";
 import CameraView from "./CameraView";
 import CameraSummary from "./CameraSummary";
-import { Container, Button, Navbar, NavDropdown, Nav, Form, FormControl } from 'react-bootstrap';
-import { Row, Col } from 'react-bootstrap';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+
+import ServiceBroker from "./shared/ServiceBroker";
+
+
+
 
 import {
     HashRouter as Router,
-    Switch,
     Route,
-    Link,
     useParams,
 } from "react-router-dom";
 
-function App() {
+
+class App extends React.Component {
+
+    constructor(props) {
+        super(props);
+
+        let broker = new ServiceBroker()
+        this.camsService = broker.newCamsService();
+
+        this.state = {
+            cameras: []
+        }
+    }
+
+    componentDidMount() {
+
+        this.camsService.retrieveItems().then(items => {
+
+            this.setState({ cameras: items });
+
+        });
+    }
+
+    render() {
+
+        let cams = this.state.cameras || [];
 
 
-    const cameras =
-        [
-            { name: "Garage Cam", type: "amcrest", id: "amcrest-1" },
-            { name: "Front Cam", type: "amcrest", id: "amcrest-2" },
-        ]
 
-    return (
-        <Router>
-            <div className="App">
-                <Container>
-                    <Navbar bg="light" expand="lg">
-                        <Navbar.Brand href="#/">Camera Viewer</Navbar.Brand>
-                        <CameraList cameras={cameras} />
-                        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-                        <Navbar.Collapse id="basic-navbar-nav">
-                            <Nav className="mr-auto">
-                                <Nav.Link href="#settings">Settings</Nav.Link>
-                                <Nav.Link href="#logs">Logs</Nav.Link>
+        return (
 
-                            </Nav>
+            <Router>
+                <div className="App">
+                    <Container>
+                        <Navbar bg="light" expand="lg">
+                            <Navbar.Brand href="#/">Camera Viewer <Dev /></Navbar.Brand>
+                            <CameraList cameras={cams} />
+                            <Navbar.Toggle aria-controls="basic-navbar-nav" />
+                            <Navbar.Collapse id="basic-navbar-nav">
+                                <Nav className="mr-auto">
+                                    <Nav.Link href="#settings">Settings</Nav.Link>
+                                    <Nav.Link href="#logs">Logs</Nav.Link>
 
-                        </Navbar.Collapse>
-                    </Navbar>
+                                </Nav>
+
+                            </Navbar.Collapse>
+                        </Navbar>
 
 
-                    <Route exact path="/">
-                        <CameraSummary cameras={cameras} />
-                    </Route>
-                    <Route path="/cameras/:id" component={Camera} />
-
-                </Container>
-            </div >
-        </Router>
-    );
+                        <Route exact path="/">
+                            <CameraSummary cameras={cams} />
+                        </Route>
+                        <Route path="/cameras/:id" component={Camera} />
+                    </Container>
+                </div >
+            </Router >
+        );
+    }
 }
 
 
@@ -68,5 +90,16 @@ function Camera() {
     );
 }
 
+function Dev() {
+    if (!isDev()) {
+        return null;
+    }
+    return <span>🛠</span>;
+}
+
+function isDev() {
+
+    return process.env.NODE_ENV !== "production";
+}
 
 export default App;

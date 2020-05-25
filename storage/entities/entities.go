@@ -6,12 +6,12 @@ import (
 )
 
 type Camera struct {
-	ID       int        `db:"ID"`
-	Name     string     `db:"Name"`
-	Type     string     `db:"Type"`
-	Host     *string    `db:"Host"`
-	LastSeen *time.Time `db:"LastSeen"`
-	Enabled  *bool      `db:"Enabled"`
+	ID       int        `db:"ID" json:"id"`
+	Name     string     `db:"Name" json:"name"`
+	Type     string     `db:"Type" json:"type"`
+	Host     *string    `db:"Host"  json:"host"`
+	LastSeen *time.Time `db:"LastSeen"  json:"last_seen"`
+	Enabled  *bool      `db:"Enabled" json:"enabled"`
 }
 
 func (c Camera) CameraID() string {
