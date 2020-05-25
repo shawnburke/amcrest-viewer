@@ -10,7 +10,7 @@ import { Container, Button, Navbar, NavDropdown, Nav, Form, FormControl } from '
 import { Row, Col } from 'react-bootstrap';
 
 import {
-    BrowserRouter as Router,
+    HashRouter as Router,
     Switch,
     Route,
     Link,
@@ -31,7 +31,7 @@ function App() {
             <div className="App">
                 <Container>
                     <Navbar bg="light" expand="lg">
-                        <Navbar.Brand href="/">Camera Viewer</Navbar.Brand>
+                        <Navbar.Brand href="#/">Camera Viewer</Navbar.Brand>
                         <CameraList cameras={cameras} />
                         <Navbar.Toggle aria-controls="basic-navbar-nav" />
                         <Navbar.Collapse id="basic-navbar-nav">
@@ -44,12 +44,12 @@ function App() {
                         </Navbar.Collapse>
                     </Navbar>
 
-                    <Switch>
-                        <Route exact path="/">
-                            <CameraSummary cameras={cameras} />
-                        </Route>
-                        <Route path="/cameras/:id" children={<Camera />} />
-                    </Switch>
+
+                    <Route exact path="/">
+                        <CameraSummary cameras={cameras} />
+                    </Route>
+                    <Route path="/cameras/:id" component={Camera} />
+
                 </Container>
             </div >
         </Router>

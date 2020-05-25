@@ -5,6 +5,7 @@ import { Row, Col, Button } from 'react-bootstrap';
 
 class CameraView extends React.Component {
     render() {
+        document.title = "Camera Viewer - " + this.props.camera;
         return <div> <Row>
             <Col>
                 <div style={{

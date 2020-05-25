@@ -10,7 +10,7 @@ class CameraRow extends React.Component {
     render() {
         const camera = this.props.camera;
         return (
-            <NavDropdown.Item href={"/cameras/" + camera.id}>{camera.name} ({camera.type})</NavDropdown.Item>
+            <NavDropdown.Item href={"#cameras/" + camera.id}>{camera.name} ({camera.type})</NavDropdown.Item>
         )
     }
 }

@@ -392,27 +392,22 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Setup(public string) http.Handler {
 	s.r = mux.NewRouter()
 
-	// assets
-	s.r.PathPrefix("/public/").Handler(
-		http.StripPrefix("/public/",
-			http.FileServer(http.Dir(public))))
-
-	// s.r.PathPrefix("/files").HandlerFunc(s.serve)
-
-	// s.r.HandleFunc("/health", s.health)
-	// s.r.HandleFunc("/", s.index)
-
 	// cameras
-	s.r.Methods("POST").Path("/cameras").HandlerFunc(s.createCamera)
-	s.r.Methods("GET").Path("/cameras").HandlerFunc(s.listCameras)
-	s.r.Methods("GET").Path("/cameras/{id}").HandlerFunc(s.getCamera)
-	s.r.Methods("PUT").Path("/cameras/{id}").HandlerFunc(s.updateCamera)
+	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
+	s.r.Methods("GET").Path("/api/cameras").HandlerFunc(s.listCameras)
+	s.r.Methods("GET").Path("/api/cameras/{id}").HandlerFunc(s.getCamera)
+	s.r.Methods("PUT").Path("/api/cameras/{id}").HandlerFunc(s.updateCamera)
 
 	// files
-	s.r.Methods("GET").Path("/files/{camera-id}").HandlerFunc(s.listFiles)
+	s.r.Methods("GET").Path("/api/files/{camera-id}").HandlerFunc(s.listFiles)
 
-	s.r.Methods("GET").Path("/files/{camera-id}/{file-id}").HandlerFunc(s.getFile)
-	s.r.Methods("GET").Path("/files/{camera-id}/{file-id}/info").HandlerFunc(s.getFileInfo)
+	s.r.Methods("GET").Path("/api/files/{camera-id}/{file-id}").HandlerFunc(s.getFile)
+	s.r.Methods("GET").Path("/api/files/{camera-id}/{file-id}/info").HandlerFunc(s.getFileInfo)
+
+	// website
+	s.r.Methods("GET").PathPrefix("/").Handler(
+		http.FileServer(http.Dir("./web/frontend/build")),
+	)
 
 	return s.r
 }
