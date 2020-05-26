@@ -17,7 +17,6 @@ ftp:
 
 files:
   root_dir: test_data/files
-
 `
 	provider, err := config.NewYAMLProviderFromBytes([]byte(testConfig))
 	require.NoError(t, err)

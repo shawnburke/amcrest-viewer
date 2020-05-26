@@ -1,10 +1,10 @@
 ftp:
-    password: pwd
-    users:
-      user_a: pwd
+  password: pwd
+  users:
+    user_a: pwd
 
 files:
   root_dir: test_data/files
 
 database:
-  dsn: test_data/cam.db
+  dsn: test_data/db/cam.db

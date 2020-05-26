@@ -17,31 +17,36 @@ import (
 type DBConfig struct {
 	Database string
 	DSN      string
-	File     string
 }
 
-func NewFromConfig(cfg config.Provider, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
+const memoryDSN = ":memory:"
 
+func NewConfig(cfg config.Provider) (*DBConfig, error) {
 	dbCfg := &DBConfig{
 		Database: "sqlite3",
-		DSN:      ":memory:",
 	}
 
 	err := cfg.Get("database").Populate(dbCfg)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting DB config: %v", err)
 	}
-	return New(dbCfg, lifecycle)
+	return dbCfg, nil
 }
+
 func New(dbCfg *DBConfig, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
 
 	if dbCfg.Database == "" {
 		dbCfg.Database = "sqlite3"
 	}
+
+	if dbCfg.DSN == "" {
+		dbCfg.DSN = memoryDSN
+	}
+
 	db, err := sqlx.Connect(dbCfg.Database, dbCfg.DSN)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Can't connect to DB (DSN=%s): %w", dbCfg.DSN, err)
 	}
 
 	lifecycle.Append(struct {

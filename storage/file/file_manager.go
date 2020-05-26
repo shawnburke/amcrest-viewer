@@ -31,17 +31,31 @@ type Config struct {
 	RootDir string `yaml:"root_dir"`
 }
 
-func NewWithConfig(logger *zap.Logger, cfg config.Provider) (Manager, error) {
-
+func NewConfig(cfg config.Provider) (*Config, error) {
 	ccfg := &Config{}
 	err := cfg.Get("files").Populate(ccfg)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to load yaml config: %w", err)
 	}
+	return ccfg, nil
+}
+
+func NewWithConfig(logger *zap.Logger, cfg config.Provider) (Manager, error) {
+
+	ccfg, err := NewConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 	return New(logger, ccfg)
 }
 
 func New(logger *zap.Logger, cfg *Config) (Manager, error) {
+
+	err := os.MkdirAll(cfg.RootDir, os.ModeDir|os.ModePerm)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to make files dir (%s): %w", cfg.RootDir, err)
+	}
+
 	return &fileManager{
 		logger:  logger,
 		rootDir: cfg.RootDir,

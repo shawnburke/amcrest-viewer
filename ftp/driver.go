@@ -15,7 +15,6 @@ import (
 )
 
 type fileDriverFactory struct {
-	RootPath string
 	ftps.Perm
 	logger *zap.Logger
 	bus    common.EventBus

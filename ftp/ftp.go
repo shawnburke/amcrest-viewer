@@ -32,7 +32,6 @@ func New(
 	bus common.EventBus,
 ) FtpServer {
 	return &ftpFileSystem{
-		dir:      args.DataDir,
 		port:     args.FtpPort,
 		host:     args.Host,
 		password: args.FtpPassword,
@@ -47,10 +46,9 @@ func (fs *ftpFileSystem) Start() error {
 		return nil
 	}
 	factory := &fileDriverFactory{
-		RootPath: fs.dir,
-		Perm:     ftps.NewSimplePerm("user", "group"),
-		logger:   fs.logger,
-		bus:      fs.bus,
+		Perm:   ftps.NewSimplePerm("user", "group"),
+		logger: fs.logger,
+		bus:    fs.bus,
 	}
 
 	opts := &ftps.ServerOpts{

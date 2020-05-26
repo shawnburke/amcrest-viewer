@@ -118,16 +118,14 @@ func yamlConfig() (config.Provider, error) {
 
 // Execute executes the root command.
 func Execute() error {
-	return rootCmd.Execute()
-}
-
-func init() {
 	rootCmd.PersistentFlags().IntVar(&p.WebPort, "web-port", 9000, "Web server port")
 	rootCmd.PersistentFlags().IntVar(&p.FtpPort, "ftp-port", 2121, "FTP server port")
+	rootCmd.PersistentFlags().StringVar(&p.DataDir, "data-dir", "", "Data directory root (for files and DB)")
 
 	rootCmd.PersistentFlags().StringVar(&p.Host, "host", "0.0.0.0", "Host address to bind to")
 	rootCmd.PersistentFlags().StringVar(&p.FtpPassword, "ftp-password", "admin", "Password to use for FTP")
 
+	return rootCmd.Execute()
 }
 
 func er(msg interface{}) {
