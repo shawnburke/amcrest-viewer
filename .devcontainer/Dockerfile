@@ -10,14 +10,14 @@ FROM golang:latest
 COPY settings.vscode.json /root/.vscode-remote/data/Machine/settings.json
 
 # Verify git, process tools installed
-RUN apt-get update && apt-get -y install git procps ftp sqlite3
+RUN apt-get update && apt-get -y install git procps ftp sqlite3 build-essential
 
 
 
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && apt-get install -y nodejs
 
-RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg |  apt-key add - && \
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" |  tee /etc/apt/sources.list.d/yarn.list
 
 RUN npm install -g browserify watchify yarn
 

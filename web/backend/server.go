@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.uber.org/config"
 	"go.uber.org/zap"
 
 	"github.com/shawnburke/amcrest-viewer/common"
@@ -20,8 +21,10 @@ import (
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 )
 
+const defaultFrontendPath = "./web/frontend/build"
+
 func New(args *common.Params, logger *zap.Logger,
-	data data.Repository, files file.Manager) HttpServer {
+	data data.Repository, files file.Manager, cfg config.Provider) HttpServer {
 
 	server := &Server{
 		FileRoot: args.DataDir,
@@ -31,7 +34,17 @@ func New(args *common.Params, logger *zap.Logger,
 		files:    files,
 	}
 
-	r := server.Setup("./public/")
+	frontendPath := ""
+
+	err := cfg.Get("web.frontend").Populate(&frontendPath)
+	if err != nil {
+		panic(err)
+	}
+
+	if frontendPath == "" {
+		frontendPath = defaultFrontendPath
+	}
+	r := server.Setup(frontendPath)
 
 	http.Handle("/", r)
 
@@ -324,7 +337,7 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *Server) Setup(public string) http.Handler {
+func (s *Server) Setup(frontendPath string) http.Handler {
 	s.r = mux.NewRouter()
 
 	// cameras
@@ -339,9 +352,10 @@ func (s *Server) Setup(public string) http.Handler {
 	s.r.Methods("GET").Path("/api/files/{camera-id}/{file-id}").HandlerFunc(s.getFile)
 	s.r.Methods("GET").Path("/api/files/{camera-id}/{file-id}/info").HandlerFunc(s.getFileInfo)
 
+	s.Logger.Info("web server path", zap.String("path", frontendPath))
 	// website
 	s.r.Methods("GET").PathPrefix("/").Handler(
-		http.FileServer(http.Dir("./web/frontend/build")),
+		http.FileServer(http.Dir(frontendPath)),
 	)
 
 	return s.r
