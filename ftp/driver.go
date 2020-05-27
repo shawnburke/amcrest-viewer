@@ -60,7 +60,7 @@ const cleanupTime = time.Minute * 5
 
 func (fd *fileDriver) fullPath(p string) string {
 	fullPath := path.Join(fd.cwd, p)
-	return fullPath
+	return path.Clean(fullPath)
 }
 
 // params  - a file path
@@ -81,14 +81,24 @@ func (fd *fileDriver) Stat(p string) (ftps.FileInfo, error) {
 //           requested path
 func (fd *fileDriver) ChangeDir(p string) error {
 	fd.logger.Info("CWD", zap.String("path", p))
-	fd.cwd = p
+
+	fullPath := fd.fullPath(p)
+	f, ok := fd.files[fullPath]
+	if !ok || !f.IsDir() {
+		return os.ErrNotExist
+	}
 	return nil
 }
 
-// params  - path, function on file or subdir found
-// returns - error
-//           path
-func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
+func (fd *fileDriver) getDirFiles(p string) ([]*ftpFile, error) {
+
+	fullPath := fd.fullPath(p)
+	f, ok := fd.files[fullPath]
+	if !ok || !f.IsDir() {
+		return nil, os.ErrNotExist
+	}
+
+	files := []*ftpFile{}
 
 	for filePath, fi := range fd.files {
 		dir := path.Dir(filePath)
@@ -96,6 +106,23 @@ func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
 			continue
 		}
 
+		files = append(files, fi)
+	}
+	return files, nil
+}
+
+// params  - path, function on file or subdir found
+// returns - error
+//           path
+func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
+
+	files, err := fd.getDirFiles(p)
+
+	if err != nil {
+		return err
+	}
+
+	for _, fi := range files {
 		err := r(fi)
 		if err != nil {
 			return err
@@ -108,14 +135,32 @@ func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
 // returns - nil if the directory was deleted or any error encountered
 func (fd *fileDriver) DeleteDir(p string) error {
 	fd.logger.Error("RMDIR", zap.String("path", p))
-	return os.ErrInvalid
+
+	files, err := fd.getDirFiles(p)
+	if err != nil {
+		return err
+	}
+
+	if len(files) > 0 {
+		return os.ErrInvalid
+	}
+
+	fullPath := fd.fullPath(p)
+	delete(fd.files, fullPath)
+	return nil
 }
 
 // params  - path
 // returns - nil if the file was deleted or any error encountered
 func (fd *fileDriver) DeleteFile(p string) error {
 	fd.logger.Error("RM", zap.String("path", p))
-	return os.ErrInvalid
+	srcPath := fd.fullPath(p)
+
+	_, ok := fd.files[srcPath]
+	if ok {
+		delete(fd.files, srcPath)
+	}
+	return nil
 }
 
 // params  - from_path, to_path
@@ -158,10 +203,11 @@ func (fd *fileDriver) MakeDir(p string) error {
 	}
 
 	fd.files[fullPath] = &ftpFile{
-		dir:   path.Dir(fullPath),
-		name:  path.Base(fullPath),
-		isDir: true,
-		ts:    time.Now(),
+		dir:      path.Dir(fullPath),
+		name:     path.Base(fullPath),
+		isDir:    true,
+		ts:       time.Now(),
+		fullPath: fullPath,
 	}
 	return nil
 }
@@ -231,13 +277,14 @@ func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) 
 }
 
 type ftpFile struct {
-	dir   string
-	name  string
-	data  []byte
-	mode  os.FileMode
-	isDir bool
-	ts    time.Time
-	conn  ftps.Conn
+	dir      string
+	name     string
+	data     []byte
+	mode     os.FileMode
+	isDir    bool
+	ts       time.Time
+	conn     ftps.Conn
+	fullPath string
 
 	owner, group string
 }
