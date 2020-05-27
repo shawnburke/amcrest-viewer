@@ -24,6 +24,9 @@ func (factory *fileDriverFactory) NewDriver() (ftps.Driver, error) {
 	return newFileDriver(factory.logger, factory.bus), nil
 }
 
+var fileSystem map[string]*ftpFile
+var fsLock sync.Mutex
+
 type fileDriver struct {
 	sync.Mutex
 	conn   *ftps.Conn
@@ -33,18 +36,22 @@ type fileDriver struct {
 	bus    common.EventBus
 }
 
+func init() {
+	fileSystem = map[string]*ftpFile{
+		"/": {
+			name:  "",
+			isDir: true,
+			dir:   "/",
+		},
+	}
+}
+
 func newFileDriver(logger *zap.Logger, bus common.EventBus) ftps.Driver {
 	fd := &fileDriver{
 		logger: logger,
 		cwd:    "/",
-		files: map[string]*ftpFile{
-			"/": {
-				name:  "",
-				isDir: true,
-				dir:   "/",
-			},
-		},
-		bus: bus,
+		files:  fileSystem,
+		bus:    bus,
 	}
 
 	return fd
@@ -134,6 +141,8 @@ func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
 // params  - path
 // returns - nil if the directory was deleted or any error encountered
 func (fd *fileDriver) DeleteDir(p string) error {
+	fsLock.Lock()
+	defer fsLock.Unlock()
 	fd.logger.Error("RMDIR", zap.String("path", p))
 
 	files, err := fd.getDirFiles(p)
@@ -153,6 +162,10 @@ func (fd *fileDriver) DeleteDir(p string) error {
 // params  - path
 // returns - nil if the file was deleted or any error encountered
 func (fd *fileDriver) DeleteFile(p string) error {
+
+	fsLock.Lock()
+	defer fsLock.Unlock()
+
 	fd.logger.Error("RM", zap.String("path", p))
 	srcPath := fd.fullPath(p)
 
@@ -166,6 +179,10 @@ func (fd *fileDriver) DeleteFile(p string) error {
 // params  - from_path, to_path
 // returns - nil if the file was renamed or any error encountered
 func (fd *fileDriver) Rename(s string, d string) error {
+
+	fsLock.Lock()
+	defer fsLock.Unlock()
+
 	fd.logger.Info("REN", zap.String("path", s), zap.String("dest", d))
 	srcPath := fd.fullPath(s)
 
@@ -192,6 +209,10 @@ func (fd *fileDriver) Rename(s string, d string) error {
 // params  - path
 // returns - nil if the new directory was created or any error encountered
 func (fd *fileDriver) MakeDir(p string) error {
+
+	fsLock.Lock()
+	defer fsLock.Unlock()
+
 	fd.logger.Info("MKDIR", zap.String("path", p))
 	fullPath := fd.fullPath(p)
 
@@ -223,6 +244,9 @@ func (fd *fileDriver) GetFile(p string, n int64) (int64, io.ReadCloser, error) {
 // params  - destination path, an io.Reader containing the file data
 // returns - the number of bytes writen and the first error encountered while writing, if any.
 func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) (int64, error) {
+
+	fsLock.Lock()
+	defer fsLock.Unlock()
 
 	fd.logger.Info("PUT", zap.String("path", destPath))
 
