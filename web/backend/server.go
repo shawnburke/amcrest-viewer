@@ -321,17 +321,7 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer reader.Close()
 
-	header := make([]byte, 0, 512)
-	n, err := reader.Read(header)
-	if s.writeError(err, w, 400) {
-		return
-	}
-
-	contentType := http.DetectContentType(header)
-
-	if contentType == mimeTextPlain {
-		contentType = mime.TypeByExtension(path.Ext(fileInfo.Path))
-	}
+	contentType := getContentType(fileInfo.Path)
 
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Length))
@@ -340,7 +330,6 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 
 	// write header bytes
-	w.Write(header[0:n])
 	_, err = io.Copy(w, reader)
 	if err != nil {
 		s.Logger.Error("Error writing file",
@@ -373,4 +362,10 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 	)
 
 	return s.r
+}
+
+func getContentType(p string) string {
+
+	ct := mime.TypeByExtension(path.Ext(p))
+	return ct
 }
