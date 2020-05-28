@@ -3,72 +3,175 @@ package ftp
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
 
+	filedriver "github.com/goftp/file-driver"
 	ftps "github.com/goftp/server"
 	"github.com/shawnburke/amcrest-viewer/common"
 )
 
+// For each user, we create a different file root.
+// Because the driver doesn't know the user until Init, we have to use a proxy strategy
+// which is that we create a proxy driver that looks up the actual driver based on the user.
+// That actual driver is responsible for creating the directory location, and for handling
+// all requests for that user.
+//
+// On top of that, we manage an index of the files and send the ones we want down to the notification system.
+//
+// TODOS:
+// 1. Implement a garage collection policy for files based on LRU (and maybe total size)
+
 type fileDriverFactory struct {
 	ftps.Perm
+	logger     *zap.Logger
+	bus        common.EventBus
+	userSpaces userSpaces
+}
+
+func newFileDriverFactory(perm ftps.Perm, logger *zap.Logger, bus common.EventBus) *fileDriverFactory {
+	return &fileDriverFactory{
+		Perm:       perm,
+		logger:     logger,
+		bus:        bus,
+		userSpaces: newUserSpaces(path.Join(os.TempDir(), "cams"), logger),
+	}
+}
+
+type userSpaces struct {
+	root   string
+	spaces map[string]*userSpace
 	logger *zap.Logger
-	bus    common.EventBus
+}
+
+func newUserSpaces(root string, logger *zap.Logger) userSpaces {
+
+	return userSpaces{
+		root:   root,
+		logger: logger,
+		spaces: map[string]*userSpace{},
+	}
+}
+
+func (us userSpaces) Get(user string) *userSpace {
+	s, ok := us.spaces[user]
+
+	if ok {
+		return s
+	}
+
+	s = newUserSpace(user, path.Join(us.root, user))
+	us.logger.Info("Creating new space", zap.String("user", user), zap.String("root", s.root))
+	us.spaces[user] = s
+	return s
 }
 
 func (factory *fileDriverFactory) NewDriver() (ftps.Driver, error) {
-	return newFileDriver(factory.logger, factory.bus), nil
+	return newFileDriver(factory.logger, factory.bus, factory.userSpaces), nil
 }
-
-var fileSystem map[string]*ftpFile
-var fsLock sync.Mutex
 
 type fileDriver struct {
-	sync.Mutex
-	conn   *ftps.Conn
-	cwd    string
-	files  map[string]*ftpFile
-	logger *zap.Logger
-	bus    common.EventBus
+	conn        *ftps.Conn
+	logger      *zap.Logger
+	bus         common.EventBus
+	driver      ftps.Driver
+	userSpace   *userSpace
+	usersSpaces userSpaces
 }
 
-func init() {
-	fileSystem = map[string]*ftpFile{
-		"/": {
-			name:  "",
-			isDir: true,
-			dir:   "/",
-		},
-	}
-}
-
-func newFileDriver(logger *zap.Logger, bus common.EventBus) ftps.Driver {
+func newFileDriver(logger *zap.Logger, bus common.EventBus, userSpaces userSpaces) ftps.Driver {
 	fd := &fileDriver{
-		logger: logger,
-		cwd:    "/",
-		files:  fileSystem,
-		bus:    bus,
+		logger:      logger,
+		bus:         bus,
+		usersSpaces: userSpaces,
+	}
+	return fd
+}
+
+type userSpace struct {
+	user string
+	root string
+}
+
+func newUserSpace(u string, r string) *userSpace {
+
+	err := os.MkdirAll(r, os.ModeDir|os.ModePerm)
+
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create user dir (%s): %v", r, err))
 	}
 
-	return fd
+	return &userSpace{
+		user: u,
+		root: r,
+	}
+}
 
+func (us userSpace) getPath(p string) string {
+	return p
+}
+
+func (us userSpace) stat(p string) os.FileInfo {
+	fullPath := path.Join(us.root, p)
+
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		// TODO: log
+		fmt.Fprintf(os.Stderr, "ERROR stating file %s: %v", fullPath, err)
+		return nil
+	}
+	return info
+}
+
+func (us userSpace) getBytes(p string) []byte {
+	fullPath := path.Join(us.root, p)
+
+	bytes, err := ioutil.ReadFile(fullPath)
+
+	if err != nil {
+		// todo logging
+		fmt.Fprintf(os.Stderr, "ERROR reading file %s: %v", fullPath, err)
+	}
+
+	return bytes
+}
+
+func (us userSpace) getReader(p string) io.ReadCloser {
+	fullPath := path.Join(us.root, p)
+
+	reader, err := os.Open(fullPath)
+
+	if err != nil {
+		// todo logging
+		fmt.Fprintf(os.Stderr, "ERROR reading file %s: %v", fullPath, err)
+	}
+
+	return reader
+
+}
+
+func (us *userSpace) CreateDriver(conn *ftps.Conn) ftps.Driver {
+	return &filedriver.FileDriver{
+		RootPath: us.root,
+		Perm:     ftps.NewSimplePerm("owner", "group"),
+	}
 }
 
 func (fd *fileDriver) Init(c *ftps.Conn) {
 	fd.logger.Info("Connection initiated", zap.String("user", c.LoginUser()))
+
+	user := c.LoginUser()
+	fd.userSpace = fd.usersSpaces.Get(user)
+	fd.driver = fd.userSpace.CreateDriver(c)
 	fd.conn = c
+
 }
 
 const cleanupTime = time.Minute * 5
-
-func (fd *fileDriver) fullPath(p string) string {
-	fullPath := path.Join(fd.cwd, p)
-	return path.Clean(fullPath)
-}
 
 // params  - a file path
 // returns - a time indicating when the requested path was last modified
@@ -76,11 +179,7 @@ func (fd *fileDriver) fullPath(p string) string {
 //           permissions
 func (fd *fileDriver) Stat(p string) (ftps.FileInfo, error) {
 	fd.logger.Info("STAT", zap.String("path", p))
-	f, ok := fd.files[fd.fullPath(p)]
-	if !ok {
-		return nil, os.ErrNotExist
-	}
-	return f, nil
+	return fd.driver.Stat(p)
 }
 
 // params  - path
@@ -89,119 +188,46 @@ func (fd *fileDriver) Stat(p string) (ftps.FileInfo, error) {
 func (fd *fileDriver) ChangeDir(p string) error {
 	fd.logger.Info("CWD", zap.String("path", p))
 
-	fullPath := fd.fullPath(p)
-	f, ok := fd.files[fullPath]
-	if !ok || !f.IsDir() {
-		return os.ErrNotExist
-	}
-	return nil
-}
-
-func (fd *fileDriver) getDirFiles(p string) ([]*ftpFile, error) {
-
-	fullPath := fd.fullPath(p)
-	f, ok := fd.files[fullPath]
-	if !ok || !f.IsDir() {
-		return nil, os.ErrNotExist
-	}
-
-	files := []*ftpFile{}
-
-	for filePath, fi := range fd.files {
-		dir := path.Dir(filePath)
-		if dir != p || filePath == p {
-			continue
-		}
-
-		files = append(files, fi)
-	}
-	return files, nil
+	return fd.driver.ChangeDir(p)
 }
 
 // params  - path, function on file or subdir found
 // returns - error
 //           path
 func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
-
-	files, err := fd.getDirFiles(p)
-
-	if err != nil {
-		return err
-	}
-
-	for _, fi := range files {
-		err := r(fi)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	fd.logger.Info("LIST", zap.String("path", p))
+	return fd.driver.ListDir(p, r)
 }
 
 // params  - path
 // returns - nil if the directory was deleted or any error encountered
 func (fd *fileDriver) DeleteDir(p string) error {
-	fsLock.Lock()
-	defer fsLock.Unlock()
-	fd.logger.Error("RMDIR", zap.String("path", p))
-
-	files, err := fd.getDirFiles(p)
-	if err != nil {
-		return err
-	}
-
-	if len(files) > 0 {
-		return os.ErrInvalid
-	}
-
-	fullPath := fd.fullPath(p)
-	delete(fd.files, fullPath)
-	return nil
+	fd.logger.Info("RMDIR", zap.String("path", p))
+	return fd.driver.DeleteDir(p)
 }
 
 // params  - path
 // returns - nil if the file was deleted or any error encountered
 func (fd *fileDriver) DeleteFile(p string) error {
-
-	fsLock.Lock()
-	defer fsLock.Unlock()
-
-	fd.logger.Error("RM", zap.String("path", p))
-	srcPath := fd.fullPath(p)
-
-	_, ok := fd.files[srcPath]
-	if ok {
-		delete(fd.files, srcPath)
-	}
-	return nil
+	fd.logger.Info("RM", zap.String("path", p))
+	return fd.driver.DeleteFile(p)
 }
 
 // params  - from_path, to_path
 // returns - nil if the file was renamed or any error encountered
 func (fd *fileDriver) Rename(s string, d string) error {
-
-	fsLock.Lock()
-	defer fsLock.Unlock()
-
 	fd.logger.Info("REN", zap.String("path", s), zap.String("dest", d))
-	srcPath := fd.fullPath(s)
 
-	file, ok := fd.files[srcPath]
-	if !ok {
-		return os.ErrNotExist
+	srcFile := fd.toFtpFile(s)
+
+	err := fd.driver.Rename(s, d)
+	if err != nil {
+		return err
 	}
 
-	destPath := fd.fullPath(d)
-	if srcPath == destPath {
-		return nil
-	}
+	destFile := fd.toFtpFile(d)
 
-	file.dir = path.Dir(destPath)
-	file.name = path.Base(destPath)
-	fd.files[destPath] = file
-	delete(fd.files, srcPath)
-
-	fd.bus.Send(NewFileRenameEvent(file.asFile(), srcPath))
+	fd.bus.Send(NewFileRenameEvent(destFile, srcFile.FullName))
 
 	return nil
 }
@@ -209,28 +235,8 @@ func (fd *fileDriver) Rename(s string, d string) error {
 // params  - path
 // returns - nil if the new directory was created or any error encountered
 func (fd *fileDriver) MakeDir(p string) error {
-
-	fsLock.Lock()
-	defer fsLock.Unlock()
-
 	fd.logger.Info("MKDIR", zap.String("path", p))
-	fullPath := fd.fullPath(p)
-
-	if f, ok := fd.files[fullPath]; ok {
-		if !f.isDir {
-			return os.ErrInvalid
-		}
-		return nil
-	}
-
-	fd.files[fullPath] = &ftpFile{
-		dir:      path.Dir(fullPath),
-		name:     path.Base(fullPath),
-		isDir:    true,
-		ts:       time.Now(),
-		fullPath: fullPath,
-	}
-	return nil
+	return fd.driver.MakeDir(p)
 }
 
 // params  - path
@@ -238,6 +244,7 @@ func (fd *fileDriver) MakeDir(p string) error {
 func (fd *fileDriver) GetFile(p string, n int64) (int64, io.ReadCloser, error) {
 	fd.logger.Error("GET", zap.String("path", p))
 
+	// return driver.GetFile(p, n)
 	return 0, nil, os.ErrInvalid
 }
 
@@ -245,59 +252,33 @@ func (fd *fileDriver) GetFile(p string, n int64) (int64, io.ReadCloser, error) {
 // returns - the number of bytes writen and the first error encountered while writing, if any.
 func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) (int64, error) {
 
-	fsLock.Lock()
-	defer fsLock.Unlock()
-
 	fd.logger.Info("PUT", zap.String("path", destPath))
 
-	fullPath := fd.fullPath(destPath)
+	n, err := fd.driver.PutFile(destPath, data, appendData)
 
-	file, ok := fd.files[fullPath]
-
-	if ok && appendData && file.isDir {
-		return 0, os.ErrInvalid
+	if err != nil {
+		fd.logger.Error("Error putting file", zap.Error(err), zap.String("path", destPath))
+		return n, err
 	}
 
-	if !ok || !appendData {
-		file = &ftpFile{
-			dir:  path.Dir(fullPath),
-			name: path.Base(fullPath),
-			conn: *fd.conn,
-		}
+	fd.bus.Send(NewFileCreateEvent(fd.toFtpFile(destPath)))
+
+	return int64(n), nil
+}
+
+func (fd *fileDriver) toFtpFile(p string) *File {
+
+	fullPath := fd.userSpace.getPath(p)
+	info := fd.userSpace.stat(p)
+
+	return &File{
+		User:       fd.conn.LoginUser(),
+		FullName:   fullPath,
+		Data:       fd.userSpace.getBytes(p),
+		Name:       path.Base(fullPath),
+		IP:         fd.conn.PublicIp(),
+		ReceivedAt: info.ModTime(),
 	}
-	fd.Lock()
-	fd.files[fullPath] = file
-	fd.Unlock()
-
-	cleanup := func() {
-		fd.Lock()
-		delete(fd.files, fullPath)
-		fd.Unlock()
-	}
-
-	go func() {
-		time.Sleep(cleanupTime)
-		cleanup()
-	}()
-
-	file.ts = time.Now()
-
-	buffer := make([]byte, 1024*1024)
-	read := 0
-	for sz, err := data.Read(buffer); sz > 0; sz, err = data.Read(buffer) {
-		if err != nil {
-			return int64(read), fmt.Errorf("Error reading data: %v", err)
-		}
-		read += sz
-		file.data = append(file.data, buffer[0:sz]...)
-	}
-
-	if fd.bus != nil {
-		f := file.asFile()
-		fd.bus.Send(NewFileCreateEvent(f))
-	}
-
-	return int64(read), nil
 }
 
 type ftpFile struct {
