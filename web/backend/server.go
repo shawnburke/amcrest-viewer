@@ -19,6 +19,7 @@ import (
 
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
+	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/file"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 )
@@ -321,11 +322,14 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer reader.Close()
 
-	contentType := getContentType(fileInfo.Path)
+	contentType := getContentType(fileInfo)
 
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Length))
-	w.Header().Set("Content-Disposition", "attachment; filename="+path.Base(fileInfo.Path))
+
+	if dl := r.URL.Query().Get("download"); dl != "" {
+		w.Header().Set("Content-Disposition", "attachment; filename="+path.Base(fileInfo.Path))
+	}
 
 	w.WriteHeader(200)
 
@@ -364,8 +368,22 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 	return s.r
 }
 
-func getContentType(p string) string {
+func init() {
+	// docker containers don't always have the mime.types file
+	if mime.TypeByExtension(".mp4") == "" {
+		types := map[string]string{
+			".mp4": "video/mp4",
+		}
 
-	ct := mime.TypeByExtension(path.Ext(p))
+		for k, v := range types {
+			mime.AddExtensionType(k, v)
+		}
+	}
+}
+
+func getContentType(fi *entities.File) string {
+
+	ct := mime.TypeByExtension(path.Ext(fi.Path))
+
 	return ct
 }
