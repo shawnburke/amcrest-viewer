@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"time"
@@ -134,7 +136,12 @@ func (s *Server) writeError(err error, w http.ResponseWriter, status int) bool {
 	}
 
 	if status == 0 {
+
 		status = 500
+
+		if errors.Is(err, os.ErrNotExist) {
+			status = 404
+		}
 	}
 	s.writeJson(info, w, status)
 	return true
@@ -292,6 +299,8 @@ func (s *Server) getFileInfo(w http.ResponseWriter, r *http.Request) {
 	s.writeJson(fileInfo, w, 200)
 }
 
+const mimeTextPlain = "text/plain"
+
 func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 
 	idStr := mux.Vars(r)["file-id"]
@@ -319,6 +328,11 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contentType := http.DetectContentType(header)
+
+	if contentType == mimeTextPlain {
+		contentType = mime.TypeByExtension(path.Ext(fileInfo.Path))
+	}
+
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Length))
 	w.Header().Set("Content-Disposition", "attachment; filename="+path.Base(fileInfo.Path))
