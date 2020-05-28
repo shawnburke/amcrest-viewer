@@ -68,6 +68,7 @@ func (ai *amcrestIngester) Name() string {
 func (ai *amcrestIngester) IngestFile(f *ftp.File) *models.MediaFile {
 	mf, err := ai.pathToFile(f.FullName)
 	if err != nil {
+		ai.logger.Error("Amcrest ingest failed", zap.Error(err), zap.String("path", f.FullName))
 		return nil
 	}
 	mf.CameraID = f.User
@@ -120,15 +121,19 @@ func pathToTimestamps(p string, tz *time.Location) []time.Time {
 		return nil
 	}
 
+	// pick out the date and the time stamps and reformat
+	// into a string like timeFormat above, then
+	// use built in parsing to do the rest
+
 	start := fmt.Sprintf("%sT%s", dateMatch, timestampMatches[0])
 	s, err := time.ParseInLocation(timeFormat, start, tz)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	end := fmt.Sprintf("%sT%s", dateMatch, timestampMatches[1])
 	e, err := time.ParseInLocation(timeFormat, end, tz)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 
 	return []time.Time{
@@ -137,10 +142,24 @@ func pathToTimestamps(p string, tz *time.Location) []time.Time {
 	}
 }
 
+// JPG Format
+// 2019-05-09/001/jpg/06/07/27[M][0@0][0].jpg
+// 2020-05-28/001/jpg/09/32/52[M][0@0][0].jpg
+
+var counterRegex = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(/\d{3}/)`)
+
 func jpgPathToTimestamp(p string, tz *time.Location) (time.Time, error) {
 
-	// todo replace with regex
-	p = strings.Replace(p, "/001/", "/xxx/", -1)
+	// convert to a format that built in parsing can manage by
+	// removing the index number.
+	match := counterRegex.FindStringSubmatch(p)
 
-	return time.ParseInLocation("2006-01-02/xxx/jpg/15/04/05", p[0:27], tz)
+	if match == nil {
+		return time.Time{}, ErrorUnknownFile
+	}
+
+	start := strings.Index(p, match[0])
+	p = strings.Replace(p, match[1], "/xxx/", 1)
+
+	return time.ParseInLocation("2006-01-02/xxx/jpg/15/04/05", p[start:start+27], tz)
 }

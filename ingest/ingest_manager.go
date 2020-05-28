@@ -87,7 +87,7 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 	}
 
 	im.logger.Info("Ingesting file",
-		zap.String("name", f.Name),
+		zap.String("name", f.FullName),
 		zap.String("User", f.User),
 		zap.String("ingester", ingester.Name()),
 	)
@@ -106,6 +106,7 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 
 	switch mf.Type {
 	case models.MP4:
+		// fall through
 	case models.JPG:
 		fileType = entities.FileTypeJpg
 	default:

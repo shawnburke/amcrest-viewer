@@ -115,42 +115,22 @@ func (us userSpace) getPath(p string) string {
 	return p
 }
 
-func (us userSpace) stat(p string) os.FileInfo {
+func (us userSpace) stat(p string) (os.FileInfo, error) {
 	fullPath := path.Join(us.root, p)
 
-	info, err := os.Stat(fullPath)
-	if err != nil {
-		// TODO: log
-		fmt.Fprintf(os.Stderr, "ERROR stating file %s: %v", fullPath, err)
-		return nil
-	}
-	return info
+	return os.Stat(fullPath)
 }
 
-func (us userSpace) getBytes(p string) []byte {
+func (us userSpace) getBytes(p string) ([]byte, error) {
 	fullPath := path.Join(us.root, p)
 
-	bytes, err := ioutil.ReadFile(fullPath)
-
-	if err != nil {
-		// todo logging
-		fmt.Fprintf(os.Stderr, "ERROR reading file %s: %v", fullPath, err)
-	}
-
-	return bytes
+	return ioutil.ReadFile(fullPath)
 }
 
-func (us userSpace) getReader(p string) io.ReadCloser {
+func (us userSpace) getReader(p string) (io.ReadCloser, error) {
 	fullPath := path.Join(us.root, p)
 
-	reader, err := os.Open(fullPath)
-
-	if err != nil {
-		// todo logging
-		fmt.Fprintf(os.Stderr, "ERROR reading file %s: %v", fullPath, err)
-	}
-
-	return reader
+	return os.Open(fullPath)
 
 }
 
@@ -218,14 +198,20 @@ func (fd *fileDriver) DeleteFile(p string) error {
 func (fd *fileDriver) Rename(s string, d string) error {
 	fd.logger.Info("REN", zap.String("path", s), zap.String("dest", d))
 
-	srcFile := fd.toFtpFile(s)
-
-	err := fd.driver.Rename(s, d)
+	srcFile, err := fd.toFtpFile(s)
 	if err != nil {
 		return err
 	}
 
-	destFile := fd.toFtpFile(d)
+	err = fd.driver.Rename(s, d)
+	if err != nil {
+		return err
+	}
+
+	destFile, err := fd.toFtpFile(d)
+	if err != nil {
+		return err
+	}
 
 	fd.bus.Send(NewFileRenameEvent(destFile, srcFile.FullName))
 
@@ -261,78 +247,35 @@ func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) 
 		return n, err
 	}
 
-	fd.bus.Send(NewFileCreateEvent(fd.toFtpFile(destPath)))
+	f, err := fd.toFtpFile(destPath)
+	if err != nil {
+		return 0, err
+	}
+
+	fd.bus.Send(NewFileCreateEvent(f))
 
 	return int64(n), nil
 }
 
-func (fd *fileDriver) toFtpFile(p string) *File {
+func (fd *fileDriver) toFtpFile(p string) (*File, error) {
 
 	fullPath := fd.userSpace.getPath(p)
-	info := fd.userSpace.stat(p)
+	info, err := fd.userSpace.stat(p)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := fd.userSpace.getBytes(p)
+	if err != nil {
+		return nil, err
+	}
 
 	return &File{
 		User:       fd.conn.LoginUser(),
 		FullName:   fullPath,
-		Data:       fd.userSpace.getBytes(p),
+		Data:       bytes,
 		Name:       path.Base(fullPath),
 		IP:         fd.conn.PublicIp(),
 		ReceivedAt: info.ModTime(),
-	}
-}
-
-type ftpFile struct {
-	dir      string
-	name     string
-	data     []byte
-	mode     os.FileMode
-	isDir    bool
-	ts       time.Time
-	conn     ftps.Conn
-	fullPath string
-
-	owner, group string
-}
-
-func (fi *ftpFile) asFile() *File {
-	fullPath := path.Join(fi.dir, fi.name)
-	f := &File{
-		Name:       path.Base(fullPath),
-		FullName:   fullPath,
-		Data:       fi.data,
-		User:       fi.conn.LoginUser(),
-		IP:         fi.conn.PublicIp(),
-		ReceivedAt: fi.ts,
-	}
-	return f
-}
-
-func (fi *ftpFile) Name() string {
-	return fi.name
-}
-
-func (fi *ftpFile) Size() int64 {
-	return int64(len(fi.data))
-}
-
-func (fi *ftpFile) Mode() os.FileMode {
-	return fi.mode
-} // file mode bits
-func (fi *ftpFile) ModTime() time.Time {
-	return fi.ts
-}
-
-func (fi *ftpFile) IsDir() bool {
-	return fi.isDir
-} // abbreviation for Mode().IsDir()
-func (fi *ftpFile) Sys() interface{} {
-	return nil
-} // underlying data source (can return nil)
-
-func (fi *ftpFile) Owner() string {
-	return fi.owner
-}
-
-func (fi *ftpFile) Group() string {
-	return fi.group
+	}, nil
 }
