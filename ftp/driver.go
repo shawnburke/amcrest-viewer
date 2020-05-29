@@ -6,11 +6,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 
-	filedriver "github.com/goftp/file-driver"
+	fd "github.com/goftp/file-driver"
 	ftps "github.com/goftp/server"
 	"github.com/shawnburke/amcrest-viewer/common"
 )
@@ -26,15 +27,15 @@ import (
 // TODOS:
 // 1. Implement a garage collection policy for files based on LRU (and maybe total size)
 
-type fileDriverFactory struct {
+type driverFactory struct {
 	ftps.Perm
 	logger     *zap.Logger
 	bus        common.EventBus
 	userSpaces userSpaces
 }
 
-func newFileDriverFactory(perm ftps.Perm, logger *zap.Logger, bus common.EventBus) *fileDriverFactory {
-	return &fileDriverFactory{
+func newDriverFactory(perm ftps.Perm, logger *zap.Logger, bus common.EventBus) *driverFactory {
+	return &driverFactory{
 		Perm:       perm,
 		logger:     logger,
 		bus:        bus,
@@ -70,21 +71,22 @@ func (us userSpaces) Get(user string) *userSpace {
 	return s
 }
 
-func (factory *fileDriverFactory) NewDriver() (ftps.Driver, error) {
-	return newFileDriver(factory.logger, factory.bus, factory.userSpaces), nil
+func (factory *driverFactory) NewDriver() (ftps.Driver, error) {
+	return newDriver(factory.logger, factory.bus, factory.userSpaces), nil
 }
 
-type fileDriver struct {
+type proxyDriver struct {
+	sync.Mutex
 	conn        *ftps.Conn
 	logger      *zap.Logger
 	bus         common.EventBus
-	driver      ftps.Driver
+	userDriver  ftps.Driver
 	userSpace   *userSpace
 	usersSpaces userSpaces
 }
 
-func newFileDriver(logger *zap.Logger, bus common.EventBus, userSpaces userSpaces) ftps.Driver {
-	fd := &fileDriver{
+func newDriver(logger *zap.Logger, bus common.EventBus, userSpaces userSpaces) ftps.Driver {
+	fd := &proxyDriver{
 		logger:      logger,
 		bus:         bus,
 		usersSpaces: userSpaces,
@@ -93,8 +95,9 @@ func newFileDriver(logger *zap.Logger, bus common.EventBus, userSpaces userSpace
 }
 
 type userSpace struct {
-	user string
-	root string
+	driver *fd.FileDriver
+	user   string
+	root   string
 }
 
 func newUserSpace(u string, r string) *userSpace {
@@ -108,6 +111,10 @@ func newUserSpace(u string, r string) *userSpace {
 	return &userSpace{
 		user: u,
 		root: r,
+		driver: &fd.FileDriver{
+			RootPath: r,
+			Perm:     ftps.NewSimplePerm("owner", "group"),
+		},
 	}
 }
 
@@ -134,21 +141,28 @@ func (us userSpace) getReader(p string) (io.ReadCloser, error) {
 
 }
 
-func (us *userSpace) CreateDriver(conn *ftps.Conn) ftps.Driver {
-	return &filedriver.FileDriver{
-		RootPath: us.root,
-		Perm:     ftps.NewSimplePerm("owner", "group"),
-	}
+func (us *userSpace) CreateDriver() ftps.Driver {
+	return us.driver
 }
 
-func (fd *fileDriver) Init(c *ftps.Conn) {
-	fd.logger.Info("Connection initiated", zap.String("user", c.LoginUser()))
-
-	user := c.LoginUser()
-	fd.userSpace = fd.usersSpaces.Get(user)
-	fd.driver = fd.userSpace.CreateDriver(c)
+func (fd *proxyDriver) Init(c *ftps.Conn) {
+	fd.logger.Info("Connection initiated")
 	fd.conn = c
+}
 
+func (fd *proxyDriver) driver() ftps.Driver {
+	fd.Lock()
+	defer fd.Unlock()
+	if fd.userDriver == nil {
+		user := fd.conn.LoginUser()
+		fd.userSpace = fd.usersSpaces.Get(user)
+		fd.userDriver = fd.userSpace.CreateDriver()
+		fd.logger.Info("Created userspace",
+			zap.String("user", user),
+			zap.String("ip", fd.conn.PublicIp()),
+		)
+	}
+	return fd.userDriver
 }
 
 const cleanupTime = time.Minute * 5
@@ -157,45 +171,45 @@ const cleanupTime = time.Minute * 5
 // returns - a time indicating when the requested path was last modified
 //         - an error if the file doesn't exist or the user lacks
 //           permissions
-func (fd *fileDriver) Stat(p string) (ftps.FileInfo, error) {
+func (fd *proxyDriver) Stat(p string) (ftps.FileInfo, error) {
 	fd.logger.Info("STAT", zap.String("path", p))
-	return fd.driver.Stat(p)
+	return fd.driver().Stat(p)
 }
 
 // params  - path
 // returns - true if the current user is permitted to change to the
 //           requested path
-func (fd *fileDriver) ChangeDir(p string) error {
+func (fd *proxyDriver) ChangeDir(p string) error {
 	fd.logger.Info("CWD", zap.String("path", p))
 
-	return fd.driver.ChangeDir(p)
+	return fd.driver().ChangeDir(p)
 }
 
 // params  - path, function on file or subdir found
 // returns - error
 //           path
-func (fd *fileDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
+func (fd *proxyDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
 	fd.logger.Info("LIST", zap.String("path", p))
-	return fd.driver.ListDir(p, r)
+	return fd.driver().ListDir(p, r)
 }
 
 // params  - path
 // returns - nil if the directory was deleted or any error encountered
-func (fd *fileDriver) DeleteDir(p string) error {
+func (fd *proxyDriver) DeleteDir(p string) error {
 	fd.logger.Info("RMDIR", zap.String("path", p))
-	return fd.driver.DeleteDir(p)
+	return fd.driver().DeleteDir(p)
 }
 
 // params  - path
 // returns - nil if the file was deleted or any error encountered
-func (fd *fileDriver) DeleteFile(p string) error {
+func (fd *proxyDriver) DeleteFile(p string) error {
 	fd.logger.Info("RM", zap.String("path", p))
-	return fd.driver.DeleteFile(p)
+	return fd.driver().DeleteFile(p)
 }
 
 // params  - from_path, to_path
 // returns - nil if the file was renamed or any error encountered
-func (fd *fileDriver) Rename(s string, d string) error {
+func (fd *proxyDriver) Rename(s string, d string) error {
 	fd.logger.Info("REN", zap.String("path", s), zap.String("dest", d))
 
 	srcFile, err := fd.toFtpFile(s)
@@ -203,7 +217,7 @@ func (fd *fileDriver) Rename(s string, d string) error {
 		return err
 	}
 
-	err = fd.driver.Rename(s, d)
+	err = fd.driver().Rename(s, d)
 	if err != nil {
 		return err
 	}
@@ -220,27 +234,27 @@ func (fd *fileDriver) Rename(s string, d string) error {
 
 // params  - path
 // returns - nil if the new directory was created or any error encountered
-func (fd *fileDriver) MakeDir(p string) error {
+func (fd *proxyDriver) MakeDir(p string) error {
 	fd.logger.Info("MKDIR", zap.String("path", p))
-	return fd.driver.MakeDir(p)
+	return fd.driver().MakeDir(p)
 }
 
 // params  - path
 // returns - a string containing the file data to send to the client
-func (fd *fileDriver) GetFile(p string, n int64) (int64, io.ReadCloser, error) {
+func (fd *proxyDriver) GetFile(p string, n int64) (int64, io.ReadCloser, error) {
 	fd.logger.Error("GET", zap.String("path", p))
 
-	// return driver.GetFile(p, n)
+	// return fd.driver().GetFile(p, n)
 	return 0, nil, os.ErrInvalid
 }
 
 // params  - destination path, an io.Reader containing the file data
 // returns - the number of bytes writen and the first error encountered while writing, if any.
-func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) (int64, error) {
+func (fd *proxyDriver) PutFile(destPath string, data io.Reader, appendData bool) (int64, error) {
 
 	fd.logger.Info("PUT", zap.String("path", destPath))
 
-	n, err := fd.driver.PutFile(destPath, data, appendData)
+	n, err := fd.driver().PutFile(destPath, data, appendData)
 
 	if err != nil {
 		fd.logger.Error("Error putting file", zap.Error(err), zap.String("path", destPath))
@@ -257,7 +271,7 @@ func (fd *fileDriver) PutFile(destPath string, data io.Reader, appendData bool) 
 	return int64(n), nil
 }
 
-func (fd *fileDriver) toFtpFile(p string) (*File, error) {
+func (fd *proxyDriver) toFtpFile(p string) (*File, error) {
 
 	fullPath := fd.userSpace.getPath(p)
 	info, err := fd.userSpace.stat(p)

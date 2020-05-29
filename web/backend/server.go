@@ -243,6 +243,21 @@ func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
 
 }
 
+var timeFormats = []string{
+	time.RFC3339,
+	"2006-01-02",
+}
+
+func (s *Server) parseTime(t string) (time.Time, error) {
+	for _, tf := range timeFormats {
+		t, err := time.Parse(tf, t)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("Could not parse time %q as either YYYY-MM-DD or YY-MM-DDTHH:MM:SSZ", t)
+}
+
 func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 
 	cameraID := mux.Vars(r)["camera-id"]
@@ -255,7 +270,7 @@ func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 	var start, end *time.Time
 
 	if st := r.URL.Query().Get("start"); st != "" {
-		t, err := time.Parse(time.RFC3339, st)
+		t, err := s.parseTime(st)
 		if err != nil && s.writeError(fmt.Errorf("Bad start time format: %w", err), w, 400) {
 			return
 		}
@@ -263,7 +278,7 @@ func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if et := r.URL.Query().Get("end"); et != "" {
-		t, err := time.Parse(time.RFC3339, et)
+		t, err := s.parseTime(et)
 		if err != nil && s.writeError(fmt.Errorf("Bad start time format: %w", err), w, 400) {
 			return
 		}
