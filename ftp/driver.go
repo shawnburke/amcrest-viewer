@@ -227,6 +227,14 @@ func (fd *proxyDriver) Rename(s string, d string) error {
 		return err
 	}
 
+	destFile.Done = func() {
+		fp := path.Join(fd.userSpace.root, destFile.FullName)
+		err = os.Remove(fp)
+		if err != nil {
+			fd.logger.Error("Failed to clean up file", zap.String("path", fp), zap.Error(err))
+		}
+	}
+
 	fd.bus.Send(NewFileRenameEvent(destFile, srcFile.FullName))
 
 	return nil

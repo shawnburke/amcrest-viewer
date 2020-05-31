@@ -29,7 +29,8 @@ class CameraView extends React.Component {
 
     loadFiles() {
         var date = this.state.date;
-        var start = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+        var start = date.toString().replace(/\d{2}:\d{2}:\d{2}/, "00:00:00")
+        start = new Date(start);
 
         var end = new Date(start.getTime() + (24 * 60 * 60 * 1000));
 
