@@ -24,14 +24,14 @@ const (
 )
 
 type File struct {
-	ID              int        `db:"ID"`
-	CameraID        int        `db:"CameraID"`
-	Path            string     `db:"Path"`
-	Type            int        `db:"Type"`
-	Timestamp       time.Time  `db:"Timestamp"`
-	Received        *time.Time `db:"Received"`
-	DurationSeconds *int       `db:"DurationSeconds"`
-	Length          int        `db:"Length"`
+	ID              int        `db:"ID" json:"id"`
+	CameraID        int        `db:"CameraID" json:"camera_id"`
+	Path            string     `db:"Path" json:"path"`
+	Type            int        `db:"Type" json:"type"`
+	Timestamp       time.Time  `db:"Timestamp" json:"timestamp"`
+	Received        *time.Time `db:"Received" json:"received_at"`
+	DurationSeconds *int       `db:"DurationSeconds" json:"duration_seconds"`
+	Length          int        `db:"Length" json:"length"`
 }
 
 func (f File) Duration() time.Duration {

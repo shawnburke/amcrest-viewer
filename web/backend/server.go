@@ -180,7 +180,7 @@ func (s *Server) createCamera(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
 
-	strID := mux.Vars(r)["id"]
+	strID := mux.Vars(r)["camera-id"]
 
 	cam, err := s.data.GetCamera(strID)
 
@@ -255,7 +255,24 @@ func (s *Server) parseTime(t string) (time.Time, error) {
 			return t, nil
 		}
 	}
+
+	// check unix time ( unix ms )
+	val, err := strconv.ParseInt(t, 10, 64)
+	if err == nil {
+		return time.Unix(val/1000, 0), nil
+	}
+
 	return time.Time{}, fmt.Errorf("Could not parse time %q as either YYYY-MM-DD or YY-MM-DDTHH:MM:SSZ", t)
+}
+
+func (s *Server) updateFilePaths(cam string, files ...*entities.File) []*entities.File {
+	newFiles := make([]*entities.File, len(files))
+	for i, f := range files {
+		nf := *f
+		nf.Path = fmt.Sprintf("/api/cameras/%s/files/%d", cam, f.ID)
+		newFiles[i] = &nf
+	}
+	return newFiles
 }
 
 func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
@@ -288,13 +305,15 @@ func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 		end = &t
 	}
 
-	cams, err := s.data.ListFiles(cameraID, start, end, nil)
+	files, err := s.data.ListFiles(cameraID, start, end, nil)
 
 	if s.writeError(err, w, 0) {
 		return
 	}
 
-	s.writeJson(cams, w, 0)
+	files = s.updateFilePaths(cameraID, files...)
+
+	s.writeJson(files, w, 0)
 
 }
 
@@ -312,7 +331,11 @@ func (s *Server) getFileInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.writeJson(fileInfo, w, 200)
+	camid := mux.Vars(r)["camera-id"]
+
+	fi := s.updateFilePaths(camid, fileInfo)
+
+	s.writeJson(fi[0], w, 200)
 }
 
 const mimeTextPlain = "text/plain"
@@ -365,14 +388,14 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 	// cameras
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
 	s.r.Methods("GET").Path("/api/cameras").HandlerFunc(s.listCameras)
-	s.r.Methods("GET").Path("/api/cameras/{id}").HandlerFunc(s.getCamera)
-	s.r.Methods("PUT").Path("/api/cameras/{id}").HandlerFunc(s.updateCamera)
+	s.r.Methods("GET").Path("/api/cameras/{camera-id}").HandlerFunc(s.getCamera)
+	s.r.Methods("PUT").Path("/api/cameras/{camera-id}").HandlerFunc(s.updateCamera)
 
 	// files
-	s.r.Methods("GET").Path("/api/files/{camera-id}").HandlerFunc(s.listFiles)
+	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files").HandlerFunc(s.listFiles)
 
-	s.r.Methods("GET").Path("/api/files/{camera-id}/{file-id}").HandlerFunc(s.getFile)
-	s.r.Methods("GET").Path("/api/files/{camera-id}/{file-id}/info").HandlerFunc(s.getFileInfo)
+	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files/{file-id}").HandlerFunc(s.getFile)
+	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files/{file-id}/info").HandlerFunc(s.getFileInfo)
 
 	s.Logger.Info("web server path", zap.String("path", frontendPath))
 	// website
