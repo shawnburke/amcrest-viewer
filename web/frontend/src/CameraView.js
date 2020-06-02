@@ -20,6 +20,7 @@ class CameraView extends React.Component {
         this.state = {
             files: [],
             date: new Date(),
+            selected: 0
         }
     }
 
@@ -38,7 +39,7 @@ class CameraView extends React.Component {
 
         this.filesService.retrieveItems(start, end).then(items => {
 
-            this.setState({ files: items, source: null });
+            this.setState({ files: items, source: null, selected:-1 });
 
         });
     }
@@ -46,9 +47,11 @@ class CameraView extends React.Component {
 
     handleClick(el) {
         el.preventDefault();
+        var index = Number(el.currentTarget.attributes.file.value);
         this.setState(
             {
-                source: el.target.attributes.src
+                source: this.state.files[index],
+                selected: index
             }
         );
     }
@@ -61,14 +64,30 @@ class CameraView extends React.Component {
         var fileRows = [];
 
         if (this.state.files) {
-            this.state.files.forEach(f => {
-                var row = <Row key={f.id}>
-                    <Col>{new Date(f.timestamp).toLocaleTimeString()}</Col>
-                    <Col>{f.type}</Col>
+            this.state.files.forEach((f,i) => {
+
+                var style = {};
+
+                if (i === this.state.selected) {
+                    style = {
+                        background: "yellow"
+                    }
+                }
+
+                var t = "jpg";
+
+                if (f.type === 1) {
+                    t = "mp4";
+                }
+
+                var row = <Row key={f.id} style={style} file={i} onClick={this.handleClick.bind(this)}>
+                    <Col >{new Date(f.timestamp).toLocaleTimeString()}</Col>
+                    <Col>{t}</Col>
                     <Col>{f.duration_seconds}</Col>
-                    <Col><a src={f.path} onClick={this.handleClick.bind(this)}>{f.path}</a></Col>
+                    <Col>{f.path}</Col>
                 </Row>;
 
+             
                 fileRows.push(row);
             })
         }
@@ -80,7 +99,7 @@ class CameraView extends React.Component {
                     background: "black",
                     color: "white",
                     height: "200px",
-                }}><Player source={this.state.source} /></div>
+                }}><Player file={this.state.source} /></div>
             </Col>
         </Row>
             <Row>
@@ -119,24 +138,28 @@ class Player extends React.Component {
 
     render() {
 
-        if (this.props.source == null) {
+        if (this.props.file == null) {
             return <div></div>;
         }
 
 
-        var val = this.props.source.value;
-        var mp4 = val.endsWith("mp4");
+        var val = this.props.file;
+        
 
-        if (mp4) {
-            return <ReactPlayer url={val} width="100%" height="100%" playing="true" style={{
-                height:"100%"
-            }} />;
+        if (val.type === 1) {
+            return <ReactPlayer 
+                url={val.path} 
+                width="100%" 
+                height="100%" 
+                playing="true" style={{
+                    height:"100%"
+                }} 
+            />;
         }
-        var jpg = val.endsWith("jpg");
-
-        if (jpg) {
-            return <img src={val}  style={{
-                height: "100%",
+        
+        if (val.type === 0) {
+            return <img src={val.path}  style={{
+                height: "100%"
             }}/>;
         }
 
