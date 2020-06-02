@@ -5,6 +5,7 @@ import { Row, Col, Button } from 'react-bootstrap';
 //import "react-datepicker/dist/react-datepicker.css";
 import DatePicker from 'react-date-picker'
 import ServiceBroker from "./shared/ServiceBroker";
+import ReactPlayer from 'react-player'
 
 
 class CameraView extends React.Component {
@@ -37,10 +38,21 @@ class CameraView extends React.Component {
 
         this.filesService.retrieveItems(start, end).then(items => {
 
-            this.setState({ files: items });
+            this.setState({ files: items, source: null });
 
         });
     }
+
+
+    handleClick(el) {
+        el.preventDefault();
+        this.setState(
+            {
+                source: el.target.attributes.src
+            }
+        );
+    }
+
 
     render() {
 
@@ -50,11 +62,11 @@ class CameraView extends React.Component {
 
         if (this.state.files) {
             this.state.files.forEach(f => {
-                var row = <Row>
+                var row = <Row key={f.id}>
                     <Col>{new Date(f.timestamp).toLocaleTimeString()}</Col>
                     <Col>{f.type}</Col>
                     <Col>{f.duration_seconds}</Col>
-                    <Col><a href={f.path}>{f.path}</a></Col>
+                    <Col><a src={f.path} onClick={this.handleClick.bind(this)}>{f.path}</a></Col>
                 </Row>;
 
                 fileRows.push(row);
@@ -68,7 +80,7 @@ class CameraView extends React.Component {
                     background: "black",
                     color: "white",
                     height: "200px",
-                }}>{this.props.camera}</div>
+                }}><Player source={this.state.source} /></div>
             </Col>
         </Row>
             <Row>
@@ -90,13 +102,46 @@ class CameraView extends React.Component {
 
     setStartDate(d) {
 
-        if (d == this.state.date) {
+        if (d === this.state.date) {
             return;
         }
         this.setState({
             date: d,
         })
         this.loadFiles();
+    }
+}
+
+
+
+
+class Player extends React.Component {
+
+    render() {
+
+        if (this.props.source == null) {
+            return <div></div>;
+        }
+
+
+        var val = this.props.source.value;
+        var mp4 = val.endsWith("mp4");
+
+        if (mp4) {
+            return <ReactPlayer url={val} width="100%" height="100%" playing="true" style={{
+                height:"100%"
+            }} />;
+        }
+        var jpg = val.endsWith("jpg");
+
+        if (jpg) {
+            return <img src={val}  style={{
+                height: "100%",
+            }}/>;
+        }
+
+        return <div></div>;
+
     }
 }
 

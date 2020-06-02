@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/shawnburke/amcrest-viewer/common"
@@ -27,9 +28,12 @@ type IngestManagerParams struct {
 	DataManager data.Repository
 }
 
+var ErrIngestDelete = errors.New("IngestDelete")
+var ErrIngestIgnore = errors.New("IngestIgnore")
+
 type Ingester interface {
 	Name() string
-	IngestFile(f *ftp.File) *models.MediaFile
+	IngestFile(f *ftp.File) (*models.MediaFile, error)
 }
 
 func NewIngestManager(p IngestManagerParams) error {
@@ -92,10 +96,20 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		zap.String("ingester", ingester.Name()),
 	)
 
-	mf := ingester.IngestFile(f)
+	mf, err := ingester.IngestFile(f)
 
 	if mf == nil {
-		im.logger.Error("Ingester failed to ingest file", zap.String("file", f.FullName))
+
+		if err == ErrIngestIgnore {
+			return nil
+		}
+
+		if err == ErrIngestDelete {
+			f.Close()
+			return nil
+		}
+
+		im.logger.Error("Ingester failed to ingest file", zap.String("file", f.FullName), zap.Error(err))
 		return nil
 	}
 

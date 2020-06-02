@@ -8,7 +8,7 @@ class CameraSummary extends React.Component {
         document.title = "Camera Viewer";
         var rows = this.props.cameras.map((c) => {
 
-            return <Row style={{
+            return <Row key={c.name} style={{
                 border: "thin black solid",
                 background: "silver",
                 padding: "5px",

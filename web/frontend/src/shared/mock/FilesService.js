@@ -116,6 +116,21 @@ class FilesService {
 
         ];
 
+
+        this.files.forEach(el => {
+            var parts = el.path.split("/");
+            var file = parts[parts.length - 1];
+            switch (el.type) {
+                case 0:
+                    el.path = "/1591027084.jpg";
+                    break;
+                case 1:
+                    el.path = "/1591028951.mp4";
+                    break
+            }
+
+        });
+
     }
 
     async retrieveItems(startDate, endDate) {

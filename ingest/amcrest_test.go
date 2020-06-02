@@ -37,6 +37,7 @@ func TestIngestParse(t *testing.T) {
 		Type     models.MediaFileType
 		Duration time.Duration
 		Fail     bool
+		Error    error
 	}{
 		{
 			P:        "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4",
@@ -54,6 +55,14 @@ func TestIngestParse(t *testing.T) {
 			Type: models.JPG,
 			TS:   time.Date(2020, time.May, 28, 9, 32, 52, 0, tz),
 		},
+		{
+			P:     "/AMC0009L_M35704/2020-05-28/001/jpg/09/32/52[M][0@0][0].mp4_",
+			Error: ErrIngestIgnore,
+		},
+		{
+			P:     "/AMC0009L_M35704/2020-05-28/001/jpg/09/32/52[M][0@0][0].idx",
+			Error: ErrIngestDelete,
+		},
 	}
 
 	for i, tt := range cases {
@@ -65,7 +74,14 @@ func TestIngestParse(t *testing.T) {
 				FullName: tt.P,
 			}
 
-			mf := ingester.Ingester.IngestFile(f)
+			mf, err := ingester.Ingester.IngestFile(f)
+
+			if tt.Error != nil {
+				require.Equal(t, tt.Error, err)
+				return
+			}
+
+			require.NoError(t, err)
 			require.NotNil(t, mf)
 			require.Equal(t, tt.Type, mf.Type)
 			require.Equal(t, tt.TS, mf.Timestamp)

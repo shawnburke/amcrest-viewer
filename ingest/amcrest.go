@@ -3,6 +3,7 @@ package ingest
 import (
 	"errors"
 	"fmt"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -65,14 +66,24 @@ type amcrestIngester struct {
 func (ai *amcrestIngester) Name() string {
 	return amcrestIngesterType
 }
-func (ai *amcrestIngester) IngestFile(f *ftp.File) *models.MediaFile {
+func (ai *amcrestIngester) IngestFile(f *ftp.File) (*models.MediaFile, error) {
 	mf, err := ai.pathToFile(f.FullName)
+
+	switch path.Ext(f.FullName) {
+	case ".mp4", ".jpg":
+		break
+	case ".idx":
+		return nil, ErrIngestDelete
+	case ".mp4_", ".backup_":
+		return nil, ErrIngestIgnore
+	}
+
 	if err != nil {
-		ai.logger.Error("Amcrest ingest failed", zap.Error(err), zap.String("path", f.FullName))
-		return nil
+		ai.logger.Error("Amcrest ingest unknown file", zap.Error(err), zap.String("path", f.FullName))
+		return nil, err
 	}
 	mf.CameraID = f.User
-	return mf
+	return mf, nil
 }
 
 func (ai *amcrestIngester) pathToFile(path string) (*models.MediaFile, error) {
