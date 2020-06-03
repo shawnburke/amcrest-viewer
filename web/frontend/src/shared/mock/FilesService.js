@@ -118,7 +118,6 @@ class FilesService {
 
 
         this.files.forEach(el => {
-            var parts = el.path.split("/");
             switch (el.type) {
                 case 0:
                     el.path = "/1591027084.jpg";
@@ -126,6 +125,8 @@ class FilesService {
                 case 1:
                     el.path = "/1591028951.mp4";
                     break
+                default:
+                    break;
             }
 
         });
@@ -134,8 +135,8 @@ class FilesService {
 
     }
 
-    async retrieveItems(startDate, endDate) {
-
+    async retrieveItems(startDate, endDate, sort) {
+        console.log(`Retrieve ${startDate} => ${endDate} (${sort})`)
         return Promise.resolve(this.files);
 
     }

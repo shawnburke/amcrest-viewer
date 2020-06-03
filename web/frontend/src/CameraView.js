@@ -29,12 +29,18 @@ class CameraView extends React.Component {
         this.loadFiles();
     }
 
-    loadFiles() {
-        var date = this.state.date;
+    componentDidUpdate(prevProps, prevState) {  
+        if (this.state.date !== prevState.date) {    
+            this.loadFiles(this.state.date);
+        }  
+    }
+
+    loadFiles(date) {
+        date = date || this.state.date;
         var start = date.toString().replace(/\d{2}:\d{2}:\d{2}/, "00:00:00")
         start = new Date(start);
 
-        var end = new Date(start.getTime() + (24 * 60 * 60 * 1000));
+        var end = new Date(start.getTime() + (24 * 60 * 60 * 1000)-1);
 
 
         this.filesService.retrieveItems(start, end, "desc").then(items => {
@@ -139,7 +145,6 @@ class CameraView extends React.Component {
         this.setState({
             date: d,
         })
-        this.loadFiles();
     }
 }
 
@@ -171,7 +176,7 @@ class Player extends React.Component {
         }
         
         if (val.type === 0) {
-            return <img src={val.path}  style={{
+            return <img alt="view" src={val.path}  style={{
                 height: "100%"
             }}/>;
         }
