@@ -37,7 +37,7 @@ class CameraView extends React.Component {
         var end = new Date(start.getTime() + (24 * 60 * 60 * 1000));
 
 
-        this.filesService.retrieveItems(start, end).then(items => {
+        this.filesService.retrieveItems(start, end, "desc").then(items => {
 
             this.setState({ 
                 files: items, 
@@ -88,7 +88,7 @@ class CameraView extends React.Component {
                     <Col >{new Date(f.timestamp).toTimeString()}</Col>
                     <Col>{t}</Col>
                     <Col>{f.duration_seconds}</Col>
-                    <Col>{f.path}</Col>
+                    <Col><a href="{f.path}" target="_vid">{f.path}</a></Col>
                 </Row>;
 
              
@@ -96,13 +96,15 @@ class CameraView extends React.Component {
             })
         }
 
+        var windowHeight = window.innerHeight;
+
         return <div> <Row>
             <Col>
                 <div style={{
                     width: "100%",
                     background: "black",
                     color: "white",
-                    height: "200px",
+                    height: windowHeight * .4,
                 }}><Player file={this.state.source} /></div>
             </Col>
         </Row>
@@ -119,7 +121,13 @@ class CameraView extends React.Component {
                     <Button><span>⚙</span></Button>
                 </Col>
             </Row>
+            <div style={{
+                maxHeight:  windowHeight * .5,
+                overflowY: "auto",
+                overflowX: "hidden"
+            }}>
             {fileRows}
+            </div>
         </div>
     }
 
@@ -152,6 +160,7 @@ class Player extends React.Component {
 
         if (val.type === 1) {
             return <ReactPlayer 
+                controls
                 url={val.path} 
                 width="100%" 
                 height="100%" 
