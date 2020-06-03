@@ -130,6 +130,8 @@ class FilesService {
 
         });
 
+        this.files = this.files.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
     }
 
     async retrieveItems(startDate, endDate) {

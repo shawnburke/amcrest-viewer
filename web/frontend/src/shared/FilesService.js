@@ -6,9 +6,9 @@ class FilesService {
 
     }
 
-    async retrieveItems(startDate, endDate) {
+    async retrieveItems(startDate, endDate, sort) {
 
-        var url = `${this.url}?start=${startDate.getTime()}&end=${endDate.getTime()}`
+        var url = `${this.url}?start=${startDate.getTime()}&end=${endDate.getTime()}&sort=${sort}`
         return fetch(url)
 
             .then(response => {
