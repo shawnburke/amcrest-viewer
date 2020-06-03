@@ -305,7 +305,16 @@ func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 		end = &t
 	}
 
-	files, err := s.data.ListFiles(cameraID, start, end, nil)
+	lff := &data.ListFilesFilter{
+		Start: start,
+		End:   end,
+	}
+
+	sort := mux.Vars(r)["sort"]
+
+	lff.Descending = sort == "desc"
+
+	files, err := s.data.ListFiles(cameraID, lff)
 
 	if s.writeError(err, w, 0) {
 		return

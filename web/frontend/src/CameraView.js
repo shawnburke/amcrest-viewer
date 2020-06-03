@@ -39,7 +39,11 @@ class CameraView extends React.Component {
 
         this.filesService.retrieveItems(start, end).then(items => {
 
-            this.setState({ files: items, source: null, selected:-1 });
+            this.setState({ 
+                files: items, 
+                source: null, 
+                selected:0 
+            });
 
         });
     }
@@ -81,7 +85,7 @@ class CameraView extends React.Component {
                 }
 
                 var row = <Row key={f.id} style={style} file={i} onClick={this.handleClick.bind(this)}>
-                    <Col >{new Date(f.timestamp).toLocaleTimeString()}</Col>
+                    <Col >{new Date(f.timestamp).toTimeString()}</Col>
                     <Col>{t}</Col>
                     <Col>{f.duration_seconds}</Col>
                     <Col>{f.path}</Col>

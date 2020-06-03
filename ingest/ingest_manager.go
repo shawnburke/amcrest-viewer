@@ -33,7 +33,7 @@ var ErrIngestIgnore = errors.New("IngestIgnore")
 
 type Ingester interface {
 	Name() string
-	IngestFile(f *ftp.File) (*models.MediaFile, error)
+	IngestFile(cam *entities.Camera, f *ftp.File) (*models.MediaFile, error)
 }
 
 func NewIngestManager(p IngestManagerParams) error {
@@ -62,8 +62,17 @@ type ingestManager struct {
 	dm        data.Repository
 }
 
-func (im *ingestManager) getIngesterType(user string) string {
-	return amcrestIngesterType
+func (im *ingestManager) getIngesterCamera(user string) (*entities.Camera, error) {
+
+	cam, err := im.dm.GetCamera(user)
+	if err != nil {
+		im.logger.Error("Failed to load camera",
+			zap.String("camera", user),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+	return cam, err
 }
 
 func (im *ingestManager) OnEvent(e common.Event) error {
@@ -77,7 +86,16 @@ func (im *ingestManager) OnEvent(e common.Event) error {
 }
 
 func (im *ingestManager) ingest(f *ftp.File) error {
-	ingesterType := im.getIngesterType(f.User)
+	cam, err := im.getIngesterCamera(f.User)
+
+	if err != nil {
+		return err
+	}
+
+	if cam == nil {
+		return fmt.Errorf("Failed to find camera for user %q", f.User)
+	}
+	ingesterType := cam.Type
 
 	ingester, ok := im.ingesters[ingesterType]
 
@@ -96,7 +114,7 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		zap.String("ingester", ingester.Name()),
 	)
 
-	mf, err := ingester.IngestFile(f)
+	mf, err := ingester.IngestFile(cam, f)
 
 	if mf == nil {
 

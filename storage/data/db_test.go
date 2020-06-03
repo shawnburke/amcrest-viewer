@@ -159,7 +159,7 @@ func TestFileAddGetList(t *testing.T) {
 		require.NotNil(t, file)
 	}
 
-	res, err := rep.ListFiles(cam.CameraID(), nil, nil, nil)
+	res, err := rep.ListFiles(cam.CameraID(), nil)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 10)
@@ -167,13 +167,21 @@ func TestFileAddGetList(t *testing.T) {
 
 	s := start.Add(time.Minute)
 	e := start.Add(time.Minute * 5)
-	res, err = rep.ListFiles(cam.CameraID(), &s, &e, nil)
+	lff := &ListFilesFilter{
+		Start: &s,
+		End:   &e,
+	}
+	res, err = rep.ListFiles(cam.CameraID(), lff)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 4)
 
 	fileType := entities.FileTypeJpg
-	res, err = rep.ListFiles(cam.CameraID(), nil, nil, &fileType)
+	lff = &ListFilesFilter{
+		FileType: &fileType,
+	}
+
+	res, err = rep.ListFiles(cam.CameraID(), lff)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 0)

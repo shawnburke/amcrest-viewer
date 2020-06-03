@@ -27,7 +27,14 @@ type Repository interface {
 	AddFile(path string, t int, cameraID string, length int, timestamp time.Time, duration *time.Duration) (*entities.File, error)
 	GetFile(id int) (*entities.File, error)
 
-	ListFiles(cameraID string, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error)
+	ListFiles(cameraID string, filter *ListFilesFilter) ([]*entities.File, error)
+}
+
+type ListFilesFilter struct {
+	Start      *time.Time
+	End        *time.Time
+	FileType   *int
+	Descending bool
 }
 
 func NewRepository(db *sqlx.DB, logger *zap.Logger) (Repository, error) {
@@ -337,11 +344,15 @@ func (sr *sqlRepository) GetFile(id int) (*entities.File, error) {
 	return nil, os.ErrNotExist
 }
 
-func (sr *sqlRepository) ListFiles(cameraID string, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error) {
+func (sr *sqlRepository) ListFiles(cameraID string, filter *ListFilesFilter) ([]*entities.File, error) {
 
 	camID, err := parseCameraID(cameraID)
 	if err != nil {
 		return nil, err
+	}
+
+	if filter == nil {
+		filter = &ListFilesFilter{}
 	}
 
 	query := `SELECT * FROM files WHERE CameraID=$1 `
@@ -350,19 +361,23 @@ func (sr *sqlRepository) ListFiles(cameraID string, start *time.Time, end *time.
 		camID,
 	}
 
-	if start != nil {
+	if filter.Start != nil {
 		query += " AND Timestamp >= $2"
-		args = append(args, *start)
+		args = append(args, *filter.Start)
 
-		if end != nil {
+		if filter.End != nil {
 			query += " AND Timestamp < $3"
-			args = append(args, *end)
+			args = append(args, *filter.End)
 		}
 	}
 
-	if fileType != nil {
+	if filter.FileType != nil {
 		query += fmt.Sprintf("AND [Type]=$%d", len(args)+1)
-		args = append(args, *fileType)
+		args = append(args, *filter.FileType)
+	}
+
+	if filter.Descending {
+		query += " ORDER BY [Timestamp] DESC"
 	}
 
 	result, err := sr.db.Queryx(query, args...)

@@ -10,7 +10,7 @@ FROM golang:latest
 COPY settings.vscode.json /root/.vscode-remote/data/Machine/settings.json
 
 # Verify git, process tools installed
-RUN apt-get update && apt-get -y install git procps ftp sqlite3 build-essential
+RUN apt-get update && apt-get -y install git procps ftp sqlite3 build-essential tzdata
 
 
 

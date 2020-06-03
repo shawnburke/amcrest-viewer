@@ -34,6 +34,16 @@ CREATE  INDEX idx_file_cameraid_timestamp
 ON files (CameraID, TimeStamp);
 `
 
+var schema2 = `
+ALTER TABLE cameras
+ADD COLUMN Timezone VARCHAR(128) DEFAULT "America/Los_Angeles";
+`
+
+var schemas = []string{
+	schema1,
+	schema2,
+}
+
 // Rather than dealing with loose files on disk (which just adds complication
 // for deployment and config, we put them in as strings in this file,
 // then write them out, in order, to disk, then use the migrate file driver
@@ -50,9 +60,7 @@ func getSchemaDir() (string, func(), error) {
 		return "", done, fmt.Errorf("Error creating schema dir: %v", err)
 	}
 
-	for i, file := range []string{
-		schema1,
-	} {
+	for i, file := range schemas {
 		fileName := path.Join(tempDir, fmt.Sprintf("%d_schema.up.sql", i+1))
 		err := ioutil.WriteFile(fileName, []byte(file), os.ModePerm)
 		if err != nil {

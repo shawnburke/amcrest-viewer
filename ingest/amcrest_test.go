@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/shawnburke/amcrest-viewer/ftp"
+	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 	"github.com/stretchr/testify/require"
 )
@@ -65,16 +66,23 @@ func TestIngestParse(t *testing.T) {
 		},
 	}
 
+	cam := &entities.Camera{
+		Name:     "Test Cam",
+		ID:       1,
+		Type:     "amcrest",
+		Timezone: "America/Los_Angeles",
+	}
+
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d: %s", i, tt.P), func(t *testing.T) {
 			f := &ftp.File{
-				User:     "amcrest",
+				User:     "amcrest-1",
 				Data:     []byte("abc"),
 				Name:     path.Base(tt.P),
 				FullName: tt.P,
 			}
 
-			mf, err := ingester.Ingester.IngestFile(f)
+			mf, err := ingester.Ingester.IngestFile(cam, f)
 
 			if tt.Error != nil {
 				require.Equal(t, tt.Error, err)

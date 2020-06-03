@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shawnburke/amcrest-viewer/storage/data"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/config"
@@ -75,6 +76,6 @@ func (mr *mockRepo) GetFile(id int) (*entities.File, error) {
 	panic("not implemented") // TODO: Implement
 }
 
-func (mr *mockRepo) ListFiles(cameraID string, start *time.Time, end *time.Time, fileType *int) ([]*entities.File, error) {
+func (mr *mockRepo) ListFiles(cameraID string, filter *data.ListFilesFilter) ([]*entities.File, error) {
 	panic("not implemented") // TODO: Implement
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shawnburke/amcrest-viewer/ftp"
+	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -55,6 +56,7 @@ func (p AmcrestParams) Timezone() *time.Location {
 	if err != nil {
 		panic(err)
 	}
+
 	return loc
 }
 
@@ -66,8 +68,8 @@ type amcrestIngester struct {
 func (ai *amcrestIngester) Name() string {
 	return amcrestIngesterType
 }
-func (ai *amcrestIngester) IngestFile(f *ftp.File) (*models.MediaFile, error) {
-	mf, err := ai.pathToFile(f.FullName)
+func (ai *amcrestIngester) IngestFile(cam *entities.Camera, f *ftp.File) (*models.MediaFile, error) {
+	mf, err := ai.pathToFile(f.FullName, cam.Timezone)
 
 	switch path.Ext(f.FullName) {
 	case ".mp4", ".jpg":
@@ -83,14 +85,24 @@ func (ai *amcrestIngester) IngestFile(f *ftp.File) (*models.MediaFile, error) {
 		return nil, err
 	}
 	mf.CameraID = f.User
+
 	return mf, nil
 }
 
-func (ai *amcrestIngester) pathToFile(path string) (*models.MediaFile, error) {
+func (ai *amcrestIngester) pathToFile(path string, tz string) (*models.MediaFile, error) {
+
+	var loc *time.Location = ai.tz
+	if tz != "" {
+		l, err := time.LoadLocation(tz)
+		if err != nil {
+			return nil, fmt.Errorf("Couldn't load location %q: %w", tz, err)
+		}
+		loc = l
+	}
 
 	if strings.HasSuffix(path, ".mp4") && strings.Contains(path, "/dav/") {
 		// "2019-05-09/001/dav/21/21.04.49-21.05.14[M][0@0][0].mp4"
-		ts := pathToTimestamps(path, ai.tz)
+		ts := pathToTimestamps(path, loc)
 		if len(ts) != 2 {
 			return nil, fmt.Errorf("%s: %v", badVideoPath, path)
 		}
@@ -104,7 +116,7 @@ func (ai *amcrestIngester) pathToFile(path string) (*models.MediaFile, error) {
 
 	if strings.HasSuffix(path, ".jpg") && strings.Contains(path, "/jpg/") {
 		// 2019-05-09/001/jpg/06/07/27[M][0@0][0].jpg
-		ts, err := jpgPathToTimestamp(path, ai.tz)
+		ts, err := jpgPathToTimestamp(path, loc)
 		if err != nil {
 			return nil, err
 		}

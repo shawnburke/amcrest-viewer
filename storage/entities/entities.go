@@ -9,9 +9,10 @@ type Camera struct {
 	ID       int        `db:"ID" json:"id"`
 	Name     string     `db:"Name" json:"name"`
 	Type     string     `db:"Type" json:"type"`
-	Host     *string    `db:"Host"  json:"host"`
+	Host     *string    `db:"Host"  json:"host,omitempty"`
 	LastSeen *time.Time `db:"LastSeen"  json:"last_seen"`
 	Enabled  *bool      `db:"Enabled" json:"enabled"`
+	Timezone string     `db:"Timezone" json:"timezone"`
 }
 
 func (c Camera) CameraID() string {
@@ -29,9 +30,9 @@ type File struct {
 	Path            string     `db:"Path" json:"path"`
 	Type            int        `db:"Type" json:"type"`
 	Timestamp       time.Time  `db:"Timestamp" json:"timestamp"`
-	Received        *time.Time `db:"Received" json:"received_at"`
-	DurationSeconds *int       `db:"DurationSeconds" json:"duration_seconds"`
-	Length          int        `db:"Length" json:"length"`
+	Received        *time.Time `db:"Received" json:"received_at,omitempty"`
+	DurationSeconds *int       `db:"DurationSeconds" json:"duration_seconds,omitempty"`
+	Length          int        `db:"Length" json:"length,omitempty"`
 }
 
 func (f File) Duration() time.Duration {
