@@ -378,6 +378,8 @@ func (sr *sqlRepository) ListFiles(cameraID string, filter *ListFilesFilter) ([]
 
 	if filter.Descending {
 		query += " ORDER BY [Timestamp] DESC"
+	} else {
+		query += " ORDER BY [Timestamp] ASC"
 	}
 
 	result, err := sr.db.Queryx(query, args...)
