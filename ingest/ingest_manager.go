@@ -131,6 +131,9 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		return nil
 	}
 
+	// make sure we always persist UTC
+	mf.Timestamp = mf.Timestamp.UTC()
+
 	im.logger.Info("Would ingest", zap.Reflect("media-file", mf))
 
 	// TODO: make manager interfaces speak models
