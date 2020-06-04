@@ -374,31 +374,42 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reader, err := s.files.GetFile(fileInfo.Path)
+	stream := r.URL.Query().Get("stream") != ""
+
+	if stream {
+		reader, err := s.files.GetFile(fileInfo.Path)
+		if s.writeError(err, w, 400) {
+			return
+		}
+		defer reader.Close()
+
+		contentType := getContentType(fileInfo)
+
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Length))
+
+		if dl := r.URL.Query().Get("download"); dl != "" {
+			w.Header().Set("Content-Disposition", "attachment; filename="+path.Base(fileInfo.Path))
+		}
+
+		w.WriteHeader(200)
+
+		// write header bytes
+		_, err = io.Copy(w, reader)
+		if err != nil {
+			s.Logger.Error("Error writing file",
+				zap.String("path", fileInfo.Path),
+				zap.Int("file-id", fileInfo.ID),
+				zap.Error(err))
+		}
+		return
+	}
+
+	p, err := s.files.GetFilePath(fileInfo.Path)
 	if s.writeError(err, w, 400) {
 		return
 	}
-	defer reader.Close()
-
-	contentType := getContentType(fileInfo)
-
-	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Length))
-
-	if dl := r.URL.Query().Get("download"); dl != "" {
-		w.Header().Set("Content-Disposition", "attachment; filename="+path.Base(fileInfo.Path))
-	}
-
-	w.WriteHeader(200)
-
-	// write header bytes
-	_, err = io.Copy(w, reader)
-	if err != nil {
-		s.Logger.Error("Error writing file",
-			zap.String("path", fileInfo.Path),
-			zap.Int("file-id", fileInfo.ID),
-			zap.Error(err))
-	}
+	http.ServeFile(w, r, p)
 
 }
 

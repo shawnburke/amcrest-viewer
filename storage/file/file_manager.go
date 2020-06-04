@@ -22,6 +22,7 @@ const subdir = "cameras"
 type Manager interface {
 	AddFile(camera string, data []byte, timestamp time.Time, fileType int) (string, error)
 	GetFile(path string) (io.ReadCloser, error)
+	GetFilePath(path string) (string, error)
 	ListFiles(camera string, start *time.Time, end *time.Time, fileType *int) ([]string, error)
 	DeleteFile(path string) (bool, error)
 	DeleteFiles(camera string, start *time.Time, end *time.Time) ([]string, error)
@@ -117,6 +118,16 @@ func (fm *fileManager) GetFile(p string) (io.ReadCloser, error) {
 	}
 
 	return os.Open(fullPath)
+}
+
+func (fm *fileManager) GetFilePath(p string) (string, error) {
+	fullPath := path.Join(fm.rootDir, p)
+
+	if _, err := os.Stat(fullPath); err != nil {
+		return "", fmt.Errorf("Error reading file %q: %v", fullPath, err)
+	}
+
+	return fullPath, nil
 }
 
 func (fm *fileManager) getRange(camera string, start *time.Time, end *time.Time, fileType *int) ([]string, error) {
