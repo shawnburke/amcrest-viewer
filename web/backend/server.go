@@ -269,7 +269,11 @@ func (s *Server) updateFilePaths(cam string, files ...*entities.File) []*entitie
 	newFiles := make([]*entities.File, len(files))
 	for i, f := range files {
 		nf := *f
-		nf.Path = fmt.Sprintf("/api/cameras/%s/files/%d", cam, f.ID)
+		ext := ".jpg"
+		if f.Type == 1 {
+			ext = ".mp4"
+		}
+		nf.Path = fmt.Sprintf("/api/cameras/%s/files/%d%s", cam, f.ID, ext)
 		newFiles[i] = &nf
 	}
 	return newFiles
@@ -355,6 +359,10 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if s.writeError(err, w, 400) {
 		return
+	}
+
+	if ext := path.Ext(idStr); ext != "" {
+		idStr = idStr[0 : len(idStr)-len(ext)]
 	}
 
 	fileInfo, err := s.data.GetFile(id)

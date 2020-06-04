@@ -169,6 +169,7 @@ class Player extends React.Component {
                 url={val.path} 
                 width="100%" 
                 height="100%" 
+                playsinline="true"
                 playing="true" style={{
                     height:"100%"
                 }} 

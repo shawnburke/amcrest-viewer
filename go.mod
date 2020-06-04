@@ -18,5 +18,4 @@ require (
 	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.12.0
 	go.uber.org/zap v1.10.0
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 )
