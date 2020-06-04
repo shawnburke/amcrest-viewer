@@ -11,21 +11,26 @@ import FilesService from "./FilesService";
 class ServiceBroker {
 
     constructor() {
-        this.camsService = this.isDev() ? CamsServiceMock : CamsService;
-        this.filesService = this.isDev() ? FilesServiceMock : FilesService;
+        this.camsService = this.useMock() ? CamsServiceMock : CamsService;
+        this.filesService = this.useMock() ? FilesServiceMock : FilesService;
     }
 
 
-    isDev() {
-        return process.env.NODE_ENV !== "production";
+    useMock() {
+        return process.env.NODE_ENV !== "production" && this.root() === "";
+    }
+
+    root() {
+        var r = process.env.REACT_APP_ROOT;
+        return r || "";
     }
 
     newCamsService() {
-        return new this.camsService();
+        return new this.camsService(this.root());
     }
 
     newFilesService(cam) {
-        return new this.filesService(cam)
+        return new this.filesService(cam, this.root())
     }
 }
 

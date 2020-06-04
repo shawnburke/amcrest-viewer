@@ -94,7 +94,7 @@ class CameraView extends React.Component {
                     <Col >{new Date(f.timestamp).toTimeString()}</Col>
                     <Col>{t}</Col>
                     <Col>{f.duration_seconds}</Col>
-                    <Col><a href="{f.path}" target="_vid">{f.path}</a></Col>
+                    <Col><a href={f.path} target="_vid">{f.path}</a></Col>
                 </Row>;
 
              

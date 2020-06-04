@@ -1,8 +1,8 @@
 class CamerasService {
 
-    constructor() {
+    constructor(root) {
 
-        this.url = "/api/cameras";
+        this.url =  (root||"") + "/api/cameras";
 
     }
 

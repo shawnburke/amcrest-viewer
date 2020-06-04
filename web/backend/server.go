@@ -333,6 +333,10 @@ func (s *Server) getFileInfo(w http.ResponseWriter, r *http.Request) {
 
 	idStr := mux.Vars(r)["file-id"]
 
+	if ext := path.Ext(idStr); ext != "" {
+		idStr = idStr[0 : len(idStr)-len(ext)]
+	}
+
 	id, err := strconv.Atoi(idStr)
 	if s.writeError(err, w, 400) {
 		return
@@ -356,13 +360,13 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 
 	idStr := mux.Vars(r)["file-id"]
 
+	if ext := path.Ext(idStr); ext != "" {
+		idStr = idStr[0 : len(idStr)-len(ext)]
+	}
+
 	id, err := strconv.Atoi(idStr)
 	if s.writeError(err, w, 400) {
 		return
-	}
-
-	if ext := path.Ext(idStr); ext != "" {
-		idStr = idStr[0 : len(idStr)-len(ext)]
 	}
 
 	fileInfo, err := s.data.GetFile(id)

@@ -1,8 +1,8 @@
 class FilesService {
 
-    constructor(camera) {
+    constructor(camera, root) {
 
-        this.url = `/api/cameras/${camera}/files`;
+        this.url = (root||"") + `/api/cameras/${camera}/files`;
 
     }
 
