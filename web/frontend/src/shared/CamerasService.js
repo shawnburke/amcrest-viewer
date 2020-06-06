@@ -6,6 +6,11 @@ class CamerasService {
 
     }
 
+    updateId(cam) {
+        cam.id = cam.id.toString().includes(cam.type) ? cam.id :`${cam.type}-${cam.id}`
+        return cam;
+    }
+
     async retrieveItems() {
 
         return fetch(this.url)
@@ -22,16 +27,11 @@ class CamerasService {
 
             })
 
-            .then(json => {
+            .then(items => {
 
-                console.log("Retrieved items:");
-
-                console.log(json);
-
-
-
-                return json;
-
+                return items.map(item => {
+                   return this.updateId(item);
+                });
             })
 
             .catch(error => {
@@ -56,8 +56,9 @@ class CamerasService {
 
                 }
 
-                return response.json();
-
+                var cam = response.json();
+                this.updateId(cam);
+                return cam;
             })
 
             .then(item => {

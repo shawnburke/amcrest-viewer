@@ -129,8 +129,8 @@ class CameraView extends React.Component {
             </Col>
         </Row>
             <Row>
-                <Col xs={2}></Col>
-                <Col>
+                <Col xs={1}></Col>
+                <Col xs={10}>
                     <DatePicker
                         minDate={this.state.minDate}
                         maxDate={this.state.maxDate}
@@ -138,9 +138,9 @@ class CameraView extends React.Component {
                         onChange={date => this.setStartDate(date)}
                     />
                 </Col>
-                <Col xs={1} style={{ textAlign: "center" }}>
+                {/* <Col xs={1} style={{ textAlign: "center" }}>
                     <Button><span>⚙</span></Button>
-                </Col>
+                </Col> */}
             </Row>
             <div style={{
                 maxHeight:  windowHeight * .5,
