@@ -486,6 +486,8 @@ func (sr *sqlRepository) ListFiles(cameraID string, filter *ListFilesFilter) ([]
 		return nil, fmt.Errorf("Error fetching files: %w", err)
 	}
 
+	sr.logger.Info("ListFiles range", zap.Any("start", s), zap.Any("end", e))
+
 	defer result.Close()
 
 	files := make([]*entities.File, 0, 8)
