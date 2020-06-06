@@ -2,11 +2,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import React from 'react';
 import './App.css';
-import CameraList from "./CameraDropdown";
+
 import CameraView from "./CameraView";
 import CameraSummary from "./CameraSummary";
-import { Container, Navbar, Nav } from 'react-bootstrap';
-
+import { Container} from 'react-bootstrap';
+import {Header} from './Header';
 import ServiceBroker from "./shared/ServiceBroker";
 
 
@@ -24,21 +24,40 @@ class App extends React.Component {
     constructor(props) {
         super(props);
 
+        
+
+
         let broker = new ServiceBroker()
         this.camsService = broker.newCamsService();
 
         this.state = {
-            cameras: []
+            cameras: [],
+            current: null,
         }
     }
 
     componentDidMount() {
 
-        this.camsService.retrieveItems().then(items => {
+       if (this.state.cameras.length === 0){
 
-            this.setState({ cameras: items });
+            this.camsService.retrieveItems().then(items => {
 
-        });
+                var state = {
+                    cameras: items 
+                }
+    
+                this.setState(state);
+
+            });
+        }
+    }
+
+    onShowCamera(camid) {
+        var cc = this.state.cameras.find(cam => cam.id === camid);
+
+        if (cc) {
+            this.setState({current:cc});
+        }
     }
 
     render() {
@@ -46,31 +65,20 @@ class App extends React.Component {
         let cams = this.state.cameras || [];
 
 
-
         return (
 
             <Router>
                 <div className="App">
                     <Container>
-                        <Navbar bg="light" expand="lg">
-                            <Navbar.Brand href="#/">Camera Viewer <Dev /></Navbar.Brand>
-                            <CameraList cameras={cams} />
-                            <Navbar.Toggle aria-controls="basic-navbar-nav" />
-                            <Navbar.Collapse id="basic-navbar-nav">
-                                <Nav className="mr-auto">
-                                    <Nav.Link href="#settings">Settings</Nav.Link>
-                                    <Nav.Link href="#logs">Logs</Nav.Link>
-
-                                </Nav>
-
-                            </Navbar.Collapse>
-                        </Navbar>
+                       <Header cams={cams} current={this.state.current}/>
 
 
                         <Route exact path="/">
                             <CameraSummary cameras={cams} />
                         </Route>
-                        <Route path="/cameras/:id" component={Camera} />
+                        <Route path="/cameras/:id">
+                            <Camera onShow={this.onShowCamera.bind(this)}/>
+                        </Route>
                     </Container>
                 </div >
             </Router >
@@ -80,26 +88,16 @@ class App extends React.Component {
 
 
 
-function Camera() {
-    // We can use the `useParams` hook here to access
-    // the dynamic pieces of the URL.
+function Camera(props) {
+    // // We can use the `useParams` hook here to access
+    // // the dynamic pieces of the URL.
     let { id } = useParams();
 
+    //props.onShow(id);
     return (
         <CameraView cameraid={id} />
     );
 }
 
-function Dev() {
-    if (!isDev()) {
-        return null;
-    }
-    return <span>🛠</span>;
-}
-
-function isDev() {
-
-    return process.env.NODE_ENV !== "production";
-}
 
 export default App;

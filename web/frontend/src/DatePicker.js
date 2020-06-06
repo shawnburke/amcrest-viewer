@@ -20,11 +20,11 @@ constructor(props) {
  }
  
  sameDay(d1, d2)  {
- 	return d1 && d2 && (d1.toDateString() == d2.toDateString());
+ 	return d1 && d2 && (d1.toDateString() === d2.toDateString());
  }
 
  componentDidUpdate() {
-     
+
  }
 
 
@@ -37,8 +37,7 @@ constructor(props) {
  
  setDate(n, el) {
  		
- 	console.log("Set date " + n);
-    var d= this.state.date.getTime();
+ 	  var d= this.state.date.getTime();
   	if (!n) {
     	 d = new Date().getTime();
     } else if (n === daysFirst) {
@@ -76,16 +75,16 @@ constructor(props) {
     
     
     var first = <button days={daysFirst} onClick={this.setDate.bind(this, daysFirst)}
-    disabled={firstDisabled}><span>⏮</span></button>;
+    disabled={firstDisabled}><span role="img">⏮</span></button>;
     
     
-    var today = <button onClick={this.setDate.bind(this, 0)} disabled={todayDisabled}><span>📆 Today</span></button>
+    var today = <button onClick={this.setDate.bind(this, 0)} disabled={todayDisabled}><span role="img">📆 Today</span></button>
     
     return <div>
       {first}
-      <button  disabled={prevDisabled} onClick={this.setDate.bind(this, -1)}><span>⏪</span></button>
-      <button onClick={this.setDate.bind(this, 0)}>{d.toDateString()}</button>
-      <button days="1" disabled={nextDisabled} onClick={this.setDate.bind(this, 1)}><span>⏩</span></button>
+      <button  disabled={prevDisabled} onClick={this.setDate.bind(this, -1)}><span role="img">⏪</span></button>
+      <button onClick={this.setDate.bind(this, 0)}>{d.toLocaleDateString()}</button>
+      <button days="1" disabled={nextDisabled} onClick={this.setDate.bind(this, 1)}><span role="img">⏩</span></button>
       {today}
     </div>
   

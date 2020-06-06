@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Row, Col, Button } from 'react-bootstrap';
+import { Row, Col } from 'react-bootstrap';
 
 import ServiceBroker from "./shared/ServiceBroker";
 import ReactPlayer from 'react-player';
@@ -69,9 +69,8 @@ class CameraView extends React.Component {
     }
 
 
-    handleClick(el) {
+    handleClick(index, el) {
         el.preventDefault();
-        var index = Number(el.currentTarget.attributes.file.value);
         this.setState(
             {
                 source: this.state.files[index],
@@ -80,6 +79,7 @@ class CameraView extends React.Component {
         );
     }
 
+  
 
     render() {
 
@@ -89,31 +89,12 @@ class CameraView extends React.Component {
 
         if (this.state.files) {
             this.state.files.forEach((f,i) => {
-
-                var style = {};
-
-                if (i === this.state.selected) {
-                    style = {
-                        background: "yellow"
-                    }
-                }
-
-                var t = "jpg";
-
-                if (f.type === 1) {
-                    t = "mp4";
-                }
-
-                var row = <Row key={f.id} style={style} file={i} onClick={this.handleClick.bind(this)}>
-                    <Col >{new Date(f.timestamp).toTimeString()}</Col>
-                    <Col>{t}</Col>
-                    <Col>{f.duration_seconds}</Col>
-                    <Col><a href={f.path} target="_vid">{f.path}</a></Col>
-                </Row>;
-
-             
-                fileRows.push(row);
+                fileRows.push(<FileRow 
+                    file={f} key={f.id} 
+                    selected={this.state.selected === i}
+                    onClick={this.handleClick.bind(this, i)}/>);
             })
+
         }
 
         var windowHeight = window.innerHeight;
@@ -163,7 +144,43 @@ class CameraView extends React.Component {
     }
 }
 
+class FileRow extends React.Component {
+    constructor(props) {
+        super(props);
+    }
 
+
+    last(array) {
+        if (!array || !array.length) {
+            return null;
+        }
+        return array[array.length-1];
+    }
+
+    render() {
+        var style = {};
+        const f = this.props.file;
+
+        if (this.props.selected) {
+            style = {
+                background: "yellow"
+            }
+        }
+
+        var t = "jpg";
+
+        if (f.type === 1) {
+            t = "mp4";
+        }
+
+        return <Row key={f.id} style={style} file={f} onClick={this.props.onClick}>
+            <Col xs={4} >{new Date(f.timestamp).toLocaleTimeString()}</Col>
+            <Col xs={1}>{t}</Col>
+            <Col xs={2}>{f.duration_seconds}</Col>
+            <Col ><a href={f.path} target="_vid">{this.last(f.path.split('/'))}</a></Col>
+        </Row>;
+    }
+}
 
 
 class Player extends React.Component {
