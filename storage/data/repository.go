@@ -175,7 +175,7 @@ func (sr *sqlRepository) GetCamera(cameraID string) (*entities.Camera, error) {
 	return nil, os.ErrNotExist
 }
 
-func (sr *sqlRepository) getTimeFilterSql(start *time.Time, end *time.Time) (time.Time, time.Time) {
+func (sr *sqlRepository) getTimeRange(start *time.Time, end *time.Time) (time.Time, time.Time) {
 	s := time.Time{}
 	e := time.Now().AddDate(100, 0, 0)
 
@@ -186,7 +186,7 @@ func (sr *sqlRepository) getTimeFilterSql(start *time.Time, end *time.Time) (tim
 	if end != nil {
 		e = *end
 	}
-	return s, e
+	return s.UTC(), e.UTC()
 }
 
 func (sr *sqlRepository) GetCameraStats(cameraID string, start *time.Time, end *time.Time, breakdown string) (*CameraStats, error) {
@@ -201,7 +201,7 @@ func (sr *sqlRepository) GetCameraStats(cameraID string, start *time.Time, end *
 			FROM files WHERE 
 			CameraId=$1 AND (Timestamp >= $2 AND Timestamp < $3) GROUP BY [Type]`
 
-	s, e := sr.getTimeFilterSql(start, end)
+	s, e := sr.getTimeRange(start, end)
 
 	res, err := sr.db.Queryx(query, id, s, e)
 
@@ -461,7 +461,7 @@ func (sr *sqlRepository) ListFiles(cameraID string, filter *ListFilesFilter) ([]
 	query := `SELECT * FROM files 
 		WHERE CameraID=$1 AND (Timestamp >= $2 AND Timestamp < $3) `
 
-	s, e := sr.getTimeFilterSql(filter.Start, filter.End)
+	s, e := sr.getTimeRange(filter.Start, filter.End)
 
 	args := []interface{}{
 		camID,

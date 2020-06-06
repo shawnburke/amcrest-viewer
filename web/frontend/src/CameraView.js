@@ -129,8 +129,8 @@ class CameraView extends React.Component {
             </Col>
         </Row>
             <Row>
-                <Col xs={1}></Col>
-                <Col xs={10}>
+              
+                <Col xs={12}>
                     <DatePicker
                         minDate={this.state.minDate}
                         maxDate={this.state.maxDate}
