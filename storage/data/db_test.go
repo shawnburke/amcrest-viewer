@@ -148,7 +148,7 @@ func TestFileAddGetList(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cam)
 
-	start := time.Now()
+	start := time.Now().UTC()
 
 	// add 10 files
 	for i := 0; i < 10; i++ {
@@ -185,6 +185,14 @@ func TestFileAddGetList(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res, 0)
+
+	cs, err := rep.GetCameraStats(cam.CameraID(), nil, nil, "")
+	require.NoError(t, err)
+	require.NotNil(t, cs)
+
+	require.Equal(t, 1145, cs.FileSize)
+	require.Equal(t, 10, cs.FileCount)
+	require.Equal(t, start.Truncate(time.Second), cs.MinDate)
 }
 
 func dumpTables(db *sqlx.DB) {

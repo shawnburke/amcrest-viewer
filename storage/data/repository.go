@@ -18,6 +18,7 @@ type Repository interface {
 	// Camera operations
 	AddCamera(name string, t string, host *string) (*entities.Camera, error)
 	GetCamera(id string) (*entities.Camera, error)
+	GetCameraStats(id string, start *time.Time, end *time.Time, breakdown string) (*CameraStats, error)
 	DeleteCamera(id string) (bool, error)
 	UpdateCamera(id string, name *string, host *string, enabled *bool) (*entities.Camera, error)
 	SeenCamera(id string) error
@@ -35,6 +36,24 @@ type ListFilesFilter struct {
 	End        *time.Time
 	FileType   *int
 	Descending bool
+}
+
+const (
+	StatFlagBreakdown = 0x00000004
+)
+
+type CameraStats struct {
+	FileCount  int              `json:"file_count"`
+	FileCounts map[int]FileData `json:"file_counts"`
+	FileSize   int              `json:"file_size"`
+	MinDate    time.Time        `json:"min_date"`
+	MaxDate    time.Time        `json:"max_date"`
+	Breakdown  []FileData       `json:"breakdown,omitempty"`
+}
+
+type FileData struct {
+	Count int `json:"count"`
+	Size  int `json:"size"`
 }
 
 func NewRepository(db *sqlx.DB, logger *zap.Logger) (Repository, error) {
@@ -154,6 +173,90 @@ func (sr *sqlRepository) GetCamera(cameraID string) (*entities.Camera, error) {
 	}
 
 	return nil, os.ErrNotExist
+}
+
+func (sr *sqlRepository) getTimeFilterSql(start *time.Time, end *time.Time) (time.Time, time.Time) {
+	s := time.Time{}
+	e := time.Now().AddDate(100, 0, 0)
+
+	if start != nil {
+		s = *start
+	}
+
+	if end != nil {
+		e = *end
+	}
+	return s, e
+}
+
+func (sr *sqlRepository) GetCameraStats(cameraID string, start *time.Time, end *time.Time, breakdown string) (*CameraStats, error) {
+
+	id, err := parseCameraID(cameraID)
+	if err != nil {
+		return nil, err
+	}
+
+	var query = `
+			SELECT [Type], COUNT(Id) as TotalCount, SUM(Length) as TotalSize, datetime(MIN(Timestamp)) as Min, datetime(MAX(Timestamp)) as Max  
+			FROM files WHERE 
+			CameraId=$1 AND (Timestamp >= $2 AND Timestamp < $3) GROUP BY [Type]`
+
+	s, e := sr.getTimeFilterSql(start, end)
+
+	res, err := sr.db.Queryx(query, id, s, e)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error getting camera stats: %w", err)
+	}
+	defer res.Close()
+
+	cs := &CameraStats{
+		FileCounts: map[int]FileData{},
+	}
+
+	for res.Next() {
+		r := struct {
+			Type       int    `db:"Type"`
+			TotalCount int    `db:"TotalCount"`
+			TotalSize  int    `db:"TotalSize"`
+			Min        string `db:"Min"`
+			Max        string `db:"Max"`
+		}{}
+
+		err = res.StructScan(&r)
+		if err != nil {
+			return nil, err
+		}
+
+		cs.FileCount += r.TotalCount
+		cs.FileSize += r.TotalSize
+
+		dateTimeFormat := "2006-01-02 15:04:05"
+
+		min, err := time.Parse(dateTimeFormat, r.Min)
+		if err != nil {
+			return nil, err
+		}
+		max, err := time.Parse(dateTimeFormat, r.Max)
+		if err != nil {
+			return nil, err
+		}
+		if cs.MinDate.IsZero() || cs.MinDate.After(min) {
+			cs.MinDate = min
+		}
+
+		if cs.MaxDate.IsZero() || cs.MaxDate.Before(max) {
+			cs.MaxDate = max
+		}
+
+		cs.FileCounts[r.Type] = FileData{
+			Size:  r.TotalSize,
+			Count: r.TotalCount,
+		}
+
+	}
+	return cs, nil
+
 }
 
 func (sr *sqlRepository) ListCameras() ([]*entities.Camera, error) {
@@ -355,20 +458,15 @@ func (sr *sqlRepository) ListFiles(cameraID string, filter *ListFilesFilter) ([]
 		filter = &ListFilesFilter{}
 	}
 
-	query := `SELECT * FROM files WHERE CameraID=$1 `
+	query := `SELECT * FROM files 
+		WHERE CameraID=$1 AND (Timestamp >= $2 AND Timestamp < $3) `
+
+	s, e := sr.getTimeFilterSql(filter.Start, filter.End)
 
 	args := []interface{}{
 		camID,
-	}
-
-	if filter.Start != nil {
-		query += " AND Timestamp >= $2"
-		args = append(args, *filter.Start)
-
-		if filter.End != nil {
-			query += " AND Timestamp < $3"
-			args = append(args, *filter.End)
-		}
+		s,
+		e,
 	}
 
 	if filter.FileType != nil {

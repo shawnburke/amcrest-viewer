@@ -44,11 +44,43 @@ class CamerasService {
 
     async getItem(id) {
 
-        console.log("ItemService.getItem():");
-
-        console.log("Item: " + id);
-
+       
+     
         return fetch(this.url + "/" + id)
+
+            .then(response => {
+
+                if (!response.ok) {
+
+                    this.handleResponseError(response);
+
+                }
+
+                return response.json();
+
+            })
+
+            .then(item => {
+
+                return item;
+
+            }
+
+            )
+
+            .catch(error => {
+
+                this.handleError(error);
+
+            });
+
+    }
+
+    async getStats(id) {
+
+       
+     
+        return fetch(`${this.url}/${id}/stats`)
 
             .then(response => {
 

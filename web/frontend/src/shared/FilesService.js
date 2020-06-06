@@ -8,6 +8,8 @@ class FilesService {
 
     async retrieveItems(startDate, endDate, sort) {
 
+        console.log(`Fetching ${startDate.toString()} => ${endDate.toString()} (${sort})`);
+
         var url = `${this.url}?start=${startDate.getTime()}&end=${endDate.getTime()}&sort=${sort}`
         return fetch(url)
 

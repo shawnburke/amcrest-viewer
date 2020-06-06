@@ -1,32 +1,46 @@
 
 import React from 'react';
 import { Row, Col, Button } from 'react-bootstrap';
-// import { DatePicker } from 'react-datepicker';
-//import "react-datepicker/dist/react-datepicker.css";
-import DatePicker from 'react-date-picker'
+
 import ServiceBroker from "./shared/ServiceBroker";
-import ReactPlayer from 'react-player'
+import ReactPlayer from 'react-player';
+
+import DatePicker from "./DatePicker";
 
 
 class CameraView extends React.Component {
     constructor(props) {
         super(props);
 
-        let broker = new ServiceBroker()
+        let broker = new ServiceBroker();
 
         // TODO: fix hack
-        this.filesService = broker.newFilesService("amcrest-" + this.props.camera);
+        this.filesService = broker.newFilesService("amcrest-" + this.props.cameraid);
+        this.camerasServer = broker.newCamsService();
 
         this.state = {
             files: [],
             date: new Date(),
-            selected: 0
+            selected: 0,
+            minDate: new Date(2000,1,1),
+            maxDate: new Date()
         }
     }
 
     componentDidMount() {
 
-        this.loadFiles();
+       
+        this.camerasServer.getStats(this.props.cameraid).then(
+            s => {
+                var dates = {
+                    minDate: new Date(s.min_date),
+                    maxDate: new Date(s.max_date)
+                }
+                this.setState(dates)
+                this.loadFiles();
+
+            }
+        )
     }
 
     componentDidUpdate(prevProps, prevState) {  
@@ -69,7 +83,7 @@ class CameraView extends React.Component {
 
     render() {
 
-        document.title = "Camera Viewer - " + this.props.camera;
+        document.title = "Camera Viewer - " + this.props.cameraid;
 
         var fileRows = [];
 
@@ -115,15 +129,16 @@ class CameraView extends React.Component {
             </Col>
         </Row>
             <Row>
-                <Col></Col>
+                <Col xs={2}></Col>
                 <Col>
                     <DatePicker
-                        todayButton="Today"
-                        value={this.state.date}
+                        minDate={this.state.minDate}
+                        maxDate={this.state.maxDate}
+                        date={this.state.date}
                         onChange={date => this.setStartDate(date)}
                     />
                 </Col>
-                <Col style={{ textAlign: "center" }}>
+                <Col xs={1} style={{ textAlign: "center" }}>
                     <Button><span>⚙</span></Button>
                 </Col>
             </Row>

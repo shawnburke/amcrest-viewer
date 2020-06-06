@@ -182,7 +182,28 @@ func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
 
 	strID := mux.Vars(r)["camera-id"]
 
-	cam, err := s.data.GetCamera(strID)
+	stats, err := s.data.GetCamera(strID)
+
+	if s.writeError(err, w, 0) {
+
+		return
+	}
+
+	s.writeJson(stats, w, 200)
+
+}
+
+func (s *Server) getCameraStats(w http.ResponseWriter, r *http.Request) {
+
+	strID := mux.Vars(r)["camera-id"]
+
+	start, end, err := s.getTimeRange(r)
+
+	if s.writeError(err, w, 400) {
+		return
+	}
+
+	cam, err := s.data.GetCameraStats(strID, start, end, "")
 
 	if s.writeError(err, w, 0) {
 
@@ -279,6 +300,31 @@ func (s *Server) updateFilePaths(cam string, files ...*entities.File) []*entitie
 	return newFiles
 }
 
+func (s *Server) getTimeRange(r *http.Request) (*time.Time, *time.Time, error) {
+	var start, end *time.Time
+
+	if st := r.URL.Query().Get("start"); st != "" {
+		t, err := s.parseTime(st)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Bad start time format: %w", err)
+		}
+		start = &t
+	}
+
+	if et := r.URL.Query().Get("end"); et != "" {
+		t, err := s.parseTime(et)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Bad end time format: %w", err)
+		}
+		end = &t
+	} else {
+		t := time.Now()
+		end = &t
+	}
+
+	return start, end, nil
+}
+
 func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 
 	cameraID := mux.Vars(r)["camera-id"]
@@ -288,25 +334,10 @@ func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var start, end *time.Time
+	start, end, err := s.getTimeRange(r)
 
-	if st := r.URL.Query().Get("start"); st != "" {
-		t, err := s.parseTime(st)
-		if err != nil && s.writeError(fmt.Errorf("Bad start time format: %w", err), w, 400) {
-			return
-		}
-		start = &t
-	}
-
-	if et := r.URL.Query().Get("end"); et != "" {
-		t, err := s.parseTime(et)
-		if err != nil && s.writeError(fmt.Errorf("Bad start time format: %w", err), w, 400) {
-			return
-		}
-		end = &t
-	} else {
-		t := time.Now()
-		end = &t
+	if s.writeError(err, w, 400) {
+		return
 	}
 
 	lff := &data.ListFilesFilter{
@@ -420,6 +451,8 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
 	s.r.Methods("GET").Path("/api/cameras").HandlerFunc(s.listCameras)
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}").HandlerFunc(s.getCamera)
+	s.r.Methods("GET").Path("/api/cameras/{camera-id}/stats").HandlerFunc(s.getCameraStats)
+
 	s.r.Methods("PUT").Path("/api/cameras/{camera-id}").HandlerFunc(s.updateCamera)
 
 	// files

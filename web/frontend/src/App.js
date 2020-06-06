@@ -86,7 +86,7 @@ function Camera() {
     let { id } = useParams();
 
     return (
-        <CameraView camera={id} />
+        <CameraView cameraid={id} />
     );
 }
 

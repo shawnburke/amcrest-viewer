@@ -1,3 +1,6 @@
+
+import {FileData} from "./FilesService";
+
 class CamerasService {
 
     constructor() {
@@ -28,6 +31,26 @@ class CamerasService {
         }
 
         return null;
+
+    }
+
+    async getStats(id) {
+
+        var res =
+        {
+            min_date: FileData[0].timestamp,
+            max_date: FileData[FileData.length - 1].timestamp,
+            file_count: 0,
+            file_size: 0
+        }
+
+        FileData.forEach(v => {
+            res.file_count++;
+            res.file_size += v.length;
+        })
+
+      
+        return Promise.resolve(res);
 
     }
 
