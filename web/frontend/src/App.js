@@ -24,16 +24,27 @@ class App extends React.Component {
     constructor(props) {
         super(props);
 
-        
-
-
         let broker = new ServiceBroker()
         this.camsService = broker.newCamsService();
-
+        this.camid = this.getCamIdFromHash();
+       
+       
         this.state = {
             cameras: [],
             current: null,
         }
+    }
+
+    getCamIdFromHash() {
+
+        // cant seem to get useParams() to work.
+        var m = window.location.hash.match("cameras/(.*)$")
+        var id = "";
+    
+        if (m) {
+            id = m[1];
+        }
+        return id;
     }
 
     componentDidMount() {
@@ -45,6 +56,10 @@ class App extends React.Component {
                 var state = {
                     cameras: items 
                 }
+
+                if (this.camid) {
+                    state.current = items.find(cam => cam.id === this.camid);
+                }
     
                 this.setState(state);
 
@@ -52,13 +67,7 @@ class App extends React.Component {
         }
     }
 
-    onShowCamera(camid) {
-        var cc = this.state.cameras.find(cam => cam.id === camid);
-
-        if (cc) {
-            this.setState({current:cc});
-        }
-    }
+   
 
     render() {
 
@@ -70,14 +79,12 @@ class App extends React.Component {
             <Router>
                 <div className="App">
                     <Container>
-                       <Header cams={cams} current={this.state.current}/>
-
-
+                        <Header cams={cams} current={this.state.current}/>
                         <Route exact path="/">
                             <CameraSummary cameras={cams} />
                         </Route>
                         <Route path="/cameras/:id">
-                            <Camera onShow={this.onShowCamera.bind(this)}/>
+                            <Camera/>
                         </Route>
                     </Container>
                 </div >
@@ -86,14 +93,12 @@ class App extends React.Component {
     }
 }
 
-
-
 function Camera(props) {
     // // We can use the `useParams` hook here to access
     // // the dynamic pieces of the URL.
     let { id } = useParams();
 
-    //props.onShow(id);
+  
     return (
         <CameraView cameraid={id} />
     );

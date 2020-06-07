@@ -113,6 +113,12 @@ export var FileData = [
 ]
 
 
+FileData.forEach(f => {
+
+    f.timestamp = new Date(f.timestamp);
+
+})
+
 
 
 class FilesService {
@@ -136,7 +142,7 @@ class FilesService {
 
         });
 
-        this.files = this.files.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        //this.files = this.files.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
     }
 

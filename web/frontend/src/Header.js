@@ -12,8 +12,9 @@ export class Header extends React.Component  {
     }
 
     render() {
+        var camname = this.props.current && this.props.current.name;
        return  <Navbar bg="light" expand="lg">
-                <Navbar.Brand href="#/">Camera Viewer <Dev /></Navbar.Brand>
+                <Navbar.Brand href="#/">{camname || "Camera Viewer"} <Dev /></Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
                     <CameraList cameras={this.props.cams} />
@@ -28,16 +29,6 @@ export class Header extends React.Component  {
 }
 
 
-
-class CameraRow extends React.Component {
-
-    render() {
-        const camera = this.props.camera;
-        return (
-            <NavDropdown.Item href={"#cameras/" + camera.id}>{camera.name} ({camera.type})</NavDropdown.Item>
-        )
-    }
-}
 
 class CameraList extends React.Component {
     render() {
@@ -58,9 +49,21 @@ class CameraList extends React.Component {
 }
 
 
+class CameraRow extends React.Component {
+
+    render() {
+        const camera = this.props.camera;
+        return (
+            <NavDropdown.Item href={"#cameras/" + camera.id}>{camera.name} ({camera.type})</NavDropdown.Item>
+        )
+    }
+}
+
+
+
 function Dev() {
-    const isDev = process.env.NODE_ENV !== "production";
-    if (isDev) {
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd) {
         return null;
     }
     return <span>🛠</span>;

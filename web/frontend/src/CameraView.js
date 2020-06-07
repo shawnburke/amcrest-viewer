@@ -57,7 +57,7 @@ class CameraView extends React.Component {
         var end = new Date(start.getTime() + (24 * 60 * 60 * 1000)-1);
 
 
-        this.filesService.retrieveItems(start, end, "desc").then(items => {
+        this.filesService.retrieveItems(start, end, "").then(items => {
 
             this.setState({ 
                 files: items, 
@@ -69,12 +69,19 @@ class CameraView extends React.Component {
     }
 
 
-    handleClick(index, el) {
+    handleClick(f, el) {
         el.preventDefault();
+
+        var id = f.id;
+
+        if (el.target.attributes.file) {
+            f = this.state.files.find(file => file.id == el.target.attributes.file.value);
+        }
+        
         this.setState(
             {
-                source: this.state.files[index],
-                selected: index
+                source:f,
+                selected: id
             }
         );
     }
@@ -88,12 +95,62 @@ class CameraView extends React.Component {
         var fileRows = [];
 
         if (this.state.files) {
-            this.state.files.forEach((f,i) => {
-                fileRows.push(<FileRow 
+            
+
+            var curmp4;
+           
+            var grouped = [];
+
+
+            function finish() {
+                
+                curmp4 = null;
+            }
+
+            function group(f) {
+                if (f.type !== 0) {
+                    return false;
+                }
+                if (curmp4 && f.timestamp < curmp4.end) {
+                    curmp4.children = curmp4.children || [];
+                    curmp4.children.push(f);
+                    return true;
+                }
+                return false;
+            }
+
+
+            // group files
+
+            this.state.files.forEach((f) => {
+                
+                if (group(f)) {
+                    return;
+                } 
+
+                if (f.type === 1){
+                    finish();
+                    curmp4 = f;
+                    f.end = new Date(f.timestamp.getTime() + (1000 * f.duration_seconds));
+                }
+                f.children = null;
+                grouped.push(f);
+            });
+            
+
+            // walk through the grouped files and create rows
+            //
+            grouped.forEach(f => {
+                var row = <FileRow 
                     file={f} key={f.id} 
-                    selected={this.state.selected === i}
-                    onClick={this.handleClick.bind(this, i)}/>);
+                    selected={this.state.selected === f.id}
+                    onClick={this.handleClick.bind(this, f)}/>;
+
+                fileRows.push(row);
             })
+
+           
+            fileRows = fileRows.reverse();
 
         }
 
@@ -145,10 +202,7 @@ class CameraView extends React.Component {
 }
 
 class FileRow extends React.Component {
-    constructor(props) {
-        super(props);
-    }
-
+  
 
     last(array) {
         if (!array || !array.length) {
@@ -167,18 +221,40 @@ class FileRow extends React.Component {
             }
         }
 
-        var t = "jpg";
+        var t = "";
 
         if (f.type === 1) {
-            t = "mp4";
+            t = "🎥";
         }
 
-        return <Row key={f.id} style={style} file={f} onClick={this.props.onClick}>
-            <Col xs={4} >{new Date(f.timestamp).toLocaleTimeString()}</Col>
-            <Col xs={1}>{t}</Col>
-            <Col xs={2}>{f.duration_seconds}</Col>
+        var children = null;
+
+        
+       
+
+        var rows = [<Row key={f.id} style={style} file={f} >
+            <Col xs={1}><span role="img">{t}</span></Col>
+            <Col xs={4}>{f.timestamp.toLocaleTimeString()}</Col>
             <Col ><a href={f.path} target="_vid">{this.last(f.path.split('/'))}</a></Col>
-        </Row>;
+        </Row>];
+
+        if (f.children) {
+            children = f.children.map(fc => {
+                return <img src={fc.path} file={fc.id} style={{
+                    width:"40px",
+                    marginLeft:"2px",
+                }}/>;
+            })
+            rows.push( <Row>
+                <Col xs={1}><span></span></Col>
+                <Col>{children}</Col>
+                <Col xs={1}></Col>
+            </Row>);
+        }
+
+       return <div onClick={this.props.onClick}>{rows}</div>;
+      
+
     }
 }
 

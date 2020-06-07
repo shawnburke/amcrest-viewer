@@ -6,6 +6,13 @@ class FilesService {
 
     }
 
+    updateTimestamp(f) {
+        if (typeof f.timestamp === "string") {
+            f.timestamp = new Date(f.timestamp);
+        }
+        return f;
+    }
+
     async retrieveItems(startDate, endDate, sort) {
 
         console.log(`Fetching ${startDate.toString()} => ${endDate.toString()} (${sort})`);
@@ -22,8 +29,9 @@ class FilesService {
                 return response.json();
             })
 
-            .then(json => {
-                return json;
+            .then(items => {
+                items.forEach(f => this.updateTimestamp(f))
+                return items;
             })
 
             .catch(error => {
@@ -45,6 +53,7 @@ class FilesService {
                 return response.json();
             })
             .then(item => {
+                this.updateTimestamp(item);
                 return item;
             })
             .catch(error => {
