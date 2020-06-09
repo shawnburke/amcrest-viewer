@@ -6,6 +6,7 @@ import ServiceBroker from "./shared/ServiceBroker";
 import ReactPlayer from 'react-player';
 
 import DatePicker from "./DatePicker";
+import TimeScroll from "./TimeScroll";
 
 
 class CameraView extends React.Component {
@@ -180,6 +181,8 @@ class CameraView extends React.Component {
                     <Button><span>⚙</span></Button>
                 </Col> */}
             </Row>
+            <TimeScroll startTime={new Date(new Date().getTime() - (60*60*1000*24))} endTime={new Date()}/>       
+          
             <div style={{
                 maxHeight:  windowHeight * .5,
                 overflowY: "auto",
@@ -235,6 +238,7 @@ class FileRow extends React.Component {
         var rows = [<Row key={f.id} style={style} file={f} >
             <Col xs={1}><span role="img">{t}</span></Col>
             <Col xs={4}>{f.timestamp.toLocaleTimeString()}</Col>
+            <Col xs={1}>{f.duration_seconds}</Col>
             <Col ><a href={f.path} target="_vid">{this.last(f.path.split('/'))}</a></Col>
         </Row>];
 

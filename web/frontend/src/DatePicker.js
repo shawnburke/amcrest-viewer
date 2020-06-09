@@ -6,21 +6,18 @@ class DatePicker extends React.Component {
 constructor(props) {
     super(props);
 
-    var date = this.props.date || new Date();
-
-    if (this.props.maxDate && this.props.maxDate < date) {
-        date = this.props.maxDate;
-    }
+   
     this.state = {
-    	maxDate: this.props.maxDate,
-    	date: date ,
-        minDate: this.props.minDate
-     }
-     console.log("Init datepicker: " + JSON.stringify(this.state))
+    	date: null,
+    }
+    this.state.date = this.setDate(0, true);
  }
  
  sameDay(d1, d2)  {
  	return d1 && d2 && (d1.toDateString() === d2.toDateString());
+ }
+
+ componentDidMount() {
  }
 
  componentDidUpdate() {
@@ -34,58 +31,79 @@ constructor(props) {
      }
      return null;
  }
+
+ boxDate(d) {
+  if (this.props.minDate && this.props.minDate > d) {
+    d = this.props.minDate;
+  }
+
+  if (this.props.maxDate && this.props.maxDate < d) {
+    d = this.props.maxDate;
+  }
+
+  return d;
+ }
  
- setDate(n, el) {
+ setDate(n, noset) {
  		
- 	  var d= this.state.date.getTime();
+ 	  var d= this.state.date ? this.state.date.getTime() : new Date();
   	if (!n) {
-    	 d = new Date().getTime();
+       d = new Date();
+
+       if (this.props.maxDate && this.props.maxDate < d) {
+        d = this.props.maxDate;
+       }
+       d = d.getTime();
+
     } else if (n === daysFirst) {
     	d = this.props.minDate;
     } else {
     	d += (24*60*60*1000*n);
     }
 
-   this.setState( {
-        date: new Date(d),
-      }
-    )
+    // box the values.
+    var final = this.boxDate(new Date(d));
+
+    if (!noset) {
+
+      this.setState( {
+            date: final,
+          }
+        )
+    }
+    return final;
     
  }
 
  dayStart(d) {
     if (!d) {
-        d = new Date()
+        d = new Date();
+        if (d > this.props.maxDate) {
+          d = this.props.maxDate;
+        }
     }
-     return new Date(d.toDateString())
+    return new Date(d.toDateString())
  }
 
 	render() {
-      const d = this.state.date;
+      var d = this.state.date;
+      if (!d) {
+        return <div></div>;
+      }
+      d = this.boxDate(d);
+      var minDate = this.props.minDate;
+      var maxDate = this.props.maxDate;
       
+      var firstEnabled = minDate && this.dayStart(d) > this.dayStart(minDate);
+      var prevEnabled = !minDate || firstEnabled;
+      var nextEnabled = this.dayStart(d) < this.dayStart() && (!maxDate || this.dayStart(d) < this.dayStart(maxDate)) 
       
-     
-      var prevDisabled = this.state.minDate && this.dayStart(this.state.minDate) >= this.dayStart(this.state.date);
-      var firstDisabled = !this.state.minDate || prevDisabled;
-      var nextDisabled = d >= this.dayStart(this.state.maxDate); 
-      var todayDisabled =  this.props.maxDate < this.dayStart(); 
-
-      todayDisabled = prevDisabled = nextDisabled = false;
-      
-    
-    
-    var first = <button days={daysFirst} onClick={this.setDate.bind(this, daysFirst)}
-    disabled={firstDisabled}><span role="img">⏮</span></button>;
-    
-    
-    var today = <button onClick={this.setDate.bind(this, 0)} disabled={todayDisabled}><span role="img">📆 Today</span></button>
     
     return <div>
-      {first}
-      <button  disabled={prevDisabled} onClick={this.setDate.bind(this, -1)}><span role="img">⏪</span></button>
+     <button style={{visibility: firstEnabled ? "visible" : "hidden"}} onClick={this.setDate.bind(this, daysFirst)} disabled={!firstEnabled}><span role="img">⏮</span></button>
+      <button style={{visibility: prevEnabled ? "visible" : "hidden"}} disabled={!prevEnabled} onClick={this.setDate.bind(this, -1)}><span role="img">⏪</span></button>
       <button onClick={this.setDate.bind(this, 0)}>{d.toLocaleDateString()}</button>
-      <button days="1" disabled={nextDisabled} onClick={this.setDate.bind(this, 1)}><span role="img">⏩</span></button>
-      {today}
+      <button style={{visibility: nextEnabled ? "visible" : "hidden"}}  disabled={!nextEnabled} onClick={this.setDate.bind(this, 1)}><span role="img">⏩</span></button>
     </div>
   
   }
