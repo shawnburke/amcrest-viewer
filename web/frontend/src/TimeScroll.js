@@ -47,7 +47,7 @@ export default class TimeScroll extends React.Component{
         var pos = viewportRect.left + offset;
 
         var setPos = viewportRect.left+offset;
-        var element = document.elementFromPoint(setPos, viewportRect.top + 5);
+        var element = document.elementFromPoint(setPos, viewportRect.top + (viewportRect.bottom - viewportRect.top)/2);
         setPos += 10;
 
         var elementViewPort = element.getBoundingClientRect();
@@ -62,6 +62,35 @@ export default class TimeScroll extends React.Component{
 
     onScrollChange(el, ratio) {
 
+        if (!el.attributes.time) {
+            return;
+        }
+        const sec = el.attributes.seconds.value;
+        const time =  Number(el.attributes.time.value);
+
+        var newTime = time + (1000*sec*ratio);
+
+        if (this.props.onTimeChange) {
+            this.props.onTimeChange(newTime, el.attributes.item_id && el.attributes.item_id.value);
+        }
+    }
+
+    boxTime(t, min, max) {
+        var toTime = function(date) {
+            if (date.constructor.name === "Date") {
+                return date.getTime();
+            }
+            return date;
+        }
+
+        var tt = toTime(t);
+        var tmin = toTime(min);
+        var tmax = toTime(max);
+
+        tt = Math.max(tt, tmin);
+        tt = Math.min(tt, tmax);
+
+        return tt;
     }
 
     render() {
@@ -70,30 +99,52 @@ export default class TimeScroll extends React.Component{
             return <div>XXX</div>
         }
 
-        var start = this.props.startTime.getTime();
-        var end = this.props.endTime.getTime();
         const hour = 60*60*1000;
-        start -= (start % hour);
-        end += (hour - (end % hour));
+        const month = hour * 24 * 30;
+       
+
+        var start = this.boxTime(this.props.startTime, new Date().getTime() - month, new Date());
+        var end = this.boxTime(this.props.endTime, new Date().getTime() - month, new Date());
+
+        // buffer an hour on either end, snap
+        // to hour boundaries
+        start -= (start % hour) + hour;
+        end += (hour - (end % hour)) + hour;
 
         const spanSeconds = (end- start) / 1000;
 
         var items = [];
 
         const hourWidth = window.innerWidth / 4;
+        const chunkSeconds = 3600;
 
 
-
-        for (var i = 0; i < spanSeconds; i += 3600) {
+        for (var i = 0; i < spanSeconds; i += chunkSeconds) {
             var t = new Date(start + (1000*i));
+
+            var iEnd = new Date(t.getTime() + chunkSeconds*1000);
             var label = t.getHours();
+
+            var mediaItems = []
+            
+            this.props.items.forEach(mi => {
+                if (mi.start >= t && mi.start < iEnd) {
+                    mediaItems.push(mi);
+                };
+            });
+
+            var w = hourWidth;
+
+            if (mediaItems && mediaItems.length) {
+                w = 20;
+            }
 
             if (label > 12) {
                 label = (label %12 )+ "p";
             } else {
                 label = (label || 12) + "a";
             }
-            var timeItem = <div key={i} style={{
+            var hourItem = <div key={i} time={t.getTime()} seconds={chunkSeconds} style={{
                 display: "inline-block",
                 height: "100%",
                 width: hourWidth + "px",
@@ -103,9 +154,36 @@ export default class TimeScroll extends React.Component{
                 padding: "2px"
             }}>{label}</div>;
 
-            items.push(timeItem);
+            items.push(hourItem);
 
+            mediaItems.forEach(mi => {
+                var seconds = (mi.end.getTime() - mi.start.getTime())/1000;
+
+                var color = mi.video ? "green" : "gold";
+
+                
+                var motionItem = <div 
+                    key={mi.start} item_id={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
+                    display: "inline-block",
+                    position:"relative",
+                    height: "60%",
+                    width: "50px",
+                    top:"15px",
+                    borderLeft:"thin white solid",
+                    color: "white",
+                    background:color, 
+                    padding: "2px",
+                    MozBorderRadius:"3px",
+                    border:"1px white solid",
+                }}>{seconds}s</div>;
+
+                items.push(motionItem);
+                
+            });
+            
         }
+
+       
        return <div 
         onMouseDown={this.mouseDown.bind(this)}
         onMouseUp={this.mouseUp.bind(this)}

@@ -24,7 +24,8 @@ class CameraView extends React.Component {
             date: new Date(),
             selected: 0,
             minDate: new Date(2000,1,1),
-            maxDate: new Date()
+            maxDate: new Date(),
+            mediaItems:[],
         }
     }
 
@@ -38,7 +39,7 @@ class CameraView extends React.Component {
                     maxDate: new Date(s.max_date)
                 }
                 this.setState(dates)
-                this.loadFiles();
+                this.loadFiles(dates.maxDate);
 
             }
         )
@@ -62,6 +63,7 @@ class CameraView extends React.Component {
 
             this.setState({ 
                 files: items, 
+                mediaItems: this.getTimeItems(items),
                 source: null, 
                 selected:0 
             });
@@ -70,7 +72,32 @@ class CameraView extends React.Component {
     }
 
 
-    handleClick(f, el) {
+    setMedia(file, pos) {
+
+        if (this.state.selected === file.id && this.state.pos === pos) {
+            return;
+        }
+
+        this.setState(
+            {
+                source:file,
+                selected:file.id,
+                pos: pos,
+            }
+        );
+    }
+
+    onTimeScrollChange(time, item_id) {
+        var file = this.state.files.find(f => f.id == item_id);
+        if (!file) {
+            console.warn(`Can't find file ${item_id}`);
+            return;
+        }
+
+        this.setMedia(file, time);
+    }
+
+    mediaRowClick(f, el) {
         el.preventDefault();
 
         var id = f.id;
@@ -79,14 +106,31 @@ class CameraView extends React.Component {
             f = this.state.files.find(file => file.id == el.target.attributes.file.value);
         }
         
-        this.setState(
-            {
-                source:f,
-                selected: id
-            }
-        );
+        this.setMedia(f);
     }
 
+    getTimeItems(files) {
+        if (!files) {
+            return []
+        }
+
+        var items = files.map(f => {
+
+            var sec = f.duration_seconds || 5;
+
+            var end = new Date(f.timestamp.getTime() + (1000*sec));
+
+            return {
+                id: f.id,
+                start: f.timestamp,
+                end: end,
+                video: f.type === 1,
+                source: f.path,
+            }
+        })
+
+        return items;
+    }
   
 
     render() {
@@ -97,7 +141,7 @@ class CameraView extends React.Component {
 
         if (this.state.files) {
             
-
+          
             var curmp4;
            
             var grouped = [];
@@ -145,7 +189,7 @@ class CameraView extends React.Component {
                 var row = <FileRow 
                     file={f} key={f.id} 
                     selected={this.state.selected === f.id}
-                    onClick={this.handleClick.bind(this, f)}/>;
+                    onClick={this.mediaRowClick.bind(this, f)}/>;
 
                 fileRows.push(row);
             })
@@ -181,8 +225,14 @@ class CameraView extends React.Component {
                     <Button><span>⚙</span></Button>
                 </Col> */}
             </Row>
-            <TimeScroll startTime={new Date(new Date().getTime() - (60*60*1000*24))} endTime={new Date()}/>       
-          
+            <div style={{margin:"2px"}}>
+            <TimeScroll 
+                startTime={this.state.minDate} 
+                endTime={this.state.maxDate}
+                items={this.state.mediaItems}
+                onTimeChange={this.onTimeScrollChange.bind(this)}
+            />       
+            </div>
             <div style={{
                 maxHeight:  windowHeight * .5,
                 overflowY: "auto",
