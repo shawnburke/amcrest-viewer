@@ -40,12 +40,10 @@ export default class TimeScroll extends React.Component{
     }
 
     onScroll(el) {
-        var scr = el.currentTarget.scrollLeft;
         var offset = (el.currentTarget.clientWidth * .5) - 10;
 
         var viewportRect = el.currentTarget.getBoundingClientRect();
-        var pos = viewportRect.left + offset;
-
+      
         var setPos = viewportRect.left+offset;
         var element = document.elementFromPoint(setPos, viewportRect.top + (viewportRect.bottom - viewportRect.top)/2);
         setPos += 10;
@@ -147,7 +145,7 @@ export default class TimeScroll extends React.Component{
             var hourItem = <div key={i} time={t.getTime()} seconds={chunkSeconds} style={{
                 display: "inline-block",
                 height: "100%",
-                width: hourWidth + "px",
+                width: w + "px",
                 borderLeft:"thin white solid",
                 color: "white",
                 background:"navy",

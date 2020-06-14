@@ -9,104 +9,86 @@ import DatePicker from "./DatePicker";
 import TimeScroll from "./TimeScroll";
 
 
+
+const hour = 3600 * 1000;
+const day = hour * 24;
+const month = day * 30;
+
+
 class CameraView extends React.Component {
     constructor(props) {
         super(props);
 
-        let broker = new ServiceBroker();
-
         // TODO: fix hack
-        this.filesService = broker.newFilesService("amcrest-" + this.props.cameraid);
-        this.camerasServer = broker.newCamsService();
+        var camid = "amcrest-" + this.props.cameraid;
+        
+        this.fileManager = new FileManager(camid, new ServiceBroker());
+
+        
+        this.fileManager.onChange = this._fileManagerChange.bind(this);
 
         this.state = {
             files: [],
             date: new Date(),
             selected: 0,
-            minDate: new Date(2000,1,1),
-            maxDate: new Date(),
+            range: {
+                min:new Date(2000,1,1),
+                max:new Date(),
+            },
+            window:{
+                start:new Date(),
+                end: new Date(new Date().getTime() + day)
+            },
             mediaItems:[],
         }
     }
 
     componentDidMount() {
 
-       
-        this.camerasServer.getStats(this.props.cameraid).then(
-            s => {
-                var dates = {
-                    minDate: new Date(s.min_date),
-                    maxDate: new Date(s.max_date)
-                }
-                this.setState(dates)
-                this.loadFiles(dates.maxDate);
-
-            }
-        )
+        this.fileManager.start();
+        
     }
 
-    componentDidUpdate(prevProps, prevState) {  
-        if (this.state.date !== prevState.date) {    
-            this.loadFiles(this.state.date);
-        }  
-    }
+ 
+    _fileManagerChange(change) {
 
-    loadFiles(date) {
-        date = date || this.state.date;
-        var start = date.toString().replace(/\d{2}:\d{2}:\d{2}/, "00:00:00")
-        start = new Date(start);
-
-        var end = new Date(start.getTime() + (24 * 60 * 60 * 1000)-1);
-
-
-        this.filesService.retrieveItems(start, end, "").then(items => {
-
-            this.setState({ 
-                files: items, 
-                mediaItems: this.getTimeItems(items),
-                source: null, 
-                selected:0 
-            });
-
-        });
-    }
-
-
-    setMedia(file, pos) {
-
-        if (this.state.selected === file.id && this.state.pos === pos) {
-            return;
+        if (change.range) {
+            this.setState({
+                range: change.range
+            })
         }
 
-        this.setState(
-            {
-                source:file,
-                selected:file.id,
-                pos: pos,
-            }
-        );
+        if (change.window) {
+            this.setState({
+                window: change.window,
+                date: change.window.start,
+            })
+        }
+
+        if (change.files) {
+            var items = this.getTimeItems(change.files);
+            this.setState({
+                mediaItems: items
+            })
+        }
+
+        if (change.file) {
+            this.setState({
+                source: change.file
+            })
+        }
     }
 
     onTimeScrollChange(time, item_id) {
-        var file = this.state.files.find(f => f.id == item_id);
-        if (!file) {
-            console.warn(`Can't find file ${item_id}`);
-            return;
-        }
-
-        this.setMedia(file, time);
+      
+        this.fileManager.setPosition(time)
     }
 
     mediaRowClick(f, el) {
         el.preventDefault();
 
-        var id = f.id;
-
-        if (el.target.attributes.file) {
-            f = this.state.files.find(file => file.id == el.target.attributes.file.value);
-        }
-        
-        this.setMedia(f);
+        this.fileManager.setCurrentFile(f);
+    
     }
 
     getTimeItems(files) {
@@ -131,15 +113,12 @@ class CameraView extends React.Component {
 
         return items;
     }
-  
 
-    render() {
 
-        document.title = "Camera Viewer - " + this.props.cameraid;
-
+    renderFileList(files) {
         var fileRows = [];
 
-        if (this.state.files) {
+        if (files) {
             
           
             var curmp4;
@@ -167,7 +146,7 @@ class CameraView extends React.Component {
 
             // group files
 
-            this.state.files.forEach((f) => {
+            files.forEach((f) => {
                 
                 if (group(f)) {
                     return;
@@ -198,6 +177,13 @@ class CameraView extends React.Component {
             fileRows = fileRows.reverse();
 
         }
+        return fileRows;
+    }
+  
+
+    render() {
+
+        document.title = "Camera Viewer - " + this.props.cameraid;
 
         var windowHeight = window.innerHeight;
 
@@ -215,20 +201,18 @@ class CameraView extends React.Component {
               
                 <Col xs={12}>
                     <DatePicker
-                        minDate={this.state.minDate}
-                        maxDate={this.state.maxDate}
+                        minDate={this.state.range.min}
+                        maxDate={this.state.range.max}
                         date={this.state.date}
                         onChange={date => this.setStartDate(date)}
                     />
                 </Col>
-                {/* <Col xs={1} style={{ textAlign: "center" }}>
-                    <Button><span>⚙</span></Button>
-                </Col> */}
+               
             </Row>
             <div style={{margin:"2px"}}>
             <TimeScroll 
-                startTime={this.state.minDate} 
-                endTime={this.state.maxDate}
+                startTime={this.state.window.start} 
+                endTime={this.state.window.end}
                 items={this.state.mediaItems}
                 onTimeChange={this.onTimeScrollChange.bind(this)}
             />       
@@ -238,7 +222,7 @@ class CameraView extends React.Component {
                 overflowY: "auto",
                 overflowX: "hidden"
             }}>
-            {fileRows}
+            {this.renderFileList(this.fileManager.files)}
             </div>
         </div>
     }
@@ -248,9 +232,10 @@ class CameraView extends React.Component {
         if (d === this.state.date) {
             return;
         }
-        this.setState({
-            date: d,
-        })
+        this.fileManager.setWindow(d);
+        // this.setState({
+        //     date: d,
+        // })
     }
 }
 
@@ -331,8 +316,9 @@ class Player extends React.Component {
                 url={val.path} 
                 width="100%" 
                 height="100%" 
-                playsinline="true"
-                playing="true" style={{
+                playsinline={true}
+                playing={true} 
+                style={{
                     height:"100%"
                 }} 
             />;
@@ -347,6 +333,315 @@ class Player extends React.Component {
         return <div></div>;
 
     }
+}
+
+
+// FileManager takes in a list of files
+// and manages them by time
+//
+// Range: 
+//      Min: minimum date for available files
+//      Max: maximum date for available files
+//
+// Window: Range.Min < Window < Range.Max
+//      Start/End: Time range of files currently 
+//                 in scope, e.g. a given day
+//      Change: Sets current to media file closest to 
+//              current time
+//
+// Position: Window.Start < Position < Window.End
+//      Change: selects a file
+//              If outside window, may bump the window?
+//
+// Current: File that contains the Postition time.  Setting this sets Position to beginning of file
+//
+// Events:
+//      OnCurrentFileChange
+//      OnWindowChange
+//      OnPositionChange
+// 
+class FileManager {
+
+    constructor(camid, broker) {
+        this.camid = camid;
+        this.filesService = broker.newFilesService(camid);
+        this.camerasServer = broker.newCamsService();
+
+        // initialize info
+        var today = new Date();
+        this.range = {
+            min: this.dateAdd(today, -1, "m"),
+            max: today,
+        }
+
+        this.window = {
+            start: this.dateAdd(today, -1, "d"),
+            end: today,
+        }
+        
+        this.position = this.dateAdd(today, -1, "h");
+    }
+
+    start() {
+        this.camerasServer.getStats(this.camid).then(
+            s => {
+                this.setRange(new Date(s.min_date),  new Date(s.max_date));
+            }
+        );
+    }
+
+   
+    loadFiles(start, end) {
+        
+        start = start.toString().replace(/\d{2}:\d{2}:\d{2}/, "00:00:00")
+        start = new Date(start);
+
+        end = end || new Date(start.getTime() + (24 * 60 * 60 * 1000)-1);
+
+
+        return this.filesService.retrieveItems(start, end, "");
+    }
+
+    _onchange(value) {
+
+        if (!value){
+            return;
+        }
+
+        // var rangeChange = value.range;
+        // var windowChange = value.window;
+        // var positionChange = value.position;
+        // var fileChange = value.file;
+
+        Object.assign(this, value);
+
+        if (this.onChange) {
+            this.onChange(value);
+        }
+
+    }
+
+    boxTime(t, min, max, bias) {
+        var toTime = function(date) {
+            if (date.constructor.name === "Date") {
+                return date.getTime();
+            }
+            return date;
+        }
+
+        var tt = toTime(t);
+        var wasDate = tt !== t;
+        var tmin = toTime(min);
+        var tmax = toTime(max);
+
+        var unboxed = tt < tmin || tt > tmax;
+
+        if (unboxed) {
+
+            switch (bias) {
+                case "min":
+                    tt = tmin;
+                    break;
+                case "max":
+                    tt = tmax;
+                    break;
+                default:
+                    if (tt < tmin) {
+                        tt = tmin;
+                    } else if (tt > tmax) {
+                        tt = tmax;
+                    }
+            }
+        }
+
+        if (wasDate) {
+            return new Date(tt);
+        }
+        return tt;
+    }
+
+    setRange(min, max) {
+        if (max < min) {
+            throw new Error("bad range");
+        }
+
+        if (min === this.range.min && max === this.range.max) {
+            return;
+        }
+
+        this._onchange({range:{
+            min: min,
+            max: max,
+        }
+        });
+        
+        this.setWindow(this.window.start, this.window.end);
+    }
+
+    setWindow(start, end) {
+
+        if (end < start) {
+            throw new Error("bad window");
+        }
+
+        var boxedStart = this.boxTime(start, this.range.min, this.range.max, "min");
+        var boxedEnd = this.boxTime(end, this.range.min, this.range.max, "max");
+
+
+        if (boxedStart === this.window.start && boxedEnd === this.window.end) {
+            return true;
+        }
+
+        
+
+        this._onchange({
+            window:{
+            start:boxedStart,
+            end:boxedEnd,
+        }})
+        ;
+
+        console.log(`Loading files for range ${boxedStart} => ${boxedEnd}`)
+        this.loadFiles(boxedStart, boxedEnd).then(items =>{
+
+            console.log(`Loaded ${items.length} files`);
+            var files = items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+            // set an end for each file item;
+            files.forEach(file => {
+                if (!file.end) {
+                    var end = file.timestamp.getTime();
+
+                    if (file.duration_seconds){
+                        end += 1000*file.duration_seconds;
+                    } else {
+                        end += 1000;
+                    }
+                    file.start = file.timestamp;
+                    file.end = end;
+                }
+            });
+
+            this._onchange({files:files});
+
+            var pos = this.boxTime(this.position, boxedStart, boxedEnd);
+
+            // find the last file
+            if (pos !== this.position && this.files.length) {
+                var lastFile = this.files[this.files.length-1];
+
+                pos = lastFile.timestamp;
+            }
+
+            this.setPosition(pos);
+        })
+    }
+
+    isInFile(time, file) {
+
+        return time >= file.start && time < file.end;
+    }
+
+    setPosition(time) {
+
+        var boxed = this.boxTime(time, this.window.start, this.window.end, 'min');
+
+        if (this.timeEqual(boxed, this.position)){
+            return true;
+        }
+
+       
+        this._onchange({position:boxed});
+
+
+        // find the file
+        var file = this.files.find(f => this.isInFile(time, f));
+
+        if (file) {
+            this.setCurrentFile(file);
+        }
+
+        
+    }
+
+    timeEqual(t1, t2) {
+        if (t1 === t2) {
+            return true;
+        }
+
+        if (!t1 || !t2) {
+            return false;
+        }
+
+        
+        if (t1.getTime) {
+            t1 = t1.getTime()
+        }
+
+        if (t2.getTime) {
+            t2 = t2.getTime()
+        }
+
+        return t1 === t2;
+    }
+
+    setCurrentFile(file) {
+        var oldid = this.file && this.file.id;
+        var newid = file && file.id;
+        if (oldid === newid) {
+            return true;
+        }
+
+        file = this.files.find(f => f.id === newid);
+
+        if (!file) {
+            console.warn(`Can't find file ${newid}`);
+            return false;
+        }
+
+        // set position if not in file
+        var boxed = this.boxTime(file.timestamp, this.window.start, this.window.end);
+
+        if (!this.timeEqual(boxed,file.timestamp)) {
+            console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.window.start} => ${this.window.end}`);
+            return false;
+        }
+
+        this.setPosition(file.timestamp);
+
+        this._onchange({file:file});
+        return true;
+
+    }
+
+    dateAdd(date, n, unit) {
+
+      
+        var base = 0;
+        
+        switch (unit) {
+            case "h": 
+                base = hour;
+                break;
+            case "d":
+                base = day;
+                break;
+            case "m":
+                base = month;
+                break;
+            default:
+                throw new Error("Unknown unit: " + unit);
+        }
+
+        base *= n;
+
+        if (!date) {
+            date = new Date();
+        }
+
+        return new Date(date.getTime() + base);
+    }
+
 }
 
 export default CameraView;
