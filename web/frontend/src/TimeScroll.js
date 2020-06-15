@@ -9,6 +9,7 @@ export default class TimeScroll extends React.Component{
     constructor(props) {
         super(props);
 
+        this.myRef = React.createRef();
         this.state =  {
             current: new Date(),
         }
@@ -38,6 +39,7 @@ export default class TimeScroll extends React.Component{
     mouseUp(el) {
         this.anchor = null;
     }
+
 
     onScroll(el) {
         var offset = (el.currentTarget.clientWidth * .5) - 10;
@@ -91,6 +93,42 @@ export default class TimeScroll extends React.Component{
         return tt;
     }
 
+    // shouldComponentUpdate(nextProps, nextState) {
+
+    //     const node = this.myRef.current;
+    //     var t = nextProps.position;
+
+    //     var left = 0;
+    //     var indicator = node.clientWidth / 2;
+
+    //     for (var i = 0 ; i < node.childNodes.length;i++) {
+    //         var child = node.childNodes[i];
+
+    //         var childTime = child.attributes.time && child.attributes.time.value;
+
+    //         if (childTime) {
+            
+    //             var seconds = Number(child.attributes.seconds.value);
+    //             var childEnd = childTime + (1000*seconds);
+
+    //             if (t > childTime && t < childEnd) {
+    //                 var delta = (t - childTime) / 1000;
+
+    //                 var scroll = (left + (child.clientWidth * (delta / seconds))) - indicator;
+
+    //                 node.scrollLeft = scroll;
+    //                 return false;
+    //             }
+    //         }
+
+    //         left += child.getClientRects().width;
+    //     }
+
+
+    //     return true;
+    // }
+
+    
     render() {
 
         if (!this.props.startTime || !this.props.endTime) {
@@ -182,7 +220,7 @@ export default class TimeScroll extends React.Component{
         }
 
        
-       return <div 
+       return <div ref={this.myRef}
         onMouseDown={this.mouseDown.bind(this)}
         onMouseUp={this.mouseUp.bind(this)}
         onMouseMove={this.mouseMove.bind(this)}

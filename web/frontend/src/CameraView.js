@@ -30,14 +30,15 @@ class CameraView extends React.Component {
         this.state = {
             files: [],
             date: new Date(),
+            position: new Date(),
             selected: 0,
             range: {
                 min:new Date(2000,1,1),
                 max:new Date(),
             },
             window:{
-                start:new Date(),
-                end: new Date(new Date().getTime() + day)
+                start:new Date(new Date().getTime() - day),
+                end: new Date()
             },
             mediaItems:[],
         }
@@ -75,6 +76,12 @@ class CameraView extends React.Component {
         if (change.file) {
             this.setState({
                 source: change.file
+            })
+        }
+
+        if (change.position) {
+            this.setState({
+                position: change.position
             })
         }
     }
@@ -214,6 +221,7 @@ class CameraView extends React.Component {
                 startTime={this.state.window.start} 
                 endTime={this.state.window.end}
                 items={this.state.mediaItems}
+                position={this.state.date}
                 onTimeChange={this.onTimeScrollChange.bind(this)}
             />       
             </div>
@@ -408,10 +416,23 @@ class FileManager {
             return;
         }
 
-        // var rangeChange = value.range;
-        // var windowChange = value.window;
-        // var positionChange = value.position;
-        // var fileChange = value.file;
+        var rangeChange = value.range;
+        if (rangeChange) {
+            console.log(`Changing range to ${value.range.min} => ${value.range.max}`);
+        }
+        var windowChange = value.window;
+        if (windowChange) {
+            console.log(`Changing window to ${value.window.start} => ${value.window.end}`)
+        }
+        var positionChange = value.position;
+        if (positionChange) {
+            console.log(`Setting position to ${value.position}`);
+        }
+
+        var fileChange = value.file;
+        if (fileChange) {
+            console.log(`Setting file to ${value.file.id} ${value.file.path}`)
+        }
 
         Object.assign(this, value);
 
@@ -419,6 +440,54 @@ class FileManager {
             this.onChange(value);
         }
 
+    }
+
+    snapTime(t, unit, bias) {
+
+        var wasDate = false;
+        if (t.getTime) {
+            t = t.getTime();
+            wasDate = true;
+        }
+
+        var chunk = 0;
+
+        
+        var offset = 0;
+
+        switch (unit) {
+            case "hour":
+                chunk = hour;
+                break;
+            case "day":
+                chunk = day;
+                offset = new Date().getTimezoneOffset() * 60 * 1000;
+                break;
+            default:
+                throw new Error("Unknown unit: " + unit); 
+        }
+
+        var delta = t % chunk;
+
+        if (!bias) {
+            bias = (delta < chunk / 2) ? -1 : 1;
+        }
+
+        switch (bias) {
+            case -1:
+                t -= delta;
+                break;
+            case 1:
+                t += (chunk-delta);
+                break;
+        }
+
+        t += offset;
+
+        if (wasDate) {
+            t = new Date(t);
+        }
+        return t;
     }
 
     boxTime(t, min, max, bias) {
@@ -487,12 +556,12 @@ class FileManager {
         var boxedStart = this.boxTime(start, this.range.min, this.range.max, "min");
         var boxedEnd = this.boxTime(end, this.range.min, this.range.max, "max");
 
+        boxedStart = this.snapTime(boxedStart, "day", -1);
+        boxedEnd = this.snapTime(boxedEnd, "day", 1);
 
         if (boxedStart === this.window.start && boxedEnd === this.window.end) {
             return true;
         }
-
-        
 
         this._onchange({
             window:{
