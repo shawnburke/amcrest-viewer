@@ -240,10 +240,11 @@ class CameraView extends React.Component {
         if (d === this.state.date) {
             return;
         }
-        this.fileManager.setWindow(d);
-        // this.setState({
-        //     date: d,
-        // })
+
+        d = this.fileManager.snapTime(d, "day", 0);
+        var e = this.fileManager.dateAdd(d, 1, "day");
+        
+        this.fileManager.setWindow(d, e);
     }
 }
 
@@ -378,16 +379,16 @@ class FileManager {
         // initialize info
         var today = new Date();
         this.range = {
-            min: this.dateAdd(today, -1, "m"),
+            min: this.dateAdd(today, -1, "month"),
             max: today,
         }
 
         this.window = {
-            start: this.dateAdd(today, -1, "d"),
+            start: this.dateAdd(today, -1, "day"),
             end: today,
         }
         
-        this.position = this.dateAdd(today, -1, "h");
+        this.position = this.dateAdd(today, -1, "hour");
     }
 
     start() {
@@ -538,10 +539,11 @@ class FileManager {
             return;
         }
 
-        this._onchange({range:{
-            min: min,
-            max: max,
-        }
+        this._onchange({
+            range:{
+                min: min,
+                max: max,
+            }
         });
         
         this.setWindow(this.window.start, this.window.end);
@@ -689,13 +691,13 @@ class FileManager {
         var base = 0;
         
         switch (unit) {
-            case "h": 
+            case "hour": 
                 base = hour;
                 break;
-            case "d":
+            case "day":
                 base = day;
                 break;
-            case "m":
+            case "month":
                 base = month;
                 break;
             default:

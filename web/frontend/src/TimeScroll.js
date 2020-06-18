@@ -129,6 +129,8 @@ export default class TimeScroll extends React.Component{
     // }
 
     
+
+
     render() {
 
         if (!this.props.startTime || !this.props.endTime) {
@@ -138,7 +140,6 @@ export default class TimeScroll extends React.Component{
         const hour = 60*60*1000;
         const month = hour * 24 * 30;
        
-
         var start = this.boxTime(this.props.startTime, new Date().getTime() - month, new Date());
         var end = this.boxTime(this.props.endTime, new Date().getTime() - month, new Date());
 

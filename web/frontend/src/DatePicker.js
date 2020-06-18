@@ -64,7 +64,7 @@ constructor(props) {
     // box the values.
     var final = this.boxDate(new Date(d));
 
-    if (!noset) {
+    if (noset !== true) {
 
       this.setState( {
             date: final,
