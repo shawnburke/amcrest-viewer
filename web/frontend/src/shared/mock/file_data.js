@@ -2864,7 +2864,7 @@ export function GetData(start, end, sort) {
 
     var result = data.filter(f => f.timestamp >= start && f.timestamp < end);
 
-    if (sort == "desc") {
+    if (sort === "desc") {
         result = result.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     }
     return result;

@@ -174,7 +174,7 @@ class CameraView extends React.Component {
             grouped.forEach(f => {
                 var row = <FileRow 
                     file={f} key={f.id} 
-                    selected={this.state.selected === f.id}
+                    selected={this.state.source && this.state.source.id === f.id}
                     onClick={this.mediaRowClick.bind(this, f)}/>;
 
                 fileRows.push(row);
@@ -221,7 +221,7 @@ class CameraView extends React.Component {
                 startTime={this.state.window.start} 
                 endTime={this.state.window.end}
                 items={this.state.mediaItems}
-                position={this.state.date}
+                position={this.state.position}
                 onTimeChange={this.onTimeScrollChange.bind(this)}
             />       
             </div>
@@ -576,7 +576,9 @@ class FileManager {
         this.loadFiles(boxedStart, boxedEnd).then(items =>{
 
             console.log(`Loaded ${items.length} files`);
-            var files = items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+            // sort ascending
+            var files = items.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
             // set an end for each file item;
             files.forEach(file => {

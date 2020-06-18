@@ -73,19 +73,15 @@ export default class TimeScroll extends React.Component{
         if (this.props.onTimeChange) {
             this.props.onTimeChange(newTime, el.attributes.item_id && el.attributes.item_id.value);
         }
+        console.log(`Scrolled to ${el.scrollLeft}`);
     }
 
     boxTime(t, min, max) {
-        var toTime = function(date) {
-            if (date.constructor.name === "Date") {
-                return date.getTime();
-            }
-            return date;
-        }
+        
 
-        var tt = toTime(t);
-        var tmin = toTime(min);
-        var tmax = toTime(max);
+        var tt = this.toUnix(t);
+        var tmin = this.toUnix(min);
+        var tmax = this.toUnix(max);
 
         tt = Math.max(tt, tmin);
         tt = Math.min(tt, tmax);
@@ -93,43 +89,78 @@ export default class TimeScroll extends React.Component{
         return tt;
     }
 
-    // shouldComponentUpdate(nextProps, nextState) {
+    toUnix(t) {
+        if (t.getTime) {
+            return t.getTime()
+        }
+        return t;
+    }
 
-    //     const node = this.myRef.current;
-    //     var t = nextProps.position;
+    shouldComponentUpdate(nextProps, nextState) {
 
-    //     var left = 0;
-    //     var indicator = node.clientWidth / 2;
 
-    //     for (var i = 0 ; i < node.childNodes.length;i++) {
-    //         var child = node.childNodes[i];
+        if (!this.anchor) {
 
-    //         var childTime = child.attributes.time && child.attributes.time.value;
+            if (nextProps.startTime === this.props.startTime &&
+                nextProps.endTime === this.props.endTime && 
+                nextProps.position !== this.props.position ) {
+                    var t = this.toUnix(nextProps.position);
+                    this.scrollToTime(t);
+                    return false;
+                }
+        }
 
-    //         if (childTime) {
+
+        return true;
+    }
+
+    scrollToTime(t) {
+        var left = 0;
+        const node = this.myRef.current;
+        var indicator = node.clientWidth / 2;
+
+        var bestFit;
+        var bestFitDuration;
+
+        for (var i = 0 ; i < node.childNodes.length;i++) {
+            var child = node.childNodes[i];
+
+            var childTime = child.attributes.time && child.attributes.time.value;
+
+            if (childTime) {
             
-    //             var seconds = Number(child.attributes.seconds.value);
-    //             var childEnd = childTime + (1000*seconds);
+                var seconds = Number(child.attributes.seconds.value);
+                var childEnd = Number(childTime) + (1000*seconds);
 
-    //             if (t > childTime && t < childEnd) {
-    //                 var delta = (t - childTime) / 1000;
+                // // went too far
+                // if (childEnd > t) {
+                //     break;
+                // }
 
-    //                 var scroll = (left + (child.clientWidth * (delta / seconds))) - indicator;
+                if (t > childTime && t < childEnd) {
+                    if (!bestFitDuration || bestFitDuration > seconds) {
+                        bestFit = child;
+                    }
+                }
+            }
 
-    //                 node.scrollLeft = scroll;
-    //                 return false;
-    //             }
-    //         }
+            left += child.getClientRects().width;
+        }
 
-    //         left += child.getClientRects().width;
-    //     }
-
-
-    //     return true;
-    // }
+        if (bestFit) {
+            this.select(bestFit);
+        }
+    }
 
     
-
+     select(e) {
+        var p = e.offsetParent; 
+        var s = this.myRef.current;
+        var center = s.clientWidth / 2;
+        var newScroll = ((e.offsetLeft - p.offsetLeft) - center) + p.offsetLeft;
+        console.log(`Scrolling ${s.scrollLeft} => ${newScroll}`);
+        s.scrollLeft = newScroll;
+      }
 
     render() {
 
@@ -162,14 +193,8 @@ export default class TimeScroll extends React.Component{
             var iEnd = new Date(t.getTime() + chunkSeconds*1000);
             var label = t.getHours();
 
-            var mediaItems = []
+            var mediaItems = this.props.items.filter(mi => mi.start >= t && mi.start < iEnd);
             
-            this.props.items.forEach(mi => {
-                if (mi.start >= t && mi.start < iEnd) {
-                    mediaItems.push(mi);
-                };
-            });
-
             var w = hourWidth;
 
             if (mediaItems && mediaItems.length) {
@@ -181,7 +206,7 @@ export default class TimeScroll extends React.Component{
             } else {
                 label = (label || 12) + "a";
             }
-            var hourItem = <div key={i} time={t.getTime()} seconds={chunkSeconds} style={{
+            var hourItem = <div key={"file" + i} time={this.toUnix(t)} seconds={chunkSeconds} style={{
                 display: "inline-block",
                 height: "100%",
                 width: w + "px",
@@ -193,14 +218,16 @@ export default class TimeScroll extends React.Component{
 
             items.push(hourItem);
 
+            
+
             mediaItems.forEach(mi => {
                 var seconds = (mi.end.getTime() - mi.start.getTime())/1000;
 
                 var color = mi.video ? "green" : "gold";
 
                 
-                var motionItem = <div 
-                    key={mi.start} item_id={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
+                var motionItem = <div onClick={ev => this.select(ev.target)}
+                    key={mi.id} item_id={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
                     display: "inline-block",
                     position:"relative",
                     height: "60%",
@@ -210,7 +237,8 @@ export default class TimeScroll extends React.Component{
                     color: "white",
                     background:color, 
                     padding: "2px",
-                    MozBorderRadius:"3px",
+                    MozBorderRadius:"5px",
+                    WebkitBorderRadius:"5px",
                     border:"1px white solid",
                 }}>{seconds}s</div>;
 
