@@ -35,6 +35,8 @@ ftp:
 type mockRepo struct {
 }
 
+var _ data.Repository = &mockRepo{}
+
 // Camera operations
 func (mr *mockRepo) AddCamera(name string, t string, host *string) (*entities.Camera, error) {
 	panic("not implemented") // TODO: Implement
@@ -67,8 +69,16 @@ func (mr *mockRepo) ListCameras() ([]*entities.Camera, error) {
 
 }
 
+func (mr *mockRepo) GetCameraStats(id string, start *time.Time, end *time.Time, breakdown string) (*data.CameraStats, error) {
+	panic("not implemented") // TODO: Implement
+}
+
 // File operations
 func (mr *mockRepo) AddFile(path string, t int, cameraID string, l int, timestamp time.Time, duration *time.Duration) (*entities.File, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (mr *mockRepo) DeleteFile(id int) error {
 	panic("not implemented") // TODO: Implement
 }
 

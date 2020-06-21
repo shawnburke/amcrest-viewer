@@ -39,9 +39,17 @@ ALTER TABLE cameras
 ADD COLUMN Timezone VARCHAR(128) DEFAULT "America/Los_Angeles";
 `
 
+var schema3 = `
+ALTER TABLE cameras
+	ADD COLUMN MaxFileAgeDays Integer DEFAULT 30;
+ALTER TABLE cameras
+	ADD COLUMN MaxTotalSizeMB Integer DEFAULT 5000;
+`
+
 var schemas = []string{
 	schema1,
 	schema2,
+	schema3,
 }
 
 // Rather than dealing with loose files on disk (which just adds complication

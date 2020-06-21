@@ -19,6 +19,9 @@ var Module = fx.Options(
 	fx.Provide(newFileManagerWithConfig),
 	fx.Provide(newDbWithConfig),
 	fx.Provide(data.NewRepository),
+	fx.Provide(data.NewConfig),
+	fx.Provide(file.NewConfig),
+	fx.Invoke(NewGCManager),
 )
 
 func newDbWithConfig(cfg config.Provider, p *common.Params, lifecycle fx.Lifecycle) (*sqlx.DB, error) {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
@@ -230,7 +231,7 @@ func createDB(t *testing.T) (*sqlx.DB, Repository, func()) {
 	err = lc.lc.OnStart(context.Background())
 	require.NoError(t, err)
 
-	rep, err := NewRepository(db, zap.NewNop())
+	rep, err := NewRepository(db, common.NewTime(), zap.NewNop())
 	require.NoError(t, err)
 	require.NotNil(t, rep)
 

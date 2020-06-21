@@ -6,13 +6,15 @@ import (
 )
 
 type Camera struct {
-	ID       int        `db:"ID" json:"id"`
-	Name     string     `db:"Name" json:"name"`
-	Type     string     `db:"Type" json:"type"`
-	Host     *string    `db:"Host"  json:"host,omitempty"`
-	LastSeen *time.Time `db:"LastSeen"  json:"last_seen"`
-	Enabled  *bool      `db:"Enabled" json:"enabled"`
-	Timezone string     `db:"Timezone" json:"timezone"`
+	ID             int        `db:"ID" json:"id"`
+	Name           string     `db:"Name" json:"name"`
+	Type           string     `db:"Type" json:"type"`
+	Host           *string    `db:"Host"  json:"host,omitempty"`
+	LastSeen       *time.Time `db:"LastSeen"  json:"last_seen"`
+	Enabled        *bool      `db:"Enabled" json:"enabled"`
+	Timezone       string     `db:"Timezone" json:"timezone"`
+	MaxFileAgeDays int        `db:"MaxFileAgeDays" json:"max_file_age_days`
+	MaxTotalSizeMB int        `db:"MaxTotalSizeMB" json:"max_file_age_days`
 }
 
 func (c Camera) CameraID() string {

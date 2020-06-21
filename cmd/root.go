@@ -55,6 +55,7 @@ func buildGraph(cfg config.Provider) fx.Option {
 		fx.Provide(configFunc),
 		fx.Provide(zap.NewDevelopment),
 		fx.Provide(tz),
+		fx.Provide(common.NewTime),
 		fx.Provide(common.NewEventBus),
 
 		// main modules

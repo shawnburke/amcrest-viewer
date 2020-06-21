@@ -29,7 +29,9 @@ type Manager interface {
 }
 
 type Config struct {
-	RootDir string `yaml:"root_dir"`
+	RootDir    string        `yaml:"root_dir"`
+	DefaultTTL time.Duration `yaml:default_ttl`
+	GCDisabled bool          `yaml:gc_disabled`
 }
 
 func NewConfig(cfg config.Provider) (*Config, error) {

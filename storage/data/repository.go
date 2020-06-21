@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"go.uber.org/zap"
 )
@@ -26,6 +27,7 @@ type Repository interface {
 
 	// File operations
 	AddFile(path string, t int, cameraID string, length int, timestamp time.Time, duration *time.Duration) (*entities.File, error)
+	DeleteFile(id int) error
 	GetFile(id int) (*entities.File, error)
 
 	ListFiles(cameraID string, filter *ListFilesFilter) ([]*entities.File, error)
@@ -56,9 +58,10 @@ type FileData struct {
 	Size  int `json:"size"`
 }
 
-func NewRepository(db *sqlx.DB, logger *zap.Logger) (Repository, error) {
+func NewRepository(db *sqlx.DB, t common.Time, logger *zap.Logger) (Repository, error) {
 	return &sqlRepository{
 		db:     db,
+		time:   t,
 		logger: logger,
 	}, nil
 }
@@ -66,6 +69,7 @@ func NewRepository(db *sqlx.DB, logger *zap.Logger) (Repository, error) {
 type sqlRepository struct {
 	db     *sqlx.DB
 	logger *zap.Logger
+	time   common.Time
 }
 
 func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entities.Camera, error) {
@@ -177,7 +181,7 @@ func (sr *sqlRepository) GetCamera(cameraID string) (*entities.Camera, error) {
 
 func (sr *sqlRepository) getTimeRange(start *time.Time, end *time.Time) (time.Time, time.Time) {
 	s := time.Time{}
-	e := time.Now().AddDate(100, 0, 0)
+	e := sr.time.Now().AddDate(100, 0, 0)
 
 	if start != nil {
 		s = *start
@@ -369,7 +373,7 @@ func (sr *sqlRepository) SeenCamera(cameraID string) error {
 	if err != nil {
 		return err
 	}
-	_, err = sr.db.Exec(`UPDATE cameras SET LastSeen=$1 WHERE ID=$2`, time.Now(), id)
+	_, err = sr.db.Exec(`UPDATE cameras SET LastSeen=$1 WHERE ID=$2`, sr.time.Now(), id)
 	return err
 }
 
@@ -425,6 +429,11 @@ func (sr *sqlRepository) AddFile(
 		return nil, fmt.Errorf("Failed to get id: %w", err)
 	}
 	return sr.GetFile(int(id))
+}
+
+func (sr *sqlRepository) DeleteFile(id int) error {
+	_, err := sr.db.Queryx(`DELETE * FROM files WHERE ID=$1`, id)
+	return err
 }
 
 func (sr *sqlRepository) GetFile(id int) (*entities.File, error) {

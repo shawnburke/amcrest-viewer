@@ -5,6 +5,8 @@ ftp:
 
 files:
   root_dir: test_data/files
+  default_ttl: 30d
+  gc_disabled: true
 
 database:
   dsn: test_data/db/cam.db
