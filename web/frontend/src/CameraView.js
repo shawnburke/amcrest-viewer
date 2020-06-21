@@ -21,10 +21,10 @@ class CameraView extends React.Component {
 
         // TODO: fix hack
         var camid = "amcrest-" + this.props.cameraid;
-        
+
         this.fileManager = new FileManager(camid, new ServiceBroker());
 
-        
+
         this.fileManager.onChange = this._fileManagerChange.bind(this);
 
         this.state = {
@@ -33,24 +33,24 @@ class CameraView extends React.Component {
             position: new Date(),
             selected: 0,
             range: {
-                min:new Date(2000,1,1),
-                max:new Date(),
+                min: new Date(2000, 1, 1),
+                max: new Date(),
             },
-            window:{
-                start:new Date(new Date().getTime() - day),
+            window: {
+                start: new Date(new Date().getTime() - day),
                 end: new Date()
             },
-            mediaItems:[],
+            mediaItems: [],
         }
     }
 
     componentDidMount() {
 
         this.fileManager.start();
-        
+
     }
 
- 
+
     _fileManagerChange(change) {
 
         if (change.range) {
@@ -86,16 +86,16 @@ class CameraView extends React.Component {
         }
     }
 
-    onTimeScrollChange(time, item_id) {
-      
-        this.fileManager.setPosition(time)
+    onTimeScrollChange(time, item) {
+
+        this.fileManager.setPosition(time, item && item.file);
     }
 
     mediaRowClick(f, el) {
         el.preventDefault();
 
         this.fileManager.setCurrentFile(f);
-    
+
     }
 
     getTimeItems(files) {
@@ -107,7 +107,7 @@ class CameraView extends React.Component {
 
             var sec = f.duration_seconds || 5;
 
-            var end = new Date(f.timestamp.getTime() + (1000*sec));
+            var end = new Date(f.timestamp.getTime() + (1000 * sec));
 
             return {
                 id: f.id,
@@ -115,6 +115,7 @@ class CameraView extends React.Component {
                 end: end,
                 video: f.type === 1,
                 source: f.path,
+                file: f,
             }
         })
 
@@ -126,15 +127,15 @@ class CameraView extends React.Component {
         var fileRows = [];
 
         if (files) {
-            
-          
+
+
             var curmp4;
-           
+
             var grouped = [];
 
 
             function finish() {
-                
+
                 curmp4 = null;
             }
 
@@ -154,12 +155,12 @@ class CameraView extends React.Component {
             // group files
 
             files.forEach((f) => {
-                
+
                 if (group(f)) {
                     return;
-                } 
+                }
 
-                if (f.type === 1){
+                if (f.type === 1) {
                     finish();
                     curmp4 = f;
                     f.end = new Date(f.timestamp.getTime() + (1000 * f.duration_seconds));
@@ -167,26 +168,26 @@ class CameraView extends React.Component {
                 f.children = null;
                 grouped.push(f);
             });
-            
+
 
             // walk through the grouped files and create rows
             //
             grouped.forEach(f => {
-                var row = <FileRow 
-                    file={f} key={f.id} 
+                var row = <FileRow
+                    file={f} key={f.id}
                     selected={this.state.source && this.state.source.id === f.id}
-                    onClick={this.mediaRowClick.bind(this, f)}/>;
+                    onClick={this.mediaRowClick.bind(this, f)} />;
 
                 fileRows.push(row);
             })
 
-           
+
             fileRows = fileRows.reverse();
 
         }
         return fileRows;
     }
-  
+
 
     render() {
 
@@ -205,7 +206,7 @@ class CameraView extends React.Component {
             </Col>
         </Row>
             <Row>
-              
+
                 <Col xs={12}>
                     <DatePicker
                         minDate={this.state.range.min}
@@ -214,23 +215,23 @@ class CameraView extends React.Component {
                         onChange={date => this.setStartDate(date)}
                     />
                 </Col>
-               
+
             </Row>
-            <div style={{margin:"2px"}}>
-            <TimeScroll 
-                startTime={this.state.window.start} 
-                endTime={this.state.window.end}
-                items={this.state.mediaItems}
-                position={this.state.position}
-                onTimeChange={this.onTimeScrollChange.bind(this)}
-            />       
+            <div style={{ margin: "2px" }}>
+                <TimeScroll
+                    startTime={this.state.window.start}
+                    endTime={this.state.window.end}
+                    items={this.state.mediaItems}
+                    position={this.state.position}
+                    onTimeChange={this.onTimeScrollChange.bind(this)}
+                />
             </div>
             <div style={{
-                maxHeight:  windowHeight * .5,
+                maxHeight: windowHeight * .5,
                 overflowY: "auto",
                 overflowX: "hidden"
             }}>
-            {this.renderFileList(this.fileManager.files)}
+                {this.renderFileList(this.fileManager.files)}
             </div>
         </div>
     }
@@ -243,19 +244,19 @@ class CameraView extends React.Component {
 
         d = this.fileManager.snapTime(d, "day", 0);
         var e = this.fileManager.dateAdd(d, 1, "day");
-        
+
         this.fileManager.setWindow(d, e);
     }
 }
 
 class FileRow extends React.Component {
-  
+
 
     last(array) {
         if (!array || !array.length) {
             return null;
         }
-        return array[array.length-1];
+        return array[array.length - 1];
     }
 
     render() {
@@ -276,8 +277,8 @@ class FileRow extends React.Component {
 
         var children = null;
 
-        
-       
+
+
 
         var rows = [<Row key={f.id} style={style} file={f} >
             <Col xs={1}><span role="img">{t}</span></Col>
@@ -289,19 +290,19 @@ class FileRow extends React.Component {
         if (f.children) {
             children = f.children.map(fc => {
                 return <img src={fc.path} file={fc.id} style={{
-                    width:"40px",
-                    marginLeft:"2px",
-                }}/>;
+                    width: "40px",
+                    marginLeft: "2px",
+                }} />;
             })
-            rows.push( <Row>
+            rows.push(<Row>
                 <Col xs={1}><span></span></Col>
                 <Col>{children}</Col>
                 <Col xs={1}></Col>
             </Row>);
         }
 
-       return <div onClick={this.props.onClick}>{rows}</div>;
-      
+        return <div onClick={this.props.onClick}>{rows}</div>;
+
 
     }
 }
@@ -317,26 +318,26 @@ class Player extends React.Component {
 
 
         var val = this.props.file;
-        
+
 
         if (val.type === 1) {
-            return <ReactPlayer 
+            return <ReactPlayer
                 controls
-                url={val.path} 
-                width="100%" 
-                height="100%" 
+                url={val.path}
+                width="100%"
+                height="100%"
                 playsinline={true}
-                playing={true} 
+                playing={true}
                 style={{
-                    height:"100%"
-                }} 
+                    height: "100%"
+                }}
             />;
         }
-        
+
         if (val.type === 0) {
-            return <img alt="view" src={val.path}  style={{
+            return <img alt="view" src={val.path} style={{
                 height: "100%"
-            }}/>;
+            }} />;
         }
 
         return <div></div>;
@@ -387,25 +388,25 @@ class FileManager {
             start: this.dateAdd(today, -1, "day"),
             end: today,
         }
-        
+
         this.position = this.dateAdd(today, -1, "hour");
     }
 
     start() {
         this.camerasServer.getStats(this.camid).then(
             s => {
-                this.setRange(new Date(s.min_date),  new Date(s.max_date));
+                this.setRange(new Date(s.min_date), new Date(s.max_date));
             }
         );
     }
 
-   
+
     loadFiles(start, end) {
-        
+
         start = start.toString().replace(/\d{2}:\d{2}:\d{2}/, "00:00:00")
         start = new Date(start);
 
-        end = end || new Date(start.getTime() + (24 * 60 * 60 * 1000)-1);
+        end = end || new Date(start.getTime() + (24 * 60 * 60 * 1000) - 1);
 
 
         return this.filesService.retrieveItems(start, end, "");
@@ -413,7 +414,7 @@ class FileManager {
 
     _onchange(value) {
 
-        if (!value){
+        if (!value) {
             return;
         }
 
@@ -453,7 +454,7 @@ class FileManager {
 
         var chunk = 0;
 
-        
+
         var offset = 0;
 
         switch (unit) {
@@ -463,9 +464,10 @@ class FileManager {
             case "day":
                 chunk = day;
                 offset = new Date().getTimezoneOffset() * 60 * 1000;
+                t -= offset;
                 break;
             default:
-                throw new Error("Unknown unit: " + unit); 
+                throw new Error("Unknown unit: " + unit);
         }
 
         var delta = t % chunk;
@@ -479,7 +481,7 @@ class FileManager {
                 t -= delta;
                 break;
             case 1:
-                t += (chunk-delta);
+                t += (chunk - delta);
                 break;
         }
 
@@ -492,7 +494,7 @@ class FileManager {
     }
 
     boxTime(t, min, max, bias) {
-        var toTime = function(date) {
+        var toTime = function (date) {
             if (date.constructor.name === "Date") {
                 return date.getTime();
             }
@@ -540,12 +542,12 @@ class FileManager {
         }
 
         this._onchange({
-            range:{
+            range: {
                 min: min,
                 max: max,
             }
         });
-        
+
         this.setWindow(this.window.start, this.window.end);
     }
 
@@ -566,14 +568,15 @@ class FileManager {
         }
 
         this._onchange({
-            window:{
-            start:boxedStart,
-            end:boxedEnd,
-        }})
-        ;
+            window: {
+                start: boxedStart,
+                end: boxedEnd,
+            }
+        })
+            ;
 
         console.log(`Loading files for range ${boxedStart} => ${boxedEnd}`)
-        this.loadFiles(boxedStart, boxedEnd).then(items =>{
+        this.loadFiles(boxedStart, boxedEnd).then(items => {
 
             console.log(`Loaded ${items.length} files`);
 
@@ -585,8 +588,8 @@ class FileManager {
                 if (!file.end) {
                     var end = file.timestamp.getTime();
 
-                    if (file.duration_seconds){
-                        end += 1000*file.duration_seconds;
+                    if (file.duration_seconds) {
+                        end += 1000 * file.duration_seconds;
                     } else {
                         end += 1000;
                     }
@@ -595,13 +598,13 @@ class FileManager {
                 }
             });
 
-            this._onchange({files:files});
+            this._onchange({ files: files });
 
             var pos = this.boxTime(this.position, boxedStart, boxedEnd);
 
             // find the last file
             if (pos !== this.position && this.files.length) {
-                var lastFile = this.files[this.files.length-1];
+                var lastFile = this.files[this.files.length - 1];
 
                 pos = lastFile.timestamp;
             }
@@ -619,12 +622,12 @@ class FileManager {
 
         var boxed = this.boxTime(time, this.window.start, this.window.end, 'min');
 
-        if (this.timeEqual(boxed, this.position)){
+        if (this.timeEqual(boxed, this.position)) {
             return true;
         }
 
-       
-        this._onchange({position:boxed});
+
+        this._onchange({ position: boxed });
 
 
         // find the file
@@ -634,7 +637,7 @@ class FileManager {
             this.setCurrentFile(file);
         }
 
-        
+
     }
 
     timeEqual(t1, t2) {
@@ -646,7 +649,7 @@ class FileManager {
             return false;
         }
 
-        
+
         if (t1.getTime) {
             t1 = t1.getTime()
         }
@@ -675,25 +678,25 @@ class FileManager {
         // set position if not in file
         var boxed = this.boxTime(file.timestamp, this.window.start, this.window.end);
 
-        if (!this.timeEqual(boxed,file.timestamp)) {
+        if (!this.timeEqual(boxed, file.timestamp)) {
             console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.window.start} => ${this.window.end}`);
             return false;
         }
 
         this.setPosition(file.timestamp);
 
-        this._onchange({file:file});
+        this._onchange({ file: file });
         return true;
 
     }
 
     dateAdd(date, n, unit) {
 
-      
+
         var base = 0;
-        
+
         switch (unit) {
-            case "hour": 
+            case "hour":
                 base = hour;
                 break;
             case "day":

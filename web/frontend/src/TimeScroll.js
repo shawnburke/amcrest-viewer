@@ -2,15 +2,17 @@ import React from 'react';
 
 
 
+var tsCounter = 0;
 
-export default class TimeScroll extends React.Component{
+export default class TimeScroll extends React.Component {
 
 
     constructor(props) {
         super(props);
 
         this.myRef = React.createRef();
-        this.state =  {
+        this.idBase = tsCounter++;
+        this.state = {
             current: new Date(),
         }
     }
@@ -23,7 +25,7 @@ export default class TimeScroll extends React.Component{
         if (this.anchor) {
             var deltaX = el.screenX - this.anchor[0];
 
-            var newScroll =  (el.currentTarget.scrollLeft - deltaX);
+            var newScroll = (el.currentTarget.scrollLeft - deltaX);
 
             newScroll = Math.max(newScroll, 0);
             newScroll = Math.min(newScroll, el.currentTarget.scrollLeftMax)
@@ -32,31 +34,25 @@ export default class TimeScroll extends React.Component{
 
             this.anchor = [el.screenX, el.screenY];
 
-            
+
         }
     }
-    
-    mouseUp(el) {
+
+    mouseUp() {
         this.anchor = null;
     }
 
 
-    onScroll(el) {
-        var offset = (el.currentTarget.clientWidth * .5) - 10;
+    onScroll() {
 
-        var viewportRect = el.currentTarget.getBoundingClientRect();
-      
-        var setPos = viewportRect.left+offset;
-        var element = document.elementFromPoint(setPos, viewportRect.top + (viewportRect.bottom - viewportRect.top)/2);
-        setPos += 10;
+        var efs = this.elementFromScroll(10);
 
-        var elementViewPort = element.getBoundingClientRect();
+        if (!efs) {
+            console.warn(`Can't find element from scroll position!`);
+            return;
+        }
 
-        var elementDelta = setPos - elementViewPort.x;
-
-        var elementRatio = elementDelta / element.clientWidth;
-
-        this.onScrollChange(element, elementRatio);
+        this.onScrollChange(efs.element, efs.ratio);
 
     }
 
@@ -66,18 +62,21 @@ export default class TimeScroll extends React.Component{
             return;
         }
         const sec = el.attributes.seconds.value;
-        const time =  Number(el.attributes.time.value);
+        const time = this.getElementTime(el);
 
-        var newTime = time + (1000*sec*ratio);
+        var newTime = time + (1000 * sec * ratio);
+
+        var item_id = Number(el.attributes.item_id && el.attributes.item_id.value);
+        var item = this.props.items.find(i => i.id === item_id);
 
         if (this.props.onTimeChange) {
-            this.props.onTimeChange(newTime, el.attributes.item_id && el.attributes.item_id.value);
+            this.props.onTimeChange(newTime, item);
         }
-        console.log(`Scrolled to ${el.scrollLeft}`);
+        console.log(`Scrolled to ${this.myRef.current.scrollLeft}`);
     }
 
     boxTime(t, min, max) {
-        
+
 
         var tt = this.toUnix(t);
         var tmin = this.toUnix(min);
@@ -93,7 +92,8 @@ export default class TimeScroll extends React.Component{
         if (t.getTime) {
             return t.getTime()
         }
-        return t;
+
+        return Number(t);
     }
 
     shouldComponentUpdate(nextProps, nextState) {
@@ -102,16 +102,26 @@ export default class TimeScroll extends React.Component{
         if (!this.anchor) {
 
             if (nextProps.startTime === this.props.startTime &&
-                nextProps.endTime === this.props.endTime && 
-                nextProps.position !== this.props.position ) {
-                    var t = this.toUnix(nextProps.position);
-                    this.scrollToTime(t);
-                    return false;
-                }
+                nextProps.endTime === this.props.endTime &&
+                nextProps.position !== this.props.position) {
+                var t = this.toUnix(nextProps.position);
+                this.scrollToTime(t);
+                return false;
+            }
         }
 
 
         return true;
+    }
+
+    getElementTime(el) {
+        var childTime = el.attributes.time && el.attributes.time.value;
+
+        if (!childTime) {
+            return null;
+        }
+
+        return this.toUnix(childTime);
     }
 
     scrollToTime(t) {
@@ -122,22 +132,17 @@ export default class TimeScroll extends React.Component{
         var bestFit;
         var bestFitDuration;
 
-        for (var i = 0 ; i < node.childNodes.length;i++) {
+        for (var i = 0; i < node.childNodes.length; i++) {
             var child = node.childNodes[i];
 
-            var childTime = child.attributes.time && child.attributes.time.value;
+            var childTime = this.getElementTime(child);
 
             if (childTime) {
-            
+
                 var seconds = Number(child.attributes.seconds.value);
-                var childEnd = Number(childTime) + (1000*seconds);
+                var childEnd = Number(childTime) + (1000 * seconds);
 
-                // // went too far
-                // if (childEnd > t) {
-                //     break;
-                // }
-
-                if (t > childTime && t < childEnd) {
+                if (t >= childTime && t <= childEnd) {
                     if (!bestFitDuration || bestFitDuration > seconds) {
                         bestFit = child;
                     }
@@ -148,29 +153,86 @@ export default class TimeScroll extends React.Component{
         }
 
         if (bestFit) {
-            this.select(bestFit);
+            var childTime = this.getElementTime(bestFit);
+            var seconds = Number(child.attributes.seconds.value);
+
+            var ratio = ((t - childTime) / 1000) / seconds;
+            this.scrollToElement(bestFit, ratio);
         }
     }
 
-    
-     select(e) {
-        var p = e.offsetParent; 
-        var s = this.myRef.current;
-        var center = s.clientWidth / 2;
-        var newScroll = ((e.offsetLeft - p.offsetLeft) - center) + p.offsetLeft;
-        console.log(`Scrolling ${s.scrollLeft} => ${newScroll}`);
-        s.scrollLeft = newScroll;
-      }
 
+    elementFromScroll(buffer) {
+        var parent = this.myRef.current;
+        buffer = buffer || 2;
+        var posCenter = parent.scrollLeft + (parent.clientWidth / 2);
+        var posLeft = posCenter - buffer / 2;
+        var posRight = posCenter + buffer / 2;
+
+        for (var i = 0; i < parent.childNodes.length; i++) {
+            var child = parent.childNodes[i];
+            var childLeft = child.offsetLeft - parent.offsetLeft;
+            var childRight = childLeft + child.clientWidth;
+            if (childLeft <= posCenter && childRight >= posCenter) {
+                var ratio = (posCenter - childLeft) / child.clientWidth;
+                return {
+                    element: child,
+                    ratio: ratio
+                };
+            }
+        }
+        return null;
+    }
+
+    scrollToElement(el, ratio) {
+
+        var cur = this.elementFromScroll(10);
+
+        if (cur && el == cur.element) {
+            return;
+        }
+
+        var parent = this.myRef.current;
+        var center = parent.clientWidth / 2;
+        var left = el.offsetLeft - (parent.offsetLeft);
+
+        var extra = 0;
+
+        if (ratio) {
+            extra = el.clientWidth * ratio;
+        }
+
+        var newScroll = (left + extra) - center;
+        console.log(`Scrolling ${parent.scrollLeft} => ${newScroll}`);
+        parent.scrollLeft = newScroll;
+    }
+
+    onMotionItemMouseUp(ev) {
+
+        var target = ev.target;
+        var delta = this.myRef.current.scrollLeft - target.scrollAnchor;
+        delete target.scrollAnchor;
+        if (Math.abs(delta) > 10) {
+            return;
+        }
+
+        this.scrollToElement(target);
+    }
+
+    onMotionItemMouseDown(ev) {
+
+        // snap the current scroll offset
+        ev.target.scrollAnchor = this.myRef.current.scrollLeft;
+    }
     render() {
 
         if (!this.props.startTime || !this.props.endTime) {
             return <div>XXX</div>
         }
 
-        const hour = 60*60*1000;
+        const hour = 60 * 60 * 1000;
         const month = hour * 24 * 30;
-       
+
         var start = this.boxTime(this.props.startTime, new Date().getTime() - month, new Date());
         var end = this.boxTime(this.props.endTime, new Date().getTime() - month, new Date());
 
@@ -179,7 +241,7 @@ export default class TimeScroll extends React.Component{
         start -= (start % hour) + hour;
         end += (hour - (end % hour)) + hour;
 
-        const spanSeconds = (end- start) / 1000;
+        const spanSeconds = (end - start) / 1000;
 
         var items = [];
 
@@ -188,13 +250,13 @@ export default class TimeScroll extends React.Component{
 
 
         for (var i = 0; i < spanSeconds; i += chunkSeconds) {
-            var t = new Date(start + (1000*i));
+            var t = new Date(start + (1000 * i));
 
-            var iEnd = new Date(t.getTime() + chunkSeconds*1000);
+            var iEnd = new Date(t.getTime() + chunkSeconds * 1000);
             var label = t.getHours();
 
             var mediaItems = this.props.items.filter(mi => mi.start >= t && mi.start < iEnd);
-            
+
             var w = hourWidth;
 
             if (mediaItems && mediaItems.length) {
@@ -202,7 +264,7 @@ export default class TimeScroll extends React.Component{
             }
 
             if (label > 12) {
-                label = (label %12 )+ "p";
+                label = (label % 12) + "p";
             } else {
                 label = (label || 12) + "a";
             }
@@ -210,67 +272,73 @@ export default class TimeScroll extends React.Component{
                 display: "inline-block",
                 height: "100%",
                 width: w + "px",
-                borderLeft:"thin white solid",
+                borderLeft: "thin white solid",
                 color: "white",
-                background:"navy",
+                background: "navy",
                 padding: "2px"
             }}>{label}</div>;
 
             items.push(hourItem);
 
-            
+
 
             mediaItems.forEach(mi => {
-                var seconds = (mi.end.getTime() - mi.start.getTime())/1000;
+                var seconds = (mi.end.getTime() - mi.start.getTime()) / 1000;
 
                 var color = mi.video ? "green" : "gold";
 
-                
-                var motionItem = <div onClick={ev => this.select(ev.target)}
+                if (!mi.video) {
+                    return;
+                }
+
+
+                var motionItem = <div id={`ts-${this.idBase}-${mi.id}`}
+                    onMouseDown={this.onMotionItemMouseDown.bind(this)}
+                    onMouseUp={this.onMotionItemMouseUp.bind(this)}
                     key={mi.id} item_id={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
-                    display: "inline-block",
-                    position:"relative",
-                    height: "60%",
-                    width: "50px",
-                    top:"15px",
-                    borderLeft:"thin white solid",
-                    color: "white",
-                    background:color, 
-                    padding: "2px",
-                    MozBorderRadius:"5px",
-                    WebkitBorderRadius:"5px",
-                    border:"1px white solid",
-                }}>{seconds}s</div>;
+                        display: "inline-block",
+                        position: "relative",
+                        height: "60%",
+                        width: "50px",
+                        top: "15px",
+                        borderLeft: "thin white solid",
+                        color: "white",
+                        background: color,
+                        padding: "2px",
+                        MozBorderRadius: "5px",
+                        WebkitBorderRadius: "5px",
+                        border: "1px white solid",
+                    }}>{seconds}s</div>;
 
                 items.push(motionItem);
-                
+
             });
-            
+
         }
 
-       
-       return <div ref={this.myRef}
-        onMouseDown={this.mouseDown.bind(this)}
-        onMouseUp={this.mouseUp.bind(this)}
-        onMouseMove={this.mouseMove.bind(this)}
-        onScroll={this.onScroll.bind(this)}
-        style={{
-           width:"100%",
-           height:"50px", 
-           background:"darkblue", 
-           overflowX:"auto",
-           overflowY: "hidden",
-           whiteSpace: "nowrap",
-          msOverflowStyle:"none"
-         
-        }}>
-        <div style={{
-            position:"absolute",
-            width: "5px",
-            background: "yellow",
-            height:"50px",
-            left: "50%"
-        }}></div>
+
+        return <div ref={this.myRef}
+            onMouseDown={this.mouseDown.bind(this)}
+            onMouseUp={this.mouseUp.bind(this)}
+            onMouseMove={this.mouseMove.bind(this)}
+            onScroll={this.onScroll.bind(this)}
+            style={{
+                width: "100%",
+                height: "50px",
+                background: "darkblue",
+                overflowX: "auto",
+                overflowY: "hidden",
+                whiteSpace: "nowrap",
+                msOverflowStyle: "none"
+
+            }}>
+            <div style={{
+                position: "absolute",
+                width: "5px",
+                background: "yellow",
+                height: "50px",
+                left: "50%"
+            }}></div>
 
             {items}
 
