@@ -7,6 +7,8 @@ import ReactPlayer from 'react-player';
 
 import DatePicker from "./DatePicker";
 import TimeScroll from "./TimeScroll";
+import { boxTime, toUnix } from './time';
+
 
 
 
@@ -107,7 +109,7 @@ class CameraView extends React.Component {
 
             var sec = f.duration_seconds || 5;
 
-            var end = new Date(f.timestamp.getTime() + (1000 * sec));
+            var end = new Date(toUnix(f.timestamp) + (1000 * sec));
 
             return {
                 id: f.id,
@@ -494,17 +496,12 @@ class FileManager {
     }
 
     boxTime(t, min, max, bias) {
-        var toTime = function (date) {
-            if (date.constructor.name === "Date") {
-                return date.getTime();
-            }
-            return date;
-        }
 
-        var tt = toTime(t);
+
+        var tt = toUnix(t);
         var wasDate = tt !== t;
-        var tmin = toTime(min);
-        var tmax = toTime(max);
+        var tmin = toUnix(min);
+        var tmax = toUnix(max);
 
         var unboxed = tt < tmin || tt > tmax;
 
@@ -581,12 +578,12 @@ class FileManager {
             console.log(`Loaded ${items.length} files`);
 
             // sort ascending
-            var files = items.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+            var files = items.sort((a, b) => toUnix(a.timestamp) - toUnix(b.timestamp));
 
             // set an end for each file item;
             files.forEach(file => {
                 if (!file.end) {
-                    var end = file.timestamp.getTime();
+                    var end = toUnix(file.timestamp);
 
                     if (file.duration_seconds) {
                         end += 1000 * file.duration_seconds;
@@ -614,11 +611,11 @@ class FileManager {
     }
 
     isInFile(time, file) {
-
-        return time >= file.start && time < file.end;
+        time = toUnix(time);
+        return time >= toUnix(file.start) && time <= toUnix(file.end);
     }
 
-    setPosition(time) {
+    setPosition(time, f) {
 
         var boxed = this.boxTime(time, this.window.start, this.window.end, 'min');
 
@@ -649,14 +646,8 @@ class FileManager {
             return false;
         }
 
-
-        if (t1.getTime) {
-            t1 = t1.getTime()
-        }
-
-        if (t2.getTime) {
-            t2 = t2.getTime()
-        }
+        t1 = toUnix(t1);
+        t2 = toUnix(t2);
 
         return t1 === t2;
     }
