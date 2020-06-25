@@ -271,7 +271,7 @@ export default class TimeScroll extends React.Component {
     }
 
     onMotionItemMouseUp(ev) {
-
+        ev.preventDefault();
         var target = ev.target;
         var delta = this.myRef.current.scrollLeft - target.scrollAnchor;
         delete target.scrollAnchor;
@@ -283,7 +283,7 @@ export default class TimeScroll extends React.Component {
     }
 
     onMotionItemMouseDown(ev) {
-
+        ev.preventDefault();
         // snap the current scroll offset
         ev.target.scrollAnchor = this.myRef.current.scrollLeft;
     }
@@ -406,7 +406,8 @@ export default class TimeScroll extends React.Component {
                 borderLeft: topOfHour ? "thin white solid": "",
                 color: "white",
                 background: "navy",
-                padding: "2px"
+                padding: "2px",
+                textAlign: "left"
             }}>{label}</div>;
 
             items.push(hourItem);
@@ -468,7 +469,8 @@ export default class TimeScroll extends React.Component {
                 overflowX: "auto",
                 overflowY: "hidden",
                 whiteSpace: "nowrap",
-                msOverflowStyle: "none"
+                msOverflowStyle: "none",
+                userSelect:"none",
 
             }}>
             <div id={this.getItemId("divider")} style={{
