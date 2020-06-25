@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { snapTime } from './time';
+
 const daysFirst = -1000000;
 
 class DatePicker extends React.Component {
@@ -17,11 +19,8 @@ constructor(props) {
  	return d1 && d2 && (d1.toDateString() === d2.toDateString());
  }
 
- componentDidMount() {
- }
-
- componentDidUpdate() {
-
+ shouldComponentUpdate(nextProps, nextState) {
+  return true;
  }
 
 
@@ -62,7 +61,7 @@ constructor(props) {
     }
 
     // box the values.
-    var final = this.boxDate(new Date(d));
+    var final = snapTime(this.boxDate(new Date(d)), "day", "-1");
 
     if (noset !== true) {
 

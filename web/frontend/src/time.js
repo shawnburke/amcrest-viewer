@@ -1,5 +1,8 @@
 
 
+const hour = 3600 * 1000;
+const day = hour * 24;
+const month = day * 30;
 
 export function boxTime(t, min, max) {
 
@@ -20,4 +23,53 @@ export function toUnix(t) {
     }
 
     return Number(t);
+}
+
+export function snapTime(t, unit, bias) {
+
+    var wasDate = false;
+    if (t.getTime) {
+        t = t.getTime();
+        wasDate = true;
+    }
+
+    var chunk = 0;
+
+
+    var offset = 0;
+
+    switch (unit) {
+        case "hour":
+            chunk = hour;
+            break;
+        case "day":
+            chunk = day;
+            offset = new Date().getTimezoneOffset() * 60 * 1000;
+            t -= offset;
+            break;
+        default:
+            throw new Error("Unknown unit: " + unit);
+    }
+
+    var delta = t % chunk;
+
+    if (!bias) {
+        bias = (delta < chunk / 2) ? -1 : 1;
+    }
+
+    switch (bias) {
+        case -1:
+            t -= delta;
+            break;
+        case 1:
+            t += (chunk - delta);
+            break;
+    }
+
+    t += offset;
+
+    if (wasDate) {
+        t = new Date(t);
+    }
+    return t;
 }

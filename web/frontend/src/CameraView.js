@@ -62,9 +62,12 @@ class CameraView extends React.Component {
         }
 
         if (change.window) {
+
+            var d = this.fileManager.snapTime(change.window.end, "day", -1);
+
             this.setState({
                 window: change.window,
-                date: change.window.start,
+                date: d,
             })
         }
 
@@ -214,8 +217,9 @@ class CameraView extends React.Component {
                         minDate={this.state.range.min}
                         maxDate={this.state.range.max}
                         date={this.state.date}
-                        onChange={date => this.setStartDate(date)}
+                        onChange={date => this.setDate(date)}
                     />
+                    <span>{this.state.position.toString()}</span>
                 </Col>
 
             </Row>
@@ -238,14 +242,15 @@ class CameraView extends React.Component {
         </div>
     }
 
-    setStartDate(d) {
+    setDate(d) {
 
         if (d === this.state.date) {
             return;
         }
 
-        d = this.fileManager.snapTime(d, "day", 0);
+        d = this.fileManager.snapTime(d, "day", -1);
         var e = this.fileManager.dateAdd(d, 1, "day");
+        e = new Date(new Date(e).getTime() - 1);
 
         this.fileManager.setWindow(d, e);
     }
@@ -624,7 +629,7 @@ class FileManager {
         }
 
 
-        this._onchange({ position: boxed });
+        this._onchange({ position: new Date(boxed) });
 
 
         // find the file

@@ -66,13 +66,12 @@ export default class TimeScroll extends React.Component {
 
         var newTime = time + (1000 * sec * ratio);
 
-        var item_id = Number(el.attributes.item_id && el.attributes.item_id.value);
-        var item = this.props.items.find(i => i.id === item_id);
+        var item = this.getTimeMapItem(newTime);
 
         if (this.props.onTimeChange) {
             this.props.onTimeChange(newTime, item);
         }
-        console.log(`Scrolled to ${this.myRef.current.scrollLeft}`);
+        console.log(`Scrolled to ${this.myRef.current.scrollLeft}, Item=${item && item.item.id}`);
     }
 
     boxTime(t, min, max) {
@@ -168,33 +167,24 @@ export default class TimeScroll extends React.Component {
 
     elementFromScroll(buffer) {
 
-        var scrollLeft = this.myRef.current.scrollLeft;
-        var item;
+     
 
-        for (var i = 0; i < this.mappedItems.scrollMap.length; i++) {
-            item = this.mappedItems.scrollMap[i];
-            if (!item) {
-                continue;
+        // see what's under the divider
+        var div = document.getElementById(this.getItemId('divider'));
+        if (div) {
+            var divRect = div.getBoundingClientRect();
+            var el = document.elementFromPoint(divRect.x-divRect.width, divRect.y+(divRect.height/2));
+            if (el) {
+                var elRect = el.getBoundingClientRect();
+                var ratio = (divRect.x - elRect.x) / elRect.width;
+                return {
+                    element: el,
+                    ratio: ratio,
+                }
             }
-
-
-            if (item.scrollLeft <= scrollLeft && item.scrollLeft + item.width >= scrollLeft) {
-                break;
-            }
         }
-
-        if (!item) {
-            return null;
-        }
-
-        var ratio = ((item.scrollLeft + item.width) - scrollLeft) / item.width;
-
-        return {
-            element: item.element,
-            ratio: ratio
-        }
-
-
+        return null;
+       
     }
 
 
@@ -244,7 +234,7 @@ export default class TimeScroll extends React.Component {
         this.props.items.forEach((mi, i) => {
 
 
-            var id = this.getMediaItemId(mi);
+            var id = this.getItemId(mi.id);
             var el = document.getElementById(id);
             if (!el) {
                 console.error(`Couldn't find element for id ${id} (mi-id: ${mi.id})`);
@@ -260,12 +250,13 @@ export default class TimeScroll extends React.Component {
                 unixEnd: this.toUnix(mi.end),
             };
 
-            var chunkIndex = Math.trunc((info.unixStart - ts.start) / (1000 * chunkSeconds));
+            for (var ct = info.unixStart; ct < info.unixEnd;ct+=chunkSeconds*1000) {
 
-            var list = chunks[chunkIndex] || [];
-            list.push(info);
-            chunks[chunkIndex] = list;
-
+                var chunkIndex = Math.trunc((ct- ts.start) / (1000 * chunkSeconds));
+                var list = chunks[chunkIndex] || [];
+                list.push(info);
+                chunks[chunkIndex] = list;
+            }
             itemsByScroll[i] = info;
 
             count++;
@@ -317,8 +308,38 @@ export default class TimeScroll extends React.Component {
         }
     }
 
-    getMediaItemId(mi) {
-        return `ts-${this.idBase}-${mi.id}`;
+    getItemId(key) {
+        return `ts-${this.idBase}-${key}`;
+    }
+
+    renderItem(mi){
+        var seconds = (mi.end.getTime() - mi.start.getTime()) / 1000;
+
+        var color = mi.video ? "green" : "gold";
+
+        if (!mi.video) {
+            return;
+        }
+
+
+        var motionItem = <div id={this.getItemId(mi.id)}
+            onMouseDown={this.onMotionItemMouseDown.bind(this)}
+            onMouseUp={this.onMotionItemMouseUp.bind(this)}
+            key={mi.id} item_id={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
+                display: "inline-block",
+                position: "relative",
+                height: "60%",
+                width: "50px",
+                top: "15px",
+                borderLeft: "thin white solid",
+                color: "white",
+                background: color,
+                padding: "2px",
+                MozBorderRadius: "5px",
+                WebkitBorderRadius: "5px",
+                border: "1px white solid",
+            }}>{seconds}s</div>;
+        return motionItem;
     }
 
     render() {
@@ -330,35 +351,59 @@ export default class TimeScroll extends React.Component {
         const span = this.totalSeconds();
 
         var items = [];
+        var mediaItems = this.props.items || [];
 
         const hourWidth = window.innerWidth / 4;
-        const chunkSeconds = 3600;
+        const chunkSeconds = 600;
+
+        var itemPos = 0;
 
 
         for (var i = 0; i < span.seconds; i += chunkSeconds) {
-            var t = new Date(span.start + (1000 * i));
 
-            var iEnd = new Date(t.getTime() + chunkSeconds * 1000);
-            var label = t.getHours();
+            // create background items for every n minutes.
+            // if the item is an hour boundary, add the label.
+            //
 
-            var mediaItems = this.props.items.filter(mi => mi.start >= t && mi.start < iEnd);
+            var tStart = new Date(span.start + (1000 * i));
+            var tEnd = new Date(toUnix(tStart) + (chunkSeconds*1000));
+            var curHour = tStart.getHours()
+           
 
-            var w = hourWidth;
 
-            if (mediaItems && mediaItems.length) {
-                w = 20;
+            var itemDistanceSeconds = chunkSeconds;
+            
+            if (mediaItems[itemPos] && mediaItems[itemPos].start.getHours() === curHour) {
+                itemDistanceSeconds = (toUnix(mediaItems[itemPos].start) - toUnix(tStart)) / 1000;
             }
 
-            if (label > 12) {
-                label = (label % 12) + "p";
-            } else {
-                label = (label || 12) + "a";
+            var topOfHour = i % 3600 === 0;
+
+            var secondsWidth = itemDistanceSeconds;
+
+            var w = secondsWidth / 3600 * hourWidth;
+
+        
+
+            var label = <span>&nbsp;</span>;
+            if (topOfHour) {
+                label = curHour;
+                if (label > 12) {
+                    label = (label % 12) + "p";
+                } else {
+                    label = (label || 12) + "a";
+                }
+
+                w = Math.max(w, 25);
             }
-            var hourItem = <div key={"file" + i} time={this.toUnix(t)} seconds={chunkSeconds} style={{
+            
+           
+           
+            var hourItem = <div key={toUnix(tStart)} time={this.toUnix(tStart)} seconds={secondsWidth} style={{
                 display: "inline-block",
                 height: "100%",
                 width: w + "px",
-                borderLeft: "thin white solid",
+                borderLeft: topOfHour ? "thin white solid": "",
                 color: "white",
                 background: "navy",
                 padding: "2px"
@@ -366,39 +411,47 @@ export default class TimeScroll extends React.Component {
 
             items.push(hourItem);
 
+            if (!mediaItems[itemPos]) {
+                continue;
+            }
 
+            var lastItemEnd = mediaItems[itemPos].unixStart;
 
-            mediaItems.forEach(mi => {
-                var seconds = (mi.end.getTime() - mi.start.getTime()) / 1000;
+            while (true) {
 
-                var color = mi.video ? "green" : "gold";
-
-                if (!mi.video) {
-                    return;
+                var nextItem = mediaItems[itemPos];
+                
+                if (!nextItem) {
+                    break;
                 }
 
+                // if more than 5 mins between items
+                if (nextItem.unixStart - lastItemEnd > chunkSeconds*1000) {
+                    break;
+                }
 
-                var motionItem = <div id={this.getMediaItemId(mi)}
-                    onMouseDown={this.onMotionItemMouseDown.bind(this)}
-                    onMouseUp={this.onMotionItemMouseUp.bind(this)}
-                    key={mi.id} item_id={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
-                        display: "inline-block",
-                        position: "relative",
-                        height: "60%",
-                        width: "50px",
-                        top: "15px",
-                        borderLeft: "thin white solid",
-                        color: "white",
-                        background: color,
-                        padding: "2px",
-                        MozBorderRadius: "5px",
-                        WebkitBorderRadius: "5px",
-                        border: "1px white solid",
-                    }}>{seconds}s</div>;
+                // if in next hour
+                if (nextItem.start.getHours() != curHour) {
+                    break;
+                }
 
-                items.push(motionItem);
+                // render this item
+                var timeItem = this.renderItem(nextItem);
+                if (timeItem) {
+                    items.push(timeItem);
+                    lastItemEnd = timeItem.unixEnd;
 
-            });
+                    // if we have advanced more than half way into a chunk, update
+                    // index
+                    var dist = lastItemEnd - tStart.getTime();
+
+                    if (dist > (chunkSeconds * 1000 / 2)) {
+                        i++;
+                        tStart = new Date(tStart.getTime() + (chunkSeconds*1000))
+                    }
+                }
+                itemPos++;
+            }
 
         }
 
@@ -410,7 +463,7 @@ export default class TimeScroll extends React.Component {
             onScroll={this.onScroll.bind(this)}
             style={{
                 width: "100%",
-                height: "50px",
+                height: "75px",
                 background: "darkblue",
                 overflowX: "auto",
                 overflowY: "hidden",
@@ -418,11 +471,11 @@ export default class TimeScroll extends React.Component {
                 msOverflowStyle: "none"
 
             }}>
-            <div style={{
+            <div id={this.getItemId("divider")} style={{
                 position: "absolute",
                 width: "5px",
                 background: "yellow",
-                height: "50px",
+                height: "75px",
                 left: "50%"
             }}></div>
 
