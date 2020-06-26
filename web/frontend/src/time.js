@@ -1,8 +1,8 @@
 
 
-const hour = 3600 * 1000;
-const day = hour * 24;
-const month = day * 30;
+export const hour = 3600 * 1000;
+export const day = hour * 24;
+export const month = day * 30;
 
 export function boxTime(t, min, max) {
 
@@ -63,6 +63,8 @@ export function snapTime(t, unit, bias) {
             break;
         case 1:
             t += (chunk - delta);
+            break;
+        default:
             break;
     }
 
