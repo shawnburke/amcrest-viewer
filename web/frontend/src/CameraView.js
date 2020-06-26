@@ -293,7 +293,7 @@ class FileRow extends React.Component {
 
         if (f.children) {
             children = f.children.map(fc => {
-                return <img src={fc.path} file={fc.id} style={{
+                return <img key={"thumb-" + fc.id} alt="thumb" src={fc.path} file={fc.id} style={{
                     width: "40px",
                     marginLeft: "2px",
                 }} />;

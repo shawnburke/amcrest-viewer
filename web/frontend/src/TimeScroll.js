@@ -292,7 +292,7 @@ export default class TimeScroll extends React.Component {
             var id = this.getItemId(mi.id);
             var el = document.getElementById(id);
             if (!el) {
-                console.error(`Couldn't find element for id ${id} (mi-id: ${mi.id})`);
+                // this can happen if we are re-rendering.
                 return;
             }
 
@@ -367,9 +367,6 @@ export default class TimeScroll extends React.Component {
 
         var w = Math.max(50, 10 * seconds);
 
-
-
-
         var motionItem = <div id={this.getItemId(mi.id)}
             onMouseDown={this.onMotionItemMouseDown.bind(this)}
             onMouseUp={this.onMotionItemMouseUp.bind(this)}
@@ -415,6 +412,7 @@ export default class TimeScroll extends React.Component {
             //
 
             var tStart = new Date(span.start + (1000 * i));
+
             var curHour = tStart.getHours()
 
 
@@ -428,7 +426,7 @@ export default class TimeScroll extends React.Component {
             var topOfHour = i % 3600 === 0;
             var quarterHour = i % 900 === 0;
 
-            var secondsWidth = itemDistanceSeconds;
+            var secondsWidth = Math.min(chunkSeconds, itemDistanceSeconds);
 
             var w = secondsWidth / 3600 * hourWidth;
 
@@ -451,12 +449,6 @@ export default class TimeScroll extends React.Component {
                 borderLeft = "thin silver dotted";
             }
 
-
-
-
-
-
-
             var hourItem = <div key={toUnix(tStart)} time={this.toUnix(tStart)} seconds={secondsWidth} style={{
                 display: "inline-block",
                 height: "100%",
@@ -474,44 +466,39 @@ export default class TimeScroll extends React.Component {
                 continue;
             }
 
-            var lastItemEnd = mediaItems[itemPos].unixStart;
+            var lastItemEnd = toUnix(mediaItems[itemPos].start);
+
+            // render time items when they are within the next chunk size.
+            //
+            var nextChunkEnd = tStart.getTime() + (chunkSeconds * 1000 * 2);
 
             while (true) {
 
                 var nextItem = mediaItems[itemPos];
 
-                if (!nextItem) {
+                if (!nextItem || nextItem.start.getHours() !== curHour) {
                     break;
                 }
 
-                // if more than 5 mins between items
-                if (nextItem.unixStart - lastItemEnd > chunkSeconds * 1000) {
+                // if the next item starts before the end of this chunk + 1,
+
+                if (toUnix(nextItem.start) >= nextChunkEnd) {
                     break;
                 }
 
-                // if in next hour
-                if (nextItem.start.getHours() !== curHour) {
-                    break;
-                }
-
-                // render this item
+                // then render this item
                 var timeItem = this.renderItem(nextItem);
                 if (timeItem) {
                     items.push(timeItem);
-                    lastItemEnd = timeItem.unixEnd;
+                }
 
-                    // if we have advanced more than half way into a chunk, update
-                    // index
-                    var dist = lastItemEnd - tStart.getTime();
-
-                    if (dist > (chunkSeconds * 1000 / 2)) {
-                        i++;
-                        tStart = new Date(tStart.getTime() + (chunkSeconds * 1000))
-                    }
+                if (toUnix(nextItem.end) > nextChunkEnd) {
+                    // consume the next chunk.
+                    i += chunkSeconds;
+                    nextChunkEnd += (1000 * chunkSeconds);
                 }
                 itemPos++;
             }
-
         }
 
 
