@@ -1,8 +1,9 @@
 import React from 'react';
-import { boxTime, toUnix } from './time';
+import { boxTime, toUnix, hour } from './time';
 
 
 var tsCounter = 0;
+const dividerWidth = 5;
 
 export default class TimeScroll extends React.Component {
 
@@ -12,18 +13,23 @@ export default class TimeScroll extends React.Component {
 
         this.myRef = React.createRef();
         this.idBase = tsCounter++;
+        this.renderCount = 0;
         this.state = {
             current: new Date(),
         }
     }
 
+    log(s) {
+        //console.log(s);
+    }
+
     mouseDown(el) {
-        this.anchor = [el.screenX, el.screenY];
+        this.mouseAnchor = [el.screenX, el.screenY];
     }
 
     mouseMove(el) {
-        if (this.anchor) {
-            var deltaX = el.screenX - this.anchor[0];
+        if (this.mouseAnchor) {
+            var deltaX = el.screenX - this.mouseAnchor[0];
 
             var newScroll = (el.currentTarget.scrollLeft - deltaX);
 
@@ -32,20 +38,21 @@ export default class TimeScroll extends React.Component {
 
             el.currentTarget.scrollLeft = newScroll;
 
-            this.anchor = [el.screenX, el.screenY];
+            this.mouseAnchor = [el.screenX, el.screenY];
 
 
         }
     }
 
     mouseUp() {
-        this.anchor = null;
+        this.mouseAnchor = null;
     }
 
 
     onScroll() {
-
-        var efs = this.elementFromScroll(10);
+        // when we scroll, we are looking for the element
+        // under the selector so we can notify on it.
+        var efs = this.elementFromScroll();
 
         if (!efs) {
             var selPos = this.getSelectionPoint();
@@ -53,9 +60,11 @@ export default class TimeScroll extends React.Component {
             return;
         }
 
+        // move on to firing the scroll event
         this.onScrollChange(efs.element, efs.ratio);
-
     }
+
+
 
     onScrollChange(el, ratio) {
 
@@ -67,12 +76,13 @@ export default class TimeScroll extends React.Component {
 
         var newTime = time + (1000 * sec * ratio);
 
-        var item = this.getTimeMapItem(newTime);
+        var item = this.getElementItem(el, newTime);
+
 
         if (this.props.onTimeChange) {
             this.props.onTimeChange(newTime, item);
         }
-        console.log(`Scrolled to ${this.myRef.current.scrollLeft}, Item=${item && item.item.id}`);
+        this.log(`Scrolled to ${this.myRef.current.scrollLeft}, Item=${item && item.id}`);
     }
 
     boxTime(t, min, max) {
@@ -84,7 +94,7 @@ export default class TimeScroll extends React.Component {
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {
-        this.getTimeMap();
+
     }
 
     shouldComponentUpdate(nextProps, nextState) {
@@ -107,6 +117,39 @@ export default class TimeScroll extends React.Component {
         return true;
     }
 
+    // given an element and a time, return
+    // the file item at that time.
+    getElementItem(el, unixTime) {
+
+        var item_ids = el.attributes.item_ids.value;
+
+        var ids = item_ids.split(",");
+
+        var items = this.props.items;
+
+        while (ids.length > 0) {
+            var candidateIndex = items.findIndex(mi => mi.id === Number(ids[0]));
+
+            ids = ids.slice(1);
+
+            if (candidateIndex === -1) {
+                continue;
+            }
+            var c = items[candidateIndex];
+
+            if (this.fileContains(c, unixTime)) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    fileContains(f, time) {
+        var unixStart = toUnix(f.start);
+        var unixEnd = toUnix(f.end);
+        return time >= unixStart && time < unixEnd;
+    }
+
     getElementTime(el) {
         var childTime = el.attributes.time && el.attributes.time.value;
 
@@ -117,106 +160,63 @@ export default class TimeScroll extends React.Component {
         return this.toUnix(childTime);
     }
 
+    getElementDuration(el) {
+        var s = el.attributes.seconds && el.attributes.seconds.value;
 
-    getScrollTime() {
-        const span = this.totalSeconds();
-        const parent = this.myRef.current;
-
-        var scrollPerSecond = (parent.scrollWidth - parent.clientWidth) / span.seconds;
-        var scrollTime = parent.scrollLeft / scrollPerSecond;
-        return Math.trunc(span.start + (scrollTime * 1000));
-    }
-
-    getTimeMapItem(t) {
-
-        // do binary search in the timeMap for the closest item
-        //
-
-        var item = this.findNearestItem(t, this.mappedItems.startTimeMap)
-
-        if (item) {
-            // direct hit!
-            if (item.found) {
-                return item.item;
-            }
-            console.log(`Found nearest item ${item.item.id} but time was not contained.`)
-            return null;
+        if (!s) {
+            return 0;
         }
+
+        return Number(s) * 1000;
 
 
     }
 
-    // findNearestItem does a binary search for the nearest item to the given time
-    findNearestItem(t, items, offset) {
-
-        var log = s => {
-            // console.log(s);
-        }
-
-        if (!items || !items.length) {
-            log("findNearest: Items array is empty")
-            return null;
-        }
 
 
-        log(`findNearest: Search ${items.length} for ${new Date(t).toISOString()} from ${new Date(items[0].unixStart).toISOString()} -> ${new Date(items[items.length - 1].unixStart).toISOString()}`);
-
-
-        offset = offset || 0;
-
-        var createResult = (i, o) => {
-            var r = {
-                item: i,
-                index: o,
-            };
-
-            if (i.unixStart <= t && i.unixEnd >= t) {
-                r.ratio = (t - i.unixStart) / (i.unixEnd - i.unixStart);
-                r.found = true;
-            }
-
-            log(`Found item ${i.item.id} (${i.item.duration_seconds}), Start=${new Date(i.unixStart).toISOString()}, ID=${i.item.id}, ratio=${r.ratio}, Delta seconds=${(i.unixStart - t) / 1000}`)
-            return r;
-        }
-
-        if (items.length === 1) {
-            log("findNearest: Items array 1");
-            return createResult(items[0], offset);
-        }
-
-        var midPoint = Math.trunc(items.length / 2);
-        var midPointItem = items[midPoint];
-
-        if (midPointItem.unixStart <= t && midPointItem.unixEnd >= t) {
-            return createResult(midPointItem, offset);
-        }
-
-        // we want to find the item nearest BEFORE the current position
-        // so when we bisect, we always include the prior item
-        if (t > midPointItem.unixStart) {
-            log(`findNearest: Split up ${items.length} => ${midPoint}-`);
-            return this.findNearestItem(t, items.slice(midPoint), offset + midPoint)
-        }
-
-        // otherwise, if the time is before the midpoint, we just to the lower half
-        log(`findNearest: Split down ${items.length} => 0-${midPoint}`);
-        return this.findNearestItem(t, items.slice(0, midPoint - 1), offset);
-    }
 
     scrollToTime(t) {
 
-        const item = this.getTimeMapItem(t);
+        // snap time to hour
+        //
+        var hourTime = t - (t % hour);
+        var nextHour = hourTime + hour;
 
-        if (!item) {
-            return;
+        var hours = document.getElementsByClassName("hour");
+
+        // walk the hours looking for the one that matches this hour.
+
+        for (var i = 0; i < hours.length; i++) {
+
+            var hourEl = hours[i];
+            var et = this.getElementTime(hourEl);
+
+            if (et === hourTime) {
+
+                // now walk siblings.
+                //
+                while (hourEl) {
+                    et = this.getElementTime(hourEl);
+
+                    if (et > nextHour) {
+                        return;
+                    }
+
+                    var d = this.getElementDuration(hourEl);
+                    var elEnd = et + d;
+
+                    if (t < elEnd) {
+                        var ratio = ((t - et)) / d;
+                        this.scrollToElement(hourEl, ratio);
+                        return;
+                    }
+
+                    hourEl = hourEl.nextElementSibling;
+                }
+                break;
+            }
+
         }
-
-        var childTime = item.unixStart;
-        var childDuration = item.item.duration_seconds;
-
-        var ratio = ((t - childTime) / 1000) / childDuration;
-        this.scrollToElement(item.element, ratio);
-
     }
 
     getSelectionPoint() {
@@ -247,10 +247,10 @@ export default class TimeScroll extends React.Component {
             }
         }
         return null;
-
     }
 
 
+    // the the x position for an element, relative to the parent
     getElementX(el) {
         var parent = this.myRef.current;
         var center = parent.clientWidth / 2;
@@ -266,7 +266,7 @@ export default class TimeScroll extends React.Component {
             return;
         }
 
-        var left = this.getElementX(el);
+        var left = this.getElementX(el) + dividerWidth;
 
         var extra = 0;
 
@@ -276,42 +276,8 @@ export default class TimeScroll extends React.Component {
 
         var parent = this.myRef.current;
         var newScroll = left + extra;
-        console.log(`Scrolling ${parent.scrollLeft} => ${newScroll}`);
+        this.log(`Scrolling ${parent.scrollLeft} => ${newScroll}`);
         parent.scrollLeft = newScroll;
-    }
-
-    getTimeMap() {
-        if (this.mappedItems) {
-            return
-        }
-        var itemsByStartTime = [];
-
-        this.props.items.forEach((mi) => {
-
-
-            var id = this.getItemId(mi.id);
-            var el = document.getElementById(id);
-            if (!el) {
-                // this can happen if we are re-rendering.
-                return;
-            }
-
-            var info = {
-                element: el,
-                width: el.clientWidth,
-                item: mi,
-                scrollLeft: this.getElementX(el),
-                unixStart: this.toUnix(mi.start),
-                unixEnd: this.toUnix(mi.end),
-            };
-
-            itemsByStartTime.push(info);
-
-
-        });
-        this.mappedItems = {
-            startTimeMap: itemsByStartTime,
-        }
     }
 
     onMotionItemMouseUp(ev) {
@@ -322,6 +288,7 @@ export default class TimeScroll extends React.Component {
         if (Math.abs(delta) > 10) {
             return;
         }
+
 
         this.scrollToElement(target);
     }
@@ -356,22 +323,25 @@ export default class TimeScroll extends React.Component {
         return `ts-${this.idBase}-${key}`;
     }
 
-    renderItem(mi) {
+    renderMediaItem(mi) {
         var seconds = (mi.end.getTime() - mi.start.getTime()) / 1000;
 
-        var color = mi.video ? "green" : "gold";
+        var color = mi.video ? "navy" : "gold";
 
         if (!mi.video) {
             return;
         }
 
-        var w = Math.max(50, 10 * seconds);
+        // 5 minute video is full width
+        var perSecond = window.innerWidth / (60 * 5);
+
+        var w = Math.max(50, perSecond * seconds);
 
         var motionItem = <div id={this.getItemId(mi.id)}
             onMouseDown={this.onMotionItemMouseDown.bind(this)}
             onMouseUp={this.onMotionItemMouseUp.bind(this)}
             title={mi.id}
-            key={mi.id} item_id={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
+            key={`mi-${this.renderCount}-${mi.id}`} item_id={mi.id} item_ids={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
                 display: "inline-block",
                 position: "relative",
                 height: "60%",
@@ -388,118 +358,126 @@ export default class TimeScroll extends React.Component {
         return motionItem;
     }
 
+    renderTimeItem(unixStart, ms, fileItems) {
+
+        var topOfHour = unixStart % 3600 === 0;
+        var halfHour = unixStart % 1800 === 0;
+        var quarterHour = unixStart % 900 === 0;
+
+        var seconds = ms / 1000;
+        const hourWidth = window.innerWidth / 4;
+        var w = seconds / 3600 * hourWidth;
+
+        var label = <span>&nbsp;</span>;
+
+        var borderLeft = "";
+
+        var cls = "";
+
+
+        if (topOfHour) {
+            label = new Date(unixStart).getHours();
+            if (label > 12) {
+                label = (label % 12) + "p";
+            } else {
+                label = (label || 12) + "a";
+            }
+
+            w = Math.max(w, 25);
+            borderLeft = "thin white solid";
+            cls = "hour"
+        } else if (halfHour) {
+            cls = "half"
+        } else if (quarterHour) {
+            cls = "quarter"
+            borderLeft = "thin silver dotted";
+        }
+
+        var id = this.getItemId(`ti-${unixStart}`);
+        var itemIds = fileItems.map(i => `${i.id}`);
+
+
+        if (this.seenIds[id]) {
+            console.error("dupe");
+        }
+        this.seenIds[id] = true;
+
+
+        var hourItem = <div key={id} className={cls} id={id} item_ids={itemIds.join(',')} time={unixStart} seconds={seconds} style={{
+            display: "inline-block",
+            height: "100%",
+            width: w + "px",
+            borderLeft: borderLeft,
+            color: "white",
+            background: "black",
+            padding: "2px",
+            textAlign: "left"
+        }}>{label}</div>;
+
+
+        return hourItem;
+    }
+
     render() {
 
         if (!this.props.startTime || !this.props.endTime) {
             return <div>XXX</div>
         }
 
-        const span = this.totalSeconds();
+        this.seenIds = {};
+
+        this.renderCount++;
+
 
         var items = [];
         var mediaItems = this.props.items || [];
 
-        const hourWidth = window.innerWidth / 4;
-        const chunkSeconds = 300;
 
-        var itemPos = 0;
-
-
-        for (var i = 0; i < span.seconds; i += chunkSeconds) {
-
-            // create background items for every n minutes.
-            // if the item is an hour boundary, add the label.
-            //
-
-            var tStart = new Date(span.start + (1000 * i));
-
-            var curHour = tStart.getHours()
+        // walk the items, creating sections as we go.
+        //
+        var startTime = toUnix(this.props.startTime);
+        var endTime = toUnix(this.props.endTime);
+        var curTime = startTime;
 
 
 
-            var itemDistanceSeconds = chunkSeconds;
+        while (curTime < endTime) {
 
-            if (mediaItems[itemPos] && mediaItems[itemPos].start.getHours() === curHour) {
-                itemDistanceSeconds = (toUnix(mediaItems[itemPos].start) - toUnix(tStart)) / 1000;
+
+            var untilNextHour = hour - (curTime % hour);
+            var nextHour = curTime + untilNextHour;
+
+            // get all of the items in the current hour
+            // and get the next video
+
+            var hourItems = mediaItems.filter(mi => toUnix(mi.start) >= curTime && toUnix(mi.start) < nextHour);
+
+            var nextVideoIndex = hourItems.findIndex(mi => mi.video);
+
+
+            var timeItemSpan = untilNextHour;
+
+            if (nextVideoIndex !== -1) {
+                timeItemSpan = toUnix(hourItems[nextVideoIndex].start) - curTime;
             }
 
-            var topOfHour = i % 3600 === 0;
-            var quarterHour = i % 900 === 0;
+            var timeItem = this.renderTimeItem(curTime, timeItemSpan, hourItems.slice(0, nextVideoIndex));
+            items.push(timeItem);
 
-            var secondsWidth = Math.min(chunkSeconds, itemDistanceSeconds);
+            // remove the items
+            mediaItems = mediaItems.slice(nextVideoIndex === -1 ? hourItems.length : nextVideoIndex);
+            curTime += timeItemSpan;
 
-            var w = secondsWidth / 3600 * hourWidth;
-
-
-
-            var label = <span>&nbsp;</span>;
-
-            var borderLeft = "";
-            if (topOfHour) {
-                label = curHour;
-                if (label > 12) {
-                    label = (label % 12) + "p";
-                } else {
-                    label = (label || 12) + "a";
-                }
-
-                w = Math.max(w, 25);
-                borderLeft = "thin white solid";
-            } else if (quarterHour) {
-                borderLeft = "thin silver dotted";
+            // render the media item
+            if (nextVideoIndex !== -1) {
+                var videoItem = hourItems[nextVideoIndex];
+                items.push(this.renderMediaItem(videoItem));
+                curTime += (videoItem.file.duration_seconds || 5) * 1000;
+                mediaItems = mediaItems.slice(1);
             }
 
-            var hourItem = <div key={toUnix(tStart)} time={this.toUnix(tStart)} seconds={secondsWidth} style={{
-                display: "inline-block",
-                height: "100%",
-                width: w + "px",
-                borderLeft: borderLeft,
-                color: "white",
-                background: "navy",
-                padding: "2px",
-                textAlign: "left"
-            }}>{label}</div>;
-
-            items.push(hourItem);
-
-            if (!mediaItems[itemPos]) {
-                continue;
-            }
-
-            var lastItemEnd = toUnix(mediaItems[itemPos].start);
-
-            // render time items when they are within the next chunk size.
-            //
-            var nextChunkEnd = tStart.getTime() + (chunkSeconds * 1000 * 2);
-
-            while (true) {
-
-                var nextItem = mediaItems[itemPos];
-
-                if (!nextItem || nextItem.start.getHours() !== curHour) {
-                    break;
-                }
-
-                // if the next item starts before the end of this chunk + 1,
-
-                if (toUnix(nextItem.start) >= nextChunkEnd) {
-                    break;
-                }
-
-                // then render this item
-                var timeItem = this.renderItem(nextItem);
-                if (timeItem) {
-                    items.push(timeItem);
-                }
-
-                if (toUnix(nextItem.end) > nextChunkEnd) {
-                    // consume the next chunk.
-                    i += chunkSeconds;
-                    nextChunkEnd += (1000 * chunkSeconds);
-                }
-                itemPos++;
-            }
         }
+
 
 
         return <div ref={this.myRef}
@@ -510,8 +488,9 @@ export default class TimeScroll extends React.Component {
             style={{
                 width: "100%",
                 height: "75px",
-                background: "darkblue",
-                overflowX: "auto",
+                border: "thin white solid",
+                padding: "1px",
+                overflowX: "hidden",
                 overflowY: "hidden",
                 whiteSpace: "nowrap",
                 msOverflowStyle: "none",
@@ -520,7 +499,7 @@ export default class TimeScroll extends React.Component {
             }}>
             <div id={this.getItemId("divider")} style={{
                 position: "absolute",
-                width: "5px",
+                width: dividerWidth + "px",
                 background: "yellow",
                 height: "75px",
                 left: "50%"

@@ -2830,6 +2830,9 @@ var data = [
     }
 ];
 
+const jpg1 = "/1591027084.jpg";
+const jpg2 = "/1593216147.jpg";
+
 data.forEach(f => {
 
     f.timestamp = new Date(f.timestamp);
@@ -2838,7 +2841,7 @@ data.forEach(f => {
     switch (f.type) {
         case 0:
 
-            f.path = "/1591027084.jpg";
+            f.path = jpg1;
             break;
         case 1:
             f.path = "/1591028951.mp4";
@@ -2853,6 +2856,43 @@ const subset = -1;
 
 if (subset > 0) {
     data = data.filter((v, i) => i < subset);
+}
+
+function generateSnapshots(start, end, interval) {
+    var unixStart = start.getTime();
+    var unixEnd = end.getTime();
+
+    // walk the data and everywhere there is not an existing file
+    // add one of the static files
+    //
+
+    var snapshots = [];
+    var pos = unixStart;
+
+    for (var i = 0; i < data.length; i++) {
+        var nextItem = data[i];
+        var nextUnixStart = nextItem.timestamp.getTime();
+
+        while (pos < nextUnixStart) {
+            snapshots.push(
+                {
+                    "id": 100000 + snapshots.length,
+                    "camera_id": 1,
+                    "path": snapshots.length % 2 === 0 ? jpg1 : jpg2,
+                    "type": 0,
+                    "timestamp": new Date(pos),
+                    "length": 33168,
+                    "duration_seconds": Math.trunc(interval / 1000)
+                }
+            );
+            pos += interval;
+        }
+
+        // snap to after
+        var nextUnixEnd = nextUnixStart + interval + (nextItem.duration_seconds || 5) * 1000;
+        pos = nextUnixEnd;
+    }
+    return snapshots;
 }
 
 export function GetData(start, end, sort) {
@@ -2870,8 +2910,12 @@ export function GetData(start, end, sort) {
 
     var result = data.filter(f => f.timestamp >= start && f.timestamp < end);
 
+    // result = result.concat(generateSnapshots(start, end, 60 * 1000));
+
     if (sort === "desc") {
         result = result.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    } else {
+        result = result.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     }
     return result;
 }

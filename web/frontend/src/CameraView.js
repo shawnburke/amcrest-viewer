@@ -10,6 +10,7 @@ import DatePicker from "./DatePicker";
 import TimeScroll from "./TimeScroll";
 import { day, toUnix } from './time';
 import { FileManager } from "./FileManager";
+import { FileList } from "./FileList"
 
 
 
@@ -93,8 +94,7 @@ class CameraView extends React.Component {
         this.fileManager.setPosition(time, item && item.file);
     }
 
-    mediaRowClick(f, el) {
-        el.preventDefault();
+    onSelectedFileChange(f) {
 
         this.fileManager.setCurrentFile(f);
 
@@ -125,70 +125,7 @@ class CameraView extends React.Component {
     }
 
 
-    renderFileList(files) {
-        var fileRows = [];
 
-        if (files) {
-
-
-            var curmp4;
-
-            var grouped = [];
-
-
-            function finish() {
-
-                curmp4 = null;
-            }
-
-            function group(f) {
-                if (f.type !== 0) {
-                    return false;
-                }
-                if (curmp4 && f.timestamp < curmp4.end) {
-                    curmp4.children = curmp4.children || [];
-                    curmp4.children.push(f);
-                    return true;
-                }
-                return false;
-            }
-
-
-            // group files
-
-            files.forEach((f) => {
-
-                if (group(f)) {
-                    return;
-                }
-
-                if (f.type === 1) {
-                    finish();
-                    curmp4 = f;
-                    f.end = new Date(f.timestamp.getTime() + (1000 * f.duration_seconds));
-                }
-                f.children = null;
-                grouped.push(f);
-            });
-
-
-            // walk through the grouped files and create rows
-            //
-            grouped.forEach(f => {
-                var row = <FileRow
-                    file={f} key={f.id}
-                    selected={this.state.source && this.state.source.id === f.id}
-                    onClick={this.mediaRowClick.bind(this, f)} />;
-
-                fileRows.push(row);
-            })
-
-
-            fileRows = fileRows.reverse();
-
-        }
-        return fileRows;
-    }
 
 
     render() {
@@ -197,7 +134,7 @@ class CameraView extends React.Component {
 
         var windowHeight = window.innerHeight;
 
-        return <div> <Row>
+        return <div style={{ background: "black", color: "white" }}> <Row>
             <Col>
                 <div style={{
                     width: "100%",
@@ -209,14 +146,16 @@ class CameraView extends React.Component {
         </Row>
             <Row>
 
-                <Col xs={12}>
+                <Col xs={9}>
                     <DatePicker
                         minDate={this.state.range.min}
                         maxDate={this.state.range.max}
                         date={this.state.date}
                         onChange={date => this.setDate(date)}
                     />
-                    <span>{this.state.position.toString()}</span>
+                </Col>
+                <Col xs={3}>
+                    <span>{this.state.position.toLocaleTimeString()}</span>
                 </Col>
 
             </Row>
@@ -229,13 +168,13 @@ class CameraView extends React.Component {
                     onTimeChange={this.onTimeScrollChange.bind(this)}
                 />
             </div>
-            <div style={{
-                maxHeight: windowHeight * .5,
-                overflowY: "auto",
-                overflowX: "hidden"
-            }}>
-                {this.renderFileList(this.fileManager.files)}
-            </div>
+
+            <FileList
+                selected={this.state.source}
+                onSelectedFileChange={this.onSelectedFileChange.bind(this)}
+                files={this.fileManager.files}
+            />
+
         </div>
     }
 
@@ -252,64 +191,5 @@ class CameraView extends React.Component {
         this.fileManager.setWindow(d, e);
     }
 }
-
-class FileRow extends React.Component {
-
-
-    last(array) {
-        if (!array || !array.length) {
-            return null;
-        }
-        return array[array.length - 1];
-    }
-
-    render() {
-        var style = {};
-        const f = this.props.file;
-
-        if (this.props.selected) {
-            style = {
-                background: "yellow"
-            }
-        }
-
-        var t = "";
-
-        if (f.type === 1) {
-            t = "🎥";
-        }
-
-        var children = null;
-
-
-
-
-        var rows = [<Row key={f.id} style={style} file={f} >
-            <Col xs={1}><span role="img">{t}</span></Col>
-            <Col xs={4}>{f.timestamp.toLocaleTimeString()}</Col>
-            <Col xs={1}>{f.duration_seconds}</Col>
-            <Col ><a href={f.path} target="_vid">{this.last(f.path.split('/'))}</a></Col>
-        </Row>];
-
-        if (f.children) {
-            children = f.children.map(fc => {
-                return <img key={"thumb-" + fc.id} alt="thumb" src={fc.path} file={fc.id} style={{
-                    width: "40px",
-                    marginLeft: "2px",
-                }} />;
-            })
-            rows.push(<Row>
-                <Col xs={1}><span></span></Col>
-                <Col>{children}</Col>
-                <Col xs={1}></Col>
-            </Row>);
-        }
-
-        return <div onClick={this.props.onClick}>{rows}</div>;
-
-
-    }
-}
-
 
 export default CameraView;

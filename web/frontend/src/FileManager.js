@@ -37,6 +37,8 @@ export class FileManager {
         this.filesService = broker.newFilesService(camid);
         this.camerasServer = broker.newCamsService();
 
+        this.maxWindow = day;
+
         // initialize info
         var today = new Date();
         this.range = {
@@ -50,6 +52,10 @@ export class FileManager {
         }
 
         this.position = this.dateAdd(today, -1, "hour");
+    }
+
+    log(s) {
+        // console.log(s);
     }
 
     start() {
@@ -80,20 +86,20 @@ export class FileManager {
 
         var rangeChange = value.range;
         if (rangeChange) {
-            console.log(`Changing range to ${value.range.min} => ${value.range.max}`);
+            this.log(`Changing range to ${value.range.min} => ${value.range.max}`);
         }
         var windowChange = value.window;
         if (windowChange) {
-            console.log(`Changing window to ${value.window.start} => ${value.window.end}`)
+            this.log(`Changing window to ${value.window.start} => ${value.window.end}`)
         }
         var positionChange = value.position;
         if (positionChange) {
-            console.log(`Setting position to ${value.position}`);
+            this.log(`Setting position to ${value.position}`);
         }
 
         var fileChange = value.file;
         if (fileChange) {
-            console.log(`Setting file to ${value.file.id} ${value.file.path}`)
+            this.log(`Setting file to ${value.file.id} ${value.file.path}`)
         }
 
         Object.assign(this, value);
@@ -223,18 +229,23 @@ export class FileManager {
             return true;
         }
 
+        var windowSize = toUnix(boxedEnd) - toUnix(boxedStart);
+        if (windowSize > this.maxWindow) {
+            boxedStart = new Date(toUnix(boxedEnd) - this.maxWindow);
+        }
+
         this._onchange({
             window: {
-                start: boxedStart,
-                end: boxedEnd,
+                start: new Date(boxedStart),
+                end: new Date(boxedEnd),
             }
         })
             ;
 
-        console.log(`Loading files for range ${boxedStart} => ${boxedEnd}`)
+        this.log(`Loading files for range ${boxedStart} => ${boxedEnd}`)
         this.loadFiles(boxedStart, boxedEnd).then(items => {
 
-            console.log(`Loaded ${items.length} files`);
+            this.log(`Loaded ${items.length} files`);
 
             // sort ascending
             var files = items.sort((a, b) => toUnix(a.timestamp) - toUnix(b.timestamp));
