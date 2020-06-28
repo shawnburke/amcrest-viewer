@@ -2910,7 +2910,7 @@ export function GetData(start, end, sort) {
 
     var result = data.filter(f => f.timestamp >= start && f.timestamp < end);
 
-    // result = result.concat(generateSnapshots(start, end, 60 * 1000));
+    result = result.concat(generateSnapshots(start, end, 60 * 1000));
 
     if (sort === "desc") {
         result = result.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());

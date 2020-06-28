@@ -13,8 +13,6 @@ import { FileManager } from "./FileManager";
 import { FileList } from "./FileList"
 
 
-
-
 class CameraView extends React.Component {
     constructor(props) {
         super(props);

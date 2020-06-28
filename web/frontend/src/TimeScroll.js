@@ -13,7 +13,6 @@ export default class TimeScroll extends React.Component {
 
         this.myRef = React.createRef();
         this.idBase = tsCounter++;
-        this.renderCount = 0;
         this.state = {
             current: new Date(),
         }
@@ -299,25 +298,7 @@ export default class TimeScroll extends React.Component {
         ev.target.scrollAnchor = this.myRef.current.scrollLeft;
     }
 
-    totalSeconds() {
-        const hour = 60 * 60 * 1000;
-        const month = hour * 24 * 30;
 
-        var start = this.boxTime(this.props.startTime, new Date().getTime() - month, new Date());
-        var end = this.boxTime(this.props.endTime, new Date().getTime() - month, new Date());
-
-        // buffer an hour on either end, snap
-        // to hour boundaries
-        start -= (start % hour) + hour;
-        end += (hour - (end % hour)) + hour;
-
-        const spanSeconds = (end - start) / 1000;
-        return {
-            seconds: spanSeconds,
-            start: start,
-            end: end,
-        }
-    }
 
     getItemId(key) {
         return `ts-${this.idBase}-${key}`;
@@ -341,7 +322,7 @@ export default class TimeScroll extends React.Component {
             onMouseDown={this.onMotionItemMouseDown.bind(this)}
             onMouseUp={this.onMotionItemMouseUp.bind(this)}
             title={mi.id}
-            key={`mi-${this.renderCount}-${mi.id}`} item_id={mi.id} item_ids={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
+            key={`mi-${mi.id}`} item_id={mi.id} item_ids={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
                 display: "inline-block",
                 position: "relative",
                 height: "60%",
@@ -397,10 +378,6 @@ export default class TimeScroll extends React.Component {
         var itemIds = fileItems.map(i => `${i.id}`);
 
 
-        if (this.seenIds[id]) {
-            console.error("dupe");
-        }
-        this.seenIds[id] = true;
 
 
         var hourItem = <div key={id} className={cls} id={id} item_ids={itemIds.join(',')} time={unixStart} seconds={seconds} style={{
@@ -424,9 +401,6 @@ export default class TimeScroll extends React.Component {
             return <div>XXX</div>
         }
 
-        this.seenIds = {};
-
-        this.renderCount++;
 
 
         var items = [];
@@ -457,11 +431,15 @@ export default class TimeScroll extends React.Component {
 
             var timeItemSpan = untilNextHour;
 
+            var hourItemsCount = hourItems.length;
+
             if (nextVideoIndex !== -1) {
                 timeItemSpan = toUnix(hourItems[nextVideoIndex].start) - curTime;
+                hourItemsCount = nextVideoIndex;
             }
 
-            var timeItem = this.renderTimeItem(curTime, timeItemSpan, hourItems.slice(0, nextVideoIndex));
+
+            var timeItem = this.renderTimeItem(curTime, timeItemSpan, hourItems.slice(0, hourItemsCount));
             items.push(timeItem);
 
             // remove the items
