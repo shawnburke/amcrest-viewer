@@ -468,7 +468,7 @@ export default class TimeScroll extends React.Component {
                 height: "75px",
                 border: "thin white solid",
                 padding: "1px",
-                overflowX: "hidden",
+                overflowX: "auto",
                 overflowY: "hidden",
                 whiteSpace: "nowrap",
                 msOverflowStyle: "none",
