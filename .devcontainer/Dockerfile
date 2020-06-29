@@ -10,9 +10,8 @@ FROM golang:latest
 COPY settings.vscode.json /root/.vscode-remote/data/Machine/settings.json
 
 # Verify git, process tools installed
-RUN apt-get update && apt-get -y install git procps ftp sqlite3 build-essential tzdata
-
-
+RUN apt-get update && apt-get -y install git procps ftp sqlite3 build-essential tzdata python-pip
+RUN pip install amcrest
 
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && apt-get install -y nodejs
 

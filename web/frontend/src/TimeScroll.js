@@ -317,10 +317,10 @@ export default class TimeScroll extends React.Component {
             return;
         }
 
-        // 5 minute video is full width
-        var perSecond = window.innerWidth / (60 * 5);
-
-        var w = Math.max(50, perSecond * seconds);
+        var startTime = new Date(mi.start).toLocaleTimeString();
+        
+        
+        var w = this.myRef.current.clientWidth / 3;
 
         var motionItem = <div id={this.getItemId(mi.id)}
             onMouseDown={this.onMotionItemMouseDown.bind(this)}
@@ -339,7 +339,7 @@ export default class TimeScroll extends React.Component {
                 MozBorderRadius: "5px",
                 WebkitBorderRadius: "5px",
                 border: "1px white solid",
-            }}>{seconds}s</div>;
+            }}>{startTime} ({seconds}s)</div>;
         return motionItem;
     }
 
@@ -370,7 +370,10 @@ export default class TimeScroll extends React.Component {
 
         if (topOfHour) {
             label = new Date(unixStart).getHours();
-            if (label > 12) {
+
+            if (label === 12) {
+                label += "p";
+            } else if (label > 12) {
                 label = (label % 12) + "p";
             } else {
                 label = (label || 12) + "a";
@@ -419,6 +422,10 @@ export default class TimeScroll extends React.Component {
         //
         var windowStart = toUnix(this.props.startTime);
         var windowEnd = toUnix(this.props.endTime);
+
+        var now = new Date().getTime();
+
+        windowEnd = Math.min(windowEnd, now);
 
         // buffer the edges to make sure everything
         // can be selected
