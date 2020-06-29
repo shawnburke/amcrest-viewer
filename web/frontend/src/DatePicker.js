@@ -19,12 +19,9 @@ class DatePicker extends React.Component {
         return d1 && d2 && (d1.toDateString() === d2.toDateString());
     }
 
-    shouldComponentUpdate(nextProps, nextState) {
-        return true;
-    }
 
 
-    getSnapshotBeforeUpdate(prevProps, prevState) {
+    getSnapshotBeforeUpdate(_prevProps, prevState) {
         if (this.state.date !== prevState.date && this.props.onChange) {
             this.props.onChange(this.state.date);
         }

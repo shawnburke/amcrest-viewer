@@ -4,7 +4,7 @@ import React from 'react';
 
 import { Row, Col } from 'react-bootstrap';
 
-import { day, toUnix } from './time';
+//import { day, toUnix } from './time';
 
 
 export class FileList extends React.Component {
@@ -27,31 +27,25 @@ export class FileList extends React.Component {
 
     componentDidUpdate() {
 
-        // var selectedId = this.props.selected && this.props.selected.id;
+        var selectedId = this.props.selected && this.props.selected.id;
 
-        // if (!selectedId) {
-        //     return;
-        // }
+        if (!selectedId) {
+            return;
+        }
 
-        // var selectedRowEl = document.getElementById(this.getRowId(selectedId));
+        var selectedRowEl = document.getElementById(this.getRowId(selectedId));
 
-        // if (!selectedRowEl) {
-        //     return;
-        // }
-
-
-        // var parent = this.myRef.current || selectedRowEl.parentElement;
-
-        // var elTop = selectedRowEl.offsetTop - selectedRowEl.offsetParent.offsetTop;
+        if (!selectedRowEl) {
+            return;
+        }
 
 
+        var parent = this.myRef.current || selectedRowEl.parentElement;
 
-        // if (elTop >= parent.scrollTop && elTop < parent.scrollTop + parent.clientHeight) {
-        //     return;
-        // }
 
-        // parent.scrollTop = elTop - 5;
+        var top = selectedRowEl.offsetTop - parent.offsetTop;
 
+        parent.scrollTop = top;
     }
 
     getRowId(id) {
@@ -163,9 +157,11 @@ class FileRow extends React.Component {
 
         return <Row
             id={this.props.id} onClick={this.props.onClick} key={'filerow' - f.id} style={style} file={f} >
-            <Col xs={3} style={{ textAlign: "left" }}><img src={f.image} style={{
-                height: "70px"
-            }} /></Col>
+            <Col xs={3} style={{ textAlign: "left" }}>
+                <img src={f.image} alt="thumb" style={{
+                    height: "70px"
+                }} />
+            </Col>
             <Col xs={3} style={{ textAlign: "left" }}>
                 <div>{f.timestamp.toLocaleTimeString()}</div>
 

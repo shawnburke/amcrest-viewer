@@ -2855,13 +2855,12 @@ const subset = -1;
 
 
 if (subset > 0) {
-    data = data.filter((v, i) => i < subset);
+    data = data.filter((_v, i) => i < subset);
 }
 
-function generateSnapshots(start, end, interval) {
+function generateSnapshots(start, _end, interval) {
     var unixStart = start.getTime();
-    var unixEnd = end.getTime();
-
+    
     // walk the data and everywhere there is not an existing file
     // add one of the static files
     //

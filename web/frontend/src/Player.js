@@ -16,7 +16,7 @@ export default class Player extends React.Component {
         this.setVideoPosition();
     }
 
-    setVideoPosition(play) {
+    setVideoPosition() {
         if (!this.props.file || !this.props.file.path) {
             return;
         }
@@ -26,9 +26,6 @@ export default class Player extends React.Component {
         }
         var delta = toUnix(this.props.position) - toUnix(this.props.file.start);
         this.player.seekTo(delta / 1000, "seconds");
-        // if (play) {
-        //     this.player.player.play();
-        // }
     }
 
 
@@ -36,7 +33,7 @@ export default class Player extends React.Component {
         this.player = player
     }
 
-    shouldComponentUpdate(nextProps, nextState) {
+    shouldComponentUpdate(nextProps, _nextState) {
 
         var oldFile = this.props.file && this.props.file.id;
         var newFile = nextProps.file && nextProps.file.id;
