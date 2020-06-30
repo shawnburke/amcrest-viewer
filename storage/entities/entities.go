@@ -13,8 +13,14 @@ type Camera struct {
 	LastSeen       *time.Time `db:"LastSeen"  json:"last_seen"`
 	Enabled        *bool      `db:"Enabled" json:"enabled"`
 	Timezone       string     `db:"Timezone" json:"timezone"`
-	MaxFileAgeDays int        `db:"MaxFileAgeDays" json:"max_file_age_days`
-	MaxTotalSizeMB int        `db:"MaxTotalSizeMB" json:"max_file_age_days`
+	MaxFileAgeDays int        `db:"MaxFileAgeDays" json:"max_file_age_days"`
+	MaxTotalSizeMB int        `db:"MaxTotalSizeMB" json:"max_file_total_mb"`
+	CameraCreds
+}
+
+type CameraCreds struct {
+	Username *string `db:"Username" json:"username"`
+	Password *string `db:"Password" json:"password"`
 }
 
 func (c Camera) CameraID() string {

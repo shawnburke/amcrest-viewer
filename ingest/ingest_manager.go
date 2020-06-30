@@ -3,9 +3,10 @@ package ingest
 import (
 	"fmt"
 
-	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/cameras"
+	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/ftp"
+	"github.com/shawnburke/amcrest-viewer/storage"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/file"
@@ -15,21 +16,19 @@ import (
 )
 
 var Module = fx.Options(
-//	fx.Provide(Amcrest),
+	//	fx.Provide(Amcrest),
 	fx.Invoke(NewIngestManager),
 )
 
 type IngestManagerParams struct {
 	fx.In
-	Logger      *zap.Logger
-	Bus         common.EventBus
-//	Ingesters   []Ingester `group:"ingester"`
+	Logger *zap.Logger
+	Bus    common.EventBus
+	//	Ingesters   []Ingester `group:"ingester"`
 	FileManager file.Manager
 	DataManager data.Repository
-	Registry	cameras.Registry
+	Registry    cameras.Registry
 }
-
-
 
 type Ingester interface {
 	Name() string
@@ -43,6 +42,7 @@ func NewIngestManager(p IngestManagerParams) error {
 		fm:        p.FileManager,
 		dm:        p.DataManager,
 		registry:  p.Registry,
+		bus:       p.Bus,
 	}
 
 	err := p.Bus.Subscribe(im)
@@ -50,7 +50,6 @@ func NewIngestManager(p IngestManagerParams) error {
 		return fmt.Errorf("Failed to subscribe: %v", err)
 	}
 
-	
 	return err
 }
 
@@ -60,6 +59,7 @@ type ingestManager struct {
 	fm        file.Manager
 	dm        data.Repository
 	registry  cameras.Registry
+	bus       common.EventBus
 }
 
 func (im *ingestManager) getIngesterCamera(user string) (*entities.Camera, error) {
@@ -78,14 +78,17 @@ func (im *ingestManager) getIngesterCamera(user string) (*entities.Camera, error
 func (im *ingestManager) OnEvent(e common.Event) error {
 	switch ev := e.(type) {
 	case *ftp.FileCreateEvent:
-		return im.ingest(ev.File)
+		return im.ingestFtp(ev.File)
 	case *ftp.FileRenameEvent:
-		return im.ingest(ev.File)
+		return im.ingestFtp(ev.File)
+	case *storage.MediaFileAvailableEvent:
+		return im.ingest(ev.File, ev.Data)
 	}
 	return nil
 }
 
-func (im *ingestManager) ingest(f *ftp.File) error {
+// TODO: move this code into FTP package
+func (im *ingestManager) ingestFtp(f *ftp.File) error {
 	cam, err := im.getIngesterCamera(f.User)
 
 	if err != nil {
@@ -95,7 +98,7 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 	if cam == nil {
 		return fmt.Errorf("Failed to find camera for user %q", f.User)
 	}
-	
+
 	camType, err := im.registry.Get(cam.Type)
 
 	if err != nil || camType == nil {
@@ -107,7 +110,7 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		return nil
 	}
 
-	im.logger.Info("Ingesting file",
+	im.logger.Info("Ingesting FTP file",
 		zap.String("name", f.FullName),
 		zap.String("User", f.User),
 		zap.String("ingester", camType.Name()),
@@ -130,10 +133,23 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		return nil
 	}
 
+	// Here we republish the event to the bus rather than calling ingest directly.
+	// This is a bit more complicated but allows other systems to hook to this event,
+	// and allows us to move the FTP stuff out w/o breaking this.
+	//
+	err = im.bus.Send(storage.NewMediaFileAvailableEvent(mf, f.Data))
+	if err != nil {
+		im.logger.Error("Error ending new file to bus", zap.Error(err), zap.String("path", f.FullName))
+		return err
+	}
+	f.Done()
+	return nil
+}
+
+func (im *ingestManager) ingest(mf *models.MediaFile, data []byte) error {
+
 	// make sure we always persist UTC
 	mf.Timestamp = mf.Timestamp.UTC()
-
-	im.logger.Info("Would ingest", zap.Reflect("media-file", mf))
 
 	// TODO: make manager interfaces speak models
 	fileType := entities.FileTypeMp4
@@ -147,25 +163,23 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		return fmt.Errorf("Unknown file type: %v", mf.Type)
 	}
 
-	relPath, err := im.fm.AddFile(mf.CameraID, f.Data, mf.Timestamp, fileType)
+	relPath, err := im.fm.AddFile(mf.CameraID, data, mf.Timestamp, fileType)
 
 	if err != nil {
 		im.logger.Error("Failed to save file",
-			zap.String("name", f.Name), zap.String("camera", mf.CameraID), zap.Error(err))
-		return fmt.Errorf("Failed to safe file %v: %w", f.FullName, err)
+			zap.String("name", mf.Name), zap.String("camera", mf.CameraID), zap.Error(err))
+		return fmt.Errorf("Failed to safe file %v: %w", mf.Name, err)
 	}
 
-	fileData, err := im.dm.AddFile(relPath, fileType, mf.CameraID, len(f.Data), mf.Timestamp, mf.Duration)
+	fileData, err := im.dm.AddFile(relPath, fileType, mf.CameraID, len(data), mf.Timestamp, mf.Duration)
 
 	if err != nil {
-		f2 := *f
-		f2.Data = nil
 		im.logger.Error("Failed to save file data",
 			zap.Error(err),
-			zap.String("name", f.Name),
+			zap.String("name", mf.Name),
 			zap.String("camera", mf.CameraID),
 			zap.String("disk-path", relPath),
-			zap.Reflect("file", f2))
+			zap.Reflect("file", mf))
 		return fmt.Errorf("Failed to save file data: %w", err)
 	}
 
@@ -174,6 +188,5 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 		zap.String("camera", mf.CameraID),
 		zap.String("path", relPath))
 
-	f.Close()
 	return nil
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"go.uber.org/config"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 
 	"github.com/shawnburke/amcrest-viewer/common"
@@ -26,20 +27,28 @@ import (
 
 const defaultFrontendPath = "./web/frontend/build"
 
-func New(args *common.Params, logger *zap.Logger,
-	data data.Repository, files file.Manager, cfg config.Provider) HttpServer {
+type HttpParams struct {
+	fx.In
+	Args   *common.Params
+	Logger *zap.Logger
+	Data   data.Repository
+	Files  file.Manager
+	Config config.Provider
+}
+
+func New(p HttpParams) HttpServer {
 
 	server := &Server{
-		FileRoot: args.DataDir,
-		Logger:   logger,
-		args:     args,
-		data:     data,
-		files:    files,
+		FileRoot: p.Args.DataDir,
+		Logger:   p.Logger,
+		args:     p.Args,
+		data:     p.Data,
+		files:    p.Files,
 	}
 
 	frontendPath := ""
 
-	err := cfg.Get("web.frontend").Populate(&frontendPath)
+	err := p.Config.Get("web.frontend").Populate(&frontendPath)
 	if err != nil {
 		panic(err)
 	}
@@ -216,6 +225,8 @@ func (s *Server) getCameraStats(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
 
+	strID := mux.Vars(r)["camera-id"]
+
 	cam := &models.Camera{}
 
 	bytes, err := ioutil.ReadAll(r.Body)
@@ -235,7 +246,7 @@ func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
 		name = &cam.Name
 	}
 
-	newCam, err := s.data.UpdateCamera(cam.ID, name, nil, nil)
+	newCam, err := s.data.UpdateCamera(strID, name, nil, nil)
 	if s.writeError(err, w, 400) {
 		return
 	}
@@ -248,6 +259,36 @@ func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJson(cam, w, 200)
+
+}
+
+func (s *Server) updateCameraCreds(w http.ResponseWriter, r *http.Request) {
+	strID := mux.Vars(r)["camera-id"]
+
+	creds := struct {
+		Host     string `json:"host"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}{}
+
+	bytes, err := ioutil.ReadAll(r.Body)
+
+	if s.writeError(err, w, 500) {
+		return
+	}
+
+	err = json.Unmarshal(bytes, &creds)
+
+	if s.writeError(err, w, 400) {
+		return
+	}
+
+	err = s.data.UpdateCameraCreds(strID, creds.Host, creds.Username, creds.Password)
+	if s.writeError(err, w, 400) {
+		return
+	}
+
+	w.WriteHeader(200)
 
 }
 
@@ -454,7 +495,7 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/stats").HandlerFunc(s.getCameraStats)
 
 	s.r.Methods("PUT").Path("/api/cameras/{camera-id}").HandlerFunc(s.updateCamera)
-
+	s.r.Methods("PUT").Path("/api/cameras/{camera-id}/creds").HandlerFunc(s.updateCameraCreds)
 	// files
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files").HandlerFunc(s.listFiles)
 

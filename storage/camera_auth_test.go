@@ -54,6 +54,10 @@ func (mr *mockRepo) UpdateCamera(id string, name *string, host *string, enabled 
 	panic("not implemented") // TODO: Implement
 }
 
+func (mr *mockRepo) UpdateCameraCreds(string, host, user, pass string) error {
+	panic("not implemented") // TODO: Implement
+}
+
 func (mr *mockRepo) SeenCamera(id string) error {
 	panic("not implemented") // TODO: Implement
 }

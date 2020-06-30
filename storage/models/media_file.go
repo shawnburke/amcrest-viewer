@@ -14,7 +14,7 @@ type MediaFile struct {
 	ID        string
 	CameraID  string
 	Type      MediaFileType
-	Path      string
+	Name      string
 	Timestamp time.Time
 	Duration  *time.Duration
 }

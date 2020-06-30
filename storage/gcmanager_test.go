@@ -67,6 +67,10 @@ func (dm *mockDataManager) UpdateCamera(id string, name *string, host *string, e
 	panic("not implemented") // TODO: Implement
 }
 
+func (dm *mockDataManager) UpdateCameraCreds(string, host, user, pass string) error {
+	panic("not implemented") // TODO: Implement
+}
+
 func (dm *mockDataManager) SeenCamera(id string) error {
 	panic("not implemented") // TODO: Implement
 }

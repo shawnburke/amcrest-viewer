@@ -45,11 +45,18 @@ ALTER TABLE cameras
 ALTER TABLE cameras
 	ADD COLUMN MaxTotalSizeMB Integer DEFAULT 5000;
 `
+var schema4 = `
+ALTER TABLE cameras
+	ADD COLUMN Username VARCHAR(256);
+ALTER TABLE cameras
+	ADD COLUMN Password VARCHAR(256);
+`
 
 var schemas = []string{
 	schema1,
 	schema2,
 	schema3,
+	schema4,
 }
 
 // Rather than dealing with loose files on disk (which just adds complication

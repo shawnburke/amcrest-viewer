@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	cameras "github.com/shawnburke/amcrest-viewer/cameras/common"
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"go.uber.org/zap"
@@ -22,6 +23,7 @@ type Repository interface {
 	GetCameraStats(id string, start *time.Time, end *time.Time, breakdown string) (*CameraStats, error)
 	DeleteCamera(id string) (bool, error)
 	UpdateCamera(id string, name *string, host *string, enabled *bool) (*entities.Camera, error)
+	UpdateCameraCreds(id string, ip string, username string, password string) error
 	SeenCamera(id string) error
 	ListCameras() ([]*entities.Camera, error)
 
@@ -58,11 +60,12 @@ type FileData struct {
 	Size  int `json:"size"`
 }
 
-func NewRepository(db *sqlx.DB, t common.Time, logger *zap.Logger) (Repository, error) {
+func NewRepository(db *sqlx.DB, t common.Time, logger *zap.Logger, bus common.EventBus) (Repository, error) {
 	return &sqlRepository{
 		db:     db,
 		time:   t,
 		logger: logger,
+		bus:    bus,
 	}, nil
 }
 
@@ -70,6 +73,7 @@ type sqlRepository struct {
 	db     *sqlx.DB
 	logger *zap.Logger
 	time   common.Time
+	bus    common.EventBus
 }
 
 func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entities.Camera, error) {
@@ -365,6 +369,23 @@ func (sr *sqlRepository) UpdateCamera(cameraID string, name *string, host *strin
 	}
 
 	return sr.GetCamera(cameraID)
+}
+
+func (sr *sqlRepository) UpdateCameraCreds(cameraID string, host, user, pass string) error {
+
+	camID, err := parseCameraID(cameraID)
+	if err != nil {
+		return err
+	}
+
+	_, err = sr.db.Exec("UPDATE cameras SET Host=$1,Username=$2,Password=$3 WHERE ID=$r", host, user, pass, camID)
+
+	if err == nil && sr.bus != nil {
+		// notify that camera creds have changed.
+		event := cameras.NewCameraCredsChangeEvent(cameraID)
+		sr.bus.Send(event)
+	}
+	return err
 }
 
 func (sr *sqlRepository) SeenCamera(cameraID string) error {

@@ -1,19 +1,20 @@
 package amcrest
 
-
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"strings"
-	"io"
 	"time"
 
+	"github.com/shawnburke/amcrest-viewer/cameras/common"
 	gcommon "github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
-	"github.com/shawnburke/amcrest-viewer/cameras/common"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -25,17 +26,16 @@ var ErrorUnknownFile = errors.New("UnknownFileType")
 
 const badVideoPath = "BadVideoPath"
 
-
 type AmcrestResult struct {
 	fx.Out
-	Instance common.Type `group:"ingester"`
+	Instance common.Type `group:"cameras"`
 }
 
 func New(logger *zap.Logger, localTime *time.Location) (AmcrestResult, error) {
 
 	amcrest := &amcrestCameraType{
 		logger: logger,
-		local: localTime,
+		local:  localTime,
 	}
 
 	return AmcrestResult{
@@ -43,19 +43,34 @@ func New(logger *zap.Logger, localTime *time.Location) (AmcrestResult, error) {
 	}, nil
 }
 
-
 type amcrestCameraType struct {
-	logger *zap.Logger
-	local *time.Location
+	logger  *zap.Logger
+	local   *time.Location
+	cliPath *string
 }
 
 func (ac *amcrestCameraType) Name() string {
-	return  amcrestIngesterType
+	return amcrestIngesterType
+}
+
+const amcrestCLI = "amcrest-cli"
+
+func (ac *amcrestCameraType) amcrestCliPath() string {
+	if ac.cliPath == nil {
+
+		acp, err := exec.LookPath(amcrestCLI)
+		if err != nil {
+			ac.logger.Warn("amcrest-cli not available", zap.Error(err))
+		}
+		ac.cliPath = &acp
+	}
+	return *ac.cliPath
 }
 
 func (ac *amcrestCameraType) Capabilities() common.Capabilities {
+
 	return common.Capabilities{
-		Snapshot: true,
+		Snapshot: ac.amcrestCliPath() != "",
 	}
 }
 
@@ -81,9 +96,70 @@ func (ac *amcrestCameraType) ParseFilePath(cam *entities.Camera, p string) (*mod
 }
 
 func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, error) {
-	return nil, nil
+
+	if ac.amcrestCliPath() == "" {
+		return nil, fmt.Errorf("Can't take snapshot for camera %q due to missing CLI", cam.CameraID())
+	}
+
+	if cam.Host == nil || cam.Username == nil || cam.Password == nil {
+		return nil, fmt.Errorf("Snapshot requires camera host, user, password")
+	}
+
+	tempPath := os.TempDir()
+	tempPath = path.Join(tempPath, cam.CameraID())
+	err := os.MkdirAll(tempPath, os.ModeDir)
+	if err != nil {
+		return nil, fmt.Errorf("Can't create snapshot temp dir %q: %w", tempPath, err)
+	}
+	start := time.Now()
+	tempPath = path.Join(tempPath, fmt.Sprintf("snapshot-%d.jpg", start.Unix()))
+
+	cmd := exec.Command(
+		ac.amcrestCliPath(),
+		"-u",
+		*cam.Username,
+		"-p",
+		*cam.Password,
+		"-H",
+		*cam.Host,
+		"--snapshot",
+		"--save",
+		tempPath,
+	)
+
+	err = cmd.Run()
+
+	if err != nil {
+		output, _ := cmd.CombinedOutput()
+		ac.logger.Error("Error getting snapshot", zap.String("cmd", cmd.Path), zap.String("output", string(output)))
+		return nil, fmt.Errorf("Error running snapshot command: %w", err)
+	}
+	finish := time.Now()
+
+	ac.logger.Debug("Took snapshot", zap.String("camera", cam.CameraID()), zap.Duration("time", finish.Sub(start)))
+
+	f, err := os.Open(tempPath)
+
+	return &deleteOnClose{
+		File:     f,
+		fullPath: tempPath,
+	}, nil
 }
 
+type deleteOnClose struct {
+	*os.File
+	fullPath string
+	logger   *zap.Logger
+}
+
+func (doc *deleteOnClose) Close() error {
+	err := doc.File.Close()
+
+	if delErr := os.Remove(doc.fullPath); delErr != nil {
+		doc.logger.Error("Failed to cleanup snapshot file", zap.Error(delErr), zap.String("path", doc.fullPath))
+	}
+	return err
+}
 
 func (ac *amcrestCameraType) pathToFile(path string, tz string) (*models.MediaFile, error) {
 
@@ -104,6 +180,7 @@ func (ac *amcrestCameraType) pathToFile(path string, tz string) (*models.MediaFi
 		}
 		d := ts[1].Sub(ts[0])
 		return &models.MediaFile{
+			Name:      path,
 			Type:      models.MP4,
 			Timestamp: ts[0],
 			Duration:  &d,
@@ -117,6 +194,7 @@ func (ac *amcrestCameraType) pathToFile(path string, tz string) (*models.MediaFi
 			return nil, err
 		}
 		return &models.MediaFile{
+			Name:      path,
 			Type:      models.JPG,
 			Timestamp: ts,
 		}, nil
@@ -124,9 +202,6 @@ func (ac *amcrestCameraType) pathToFile(path string, tz string) (*models.MediaFi
 
 	return nil, ErrorUnknownFile
 }
-	
-
-
 
 var dateRegEx = regexp.MustCompile(`\d{4}-\d{2}-\d{2}`)
 var tsRegEx = regexp.MustCompile(`(\d{2}\.\d{2}\.\d{2})`)
