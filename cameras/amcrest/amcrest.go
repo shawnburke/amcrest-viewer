@@ -1,4 +1,5 @@
-package ingest
+package amcrest
+
 
 import (
 	"errors"
@@ -6,11 +7,13 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"io"
 	"time"
 
-	"github.com/shawnburke/amcrest-viewer/ftp"
+	gcommon "github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
+	"github.com/shawnburke/amcrest-viewer/cameras/common"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -22,76 +25,69 @@ var ErrorUnknownFile = errors.New("UnknownFileType")
 
 const badVideoPath = "BadVideoPath"
 
-// todo: move this into its own package and load with ingest manager
-// but solve Ingester circular dep
-type AmcrestParams struct {
-	fx.In
-	TZ     *time.Location `optional:"true"`
-	Logger *zap.Logger
-}
 
 type AmcrestResult struct {
 	fx.Out
-	Ingester Ingester `group:"ingester"`
+	Instance common.Type `group:"ingester"`
 }
 
-func Amcrest(p AmcrestParams) (AmcrestResult, error) {
+func New(logger *zap.Logger, localTime *time.Location) (AmcrestResult, error) {
 
-	amcrest := &amcrestIngester{
-		tz:     p.Timezone(),
-		logger: p.Logger,
+	amcrest := &amcrestCameraType{
+		logger: logger,
+		local: localTime,
 	}
 
 	return AmcrestResult{
-		Ingester: amcrest,
+		Instance: amcrest,
 	}, nil
 }
 
-func (p AmcrestParams) Timezone() *time.Location {
-	if p.TZ != nil {
-		return p.TZ
-	}
 
-	loc, err := time.LoadLocation("Local")
-	if err != nil {
-		panic(err)
-	}
-
-	return loc
-}
-
-type amcrestIngester struct {
-	tz     *time.Location
+type amcrestCameraType struct {
 	logger *zap.Logger
+	local *time.Location
 }
 
-func (ai *amcrestIngester) Name() string {
-	return amcrestIngesterType
+func (ac *amcrestCameraType) Name() string {
+	return  amcrestIngesterType
 }
-func (ai *amcrestIngester) IngestFile(cam *entities.Camera, f *ftp.File) (*models.MediaFile, error) {
-	mf, err := ai.pathToFile(f.FullName, cam.Timezone)
 
-	switch path.Ext(f.FullName) {
+func (ac *amcrestCameraType) Capabilities() common.Capabilities {
+	return common.Capabilities{
+		Snapshot: true,
+	}
+}
+
+func (ac *amcrestCameraType) ParseFilePath(cam *entities.Camera, p string) (*models.MediaFile, error) {
+
+	mf, err := ac.pathToFile(p, cam.Timezone)
+
+	switch path.Ext(p) {
 	case ".mp4", ".jpg":
 		break
 	case ".idx":
-		return nil, ErrIngestDelete
+		return nil, gcommon.ErrIngestDelete
 	case ".mp4_", ".backup_":
-		return nil, ErrIngestIgnore
+		return nil, gcommon.ErrIngestIgnore
 	}
 
 	if err != nil {
-		ai.logger.Error("Amcrest ingest unknown file", zap.Error(err), zap.String("path", f.FullName))
+		ac.logger.Error("Amcrest ingest unknown file", zap.Error(err), zap.String("path", p))
 		return nil, err
 	}
-	mf.CameraID = f.User
-
+	mf.CameraID = cam.CameraID()
 	return mf, nil
 }
 
-func (ai *amcrestIngester) pathToFile(path string, tz string) (*models.MediaFile, error) {
+func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, error) {
+	return nil, nil
+}
 
-	var loc *time.Location = ai.tz
+
+func (ac *amcrestCameraType) pathToFile(path string, tz string) (*models.MediaFile, error) {
+
+	var loc *time.Location = ac.local
 	if tz != "" {
 		l, err := time.LoadLocation(tz)
 		if err != nil {
@@ -128,6 +124,9 @@ func (ai *amcrestIngester) pathToFile(path string, tz string) (*models.MediaFile
 
 	return nil, ErrorUnknownFile
 }
+	
+
+
 
 var dateRegEx = regexp.MustCompile(`\d{4}-\d{2}-\d{2}`)
 var tsRegEx = regexp.MustCompile(`(\d{2}\.\d{2}\.\d{2})`)

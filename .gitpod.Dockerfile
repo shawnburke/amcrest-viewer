@@ -2,7 +2,7 @@ FROM gitpod/workspace-full
 
 USER gitpod
 
-RUN sudo apt-get -q update && sudo apt-get -yq install ftp sqlite3 python-pip
+RUN sudo apt-get -q update && sudo apt-get -yq install ftp sqlite3
 
 RUN pip install amcrest
 

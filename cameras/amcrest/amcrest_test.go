@@ -1,4 +1,4 @@
-package ingest
+package amcrest
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/shawnburke/amcrest-viewer/ftp"
+	 c "github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 	"github.com/stretchr/testify/require"
@@ -26,11 +27,10 @@ func init() {
 
 func TestIngestParse(t *testing.T) {
 
-	ingester, err := Amcrest(AmcrestParams{
-		TZ:     tz,
-		Logger: zap.NewNop(),
-	})
+	ac, err := New(zap.NewNop(), tz)
 	require.NoError(t, err)
+
+	ct := ac.Instance
 
 	cases := []struct {
 		P        string
@@ -58,11 +58,11 @@ func TestIngestParse(t *testing.T) {
 		},
 		{
 			P:     "/AMC0009L_M35704/2020-05-28/001/jpg/09/32/52[M][0@0][0].mp4_",
-			Error: ErrIngestIgnore,
+			Error: c.ErrIngestIgnore,
 		},
 		{
 			P:     "/AMC0009L_M35704/2020-05-28/001/jpg/09/32/52[M][0@0][0].idx",
-			Error: ErrIngestDelete,
+			Error:c.ErrIngestDelete,
 		},
 	}
 
@@ -82,7 +82,7 @@ func TestIngestParse(t *testing.T) {
 				FullName: tt.P,
 			}
 
-			mf, err := ingester.Ingester.IngestFile(cam, f)
+			mf, err := ct.ParseFilePath(cam, f.FullName)
 
 			if tt.Error != nil {
 				require.Equal(t, tt.Error, err)

@@ -1,10 +1,10 @@
 package ingest
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/shawnburke/amcrest-viewer/common"
+	"github.com/shawnburke/amcrest-viewer/cameras"
 	"github.com/shawnburke/amcrest-viewer/ftp"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
@@ -15,7 +15,7 @@ import (
 )
 
 var Module = fx.Options(
-	fx.Provide(Amcrest),
+//	fx.Provide(Amcrest),
 	fx.Invoke(NewIngestManager),
 )
 
@@ -23,13 +23,13 @@ type IngestManagerParams struct {
 	fx.In
 	Logger      *zap.Logger
 	Bus         common.EventBus
-	Ingesters   []Ingester `group:"ingester"`
+//	Ingesters   []Ingester `group:"ingester"`
 	FileManager file.Manager
 	DataManager data.Repository
+	Registry	cameras.Registry
 }
 
-var ErrIngestDelete = errors.New("IngestDelete")
-var ErrIngestIgnore = errors.New("IngestIgnore")
+
 
 type Ingester interface {
 	Name() string
@@ -42,6 +42,7 @@ func NewIngestManager(p IngestManagerParams) error {
 		ingesters: map[string]Ingester{},
 		fm:        p.FileManager,
 		dm:        p.DataManager,
+		registry:  p.Registry,
 	}
 
 	err := p.Bus.Subscribe(im)
@@ -49,9 +50,7 @@ func NewIngestManager(p IngestManagerParams) error {
 		return fmt.Errorf("Failed to subscribe: %v", err)
 	}
 
-	for _, i := range p.Ingesters {
-		im.ingesters[i.Name()] = i
-	}
+	
 	return err
 }
 
@@ -60,6 +59,7 @@ type ingestManager struct {
 	ingesters map[string]Ingester
 	fm        file.Manager
 	dm        data.Repository
+	registry  cameras.Registry
 }
 
 func (im *ingestManager) getIngesterCamera(user string) (*entities.Camera, error) {
@@ -95,13 +95,12 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 	if cam == nil {
 		return fmt.Errorf("Failed to find camera for user %q", f.User)
 	}
-	ingesterType := cam.Type
+	
+	camType, err := im.registry.Get(cam.Type)
 
-	ingester, ok := im.ingesters[ingesterType]
-
-	if !ok {
+	if err != nil || camType == nil {
 		im.logger.Error("Can't find ingester type",
-			zap.String("type", ingesterType),
+			zap.String("type", cam.Type),
 			zap.String("user", f.User),
 			zap.String("file", f.FullName),
 		)
@@ -111,18 +110,18 @@ func (im *ingestManager) ingest(f *ftp.File) error {
 	im.logger.Info("Ingesting file",
 		zap.String("name", f.FullName),
 		zap.String("User", f.User),
-		zap.String("ingester", ingester.Name()),
+		zap.String("ingester", camType.Name()),
 	)
 
-	mf, err := ingester.IngestFile(cam, f)
+	mf, err := camType.ParseFilePath(cam, f.FullName)
 
 	if mf == nil {
 
-		if err == ErrIngestIgnore {
+		if err == common.ErrIngestIgnore {
 			return nil
 		}
 
-		if err == ErrIngestDelete {
+		if err == common.ErrIngestDelete {
 			f.Close()
 			return nil
 		}

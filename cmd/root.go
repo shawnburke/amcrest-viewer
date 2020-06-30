@@ -15,6 +15,7 @@ import (
 	"github.com/shawnburke/amcrest-viewer/ftp"
 	"github.com/shawnburke/amcrest-viewer/ingest"
 	"github.com/shawnburke/amcrest-viewer/storage"
+	"github.com/shawnburke/amcrest-viewer/cameras"
 	web "github.com/shawnburke/amcrest-viewer/web/backend"
 )
 
@@ -61,6 +62,7 @@ func buildGraph(cfg config.Provider) fx.Option {
 		// main modules
 		ingest.Module,
 		storage.Module,
+		cameras.Module,
 
 		// servers
 		fx.Provide(ftp.New),
