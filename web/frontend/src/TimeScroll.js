@@ -320,7 +320,7 @@ export default class TimeScroll extends React.Component {
         var startTime = new Date(mi.start).toLocaleTimeString();
         
         
-        var w = this.myRef.current.clientWidth / 3;
+        var w = this.myRef.current.clientWidth / 2;
 
         var motionItem = <div id={this.getItemId(mi.id)}
             onMouseDown={this.onMotionItemMouseDown.bind(this)}
@@ -339,7 +339,14 @@ export default class TimeScroll extends React.Component {
                 MozBorderRadius: "5px",
                 WebkitBorderRadius: "5px",
                 border: "1px white solid",
-            }}>{startTime} ({seconds}s)</div>;
+                fontSize: ".75em",
+                textAlign: "left",
+                paddingLeft: "5px",
+                paddingTop: "10px",
+            }}>
+                <span role="img" aria-label="icon">🎥</span>
+                <span>{startTime} ({seconds}s)</span>
+            </div>;
         return motionItem;
     }
 
