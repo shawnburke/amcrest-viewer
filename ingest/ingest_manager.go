@@ -142,7 +142,9 @@ func (im *ingestManager) ingestFtp(f *ftp.File) error {
 		im.logger.Error("Error ending new file to bus", zap.Error(err), zap.String("path", f.FullName))
 		return err
 	}
-	f.Done()
+	if f.Done != nil {
+		f.Done()
+	}
 	return nil
 }
 
