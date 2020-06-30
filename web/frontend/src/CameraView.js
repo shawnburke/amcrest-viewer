@@ -103,9 +103,11 @@ class CameraView extends React.Component {
             return []
         }
 
+        const jpgSeconds = 1;
+
         var items = files.map(f => {
 
-            var sec = f.duration_seconds || 5;
+            var sec = f.duration_seconds || jpgSeconds;
 
             var end = new Date(toUnix(f.timestamp) + (1000 * sec));
 
