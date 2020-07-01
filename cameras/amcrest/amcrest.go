@@ -15,27 +15,44 @@ import (
 	gcommon "github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
+	"go.uber.org/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 const amcrestIngesterType = "amcrest"
+const configKey = "cameras_types.amcrest"
 
 // ErrorUnknownFile is standard
 var ErrorUnknownFile = errors.New("UnknownFileType")
 
 const badVideoPath = "BadVideoPath"
 
+type amcrestConfig struct {
+	ReturnSnapshot bool `yaml:"return_snapshot"`
+}
+
 type AmcrestResult struct {
 	fx.Out
 	Instance common.Type `group:"cameras"`
 }
 
-func New(logger *zap.Logger, localTime *time.Location) (AmcrestResult, error) {
+func New(
+	logger *zap.Logger,
+	localTime *time.Location,
+	cfg config.Provider,
+) (AmcrestResult, error) {
 
 	amcrest := &amcrestCameraType{
 		logger: logger,
 		local:  localTime,
+	}
+
+	if val := cfg.Get(configKey); val.HasValue() {
+		err := val.Populate(&amcrest.cfg)
+		if err != nil {
+			logger.Error("Error loading amcrest config", zap.Error(err))
+		}
 	}
 
 	return AmcrestResult{
@@ -46,6 +63,7 @@ func New(logger *zap.Logger, localTime *time.Location) (AmcrestResult, error) {
 type amcrestCameraType struct {
 	logger  *zap.Logger
 	local   *time.Location
+	cfg     amcrestConfig
 	cliPath *string
 }
 
@@ -140,10 +158,21 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 
 	f, err := os.Open(tempPath)
 
-	return &deleteOnClose{
+	if err != nil {
+		return nil, err
+	}
+
+	res := &deleteOnClose{
 		File:     f,
 		fullPath: tempPath,
-	}, nil
+	}
+
+	if !ac.cfg.ReturnSnapshot {
+		res.Close()
+		res = nil
+	}
+
+	return res, nil
 }
 
 type deleteOnClose struct {

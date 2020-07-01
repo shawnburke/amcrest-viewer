@@ -31,6 +31,7 @@ type Repository interface {
 	AddFile(path string, t int, cameraID string, length int, timestamp time.Time, duration *time.Duration) (*entities.File, error)
 	DeleteFile(id int) error
 	GetFile(id int) (*entities.File, error)
+	GetLatestFile(cameraID string, fileType int) (*entities.File, error)
 
 	ListFiles(cameraID string, filter *ListFilesFilter) ([]*entities.File, error)
 }
@@ -475,6 +476,33 @@ func (sr *sqlRepository) GetFile(id int) (*entities.File, error) {
 	}
 
 	return nil, os.ErrNotExist
+}
+
+func (sr *sqlRepository) GetLatestFile(cameraID string, fileType int) (*entities.File, error) {
+	camID, err := parseCameraID(cameraID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `SELECT * FROM files WHERE CameraID=$1 AND Type=$2 ORDER BY Timestamp desc LIMIT 1`
+
+	result, err := sr.db.Queryx(query, camID, fileType)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching files: %w", err)
+	}
+
+	defer result.Close()
+
+	for result.Next() {
+		file := &entities.File{}
+		if err = result.StructScan(file); err != nil {
+			return nil, err
+		}
+		return file, nil
+	}
+
+	return nil, nil
 }
 
 func (sr *sqlRepository) ListFiles(cameraID string, filter *ListFilesFilter) ([]*entities.File, error) {

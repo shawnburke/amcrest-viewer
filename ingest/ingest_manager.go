@@ -16,15 +16,13 @@ import (
 )
 
 var Module = fx.Options(
-	//	fx.Provide(Amcrest),
 	fx.Invoke(NewIngestManager),
 )
 
 type IngestManagerParams struct {
 	fx.In
-	Logger *zap.Logger
-	Bus    common.EventBus
-	//	Ingesters   []Ingester `group:"ingester"`
+	Logger      *zap.Logger
+	Bus         common.EventBus
 	FileManager file.Manager
 	DataManager data.Repository
 	Registry    cameras.Registry

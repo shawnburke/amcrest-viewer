@@ -134,6 +134,13 @@ func (sm *snapshotManager) run() {
 					return
 				}
 
+				if reader == nil {
+					// some cameras will also FTP
+					// the snapshot so we don't need to do this
+					// a second time
+					return
+				}
+
 				defer reader.Close()
 
 				bytes, err := ioutil.ReadAll(reader)

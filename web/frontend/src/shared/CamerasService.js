@@ -2,12 +2,12 @@ class CamerasService {
 
     constructor(root) {
 
-        this.url =  (root||"") + "/api/cameras";
+        this.url = (root || "") + "/api/cameras?latest_snapshot=1";
 
     }
 
     updateId(cam) {
-        cam.id = cam.id.toString().includes(cam.type) ? cam.id :`${cam.type}-${cam.id}`
+        cam.id = cam.id.toString().includes(cam.type) ? cam.id : `${cam.type}-${cam.id}`
         return cam;
     }
 
@@ -30,7 +30,7 @@ class CamerasService {
             .then(items => {
 
                 return items.map(item => {
-                   return this.updateId(item);
+                    return this.updateId(item);
                 });
             })
 
@@ -44,8 +44,8 @@ class CamerasService {
 
     async getItem(id) {
 
-       
-     
+
+
         return fetch(this.url + "/" + id)
 
             .then(response => {
@@ -79,8 +79,8 @@ class CamerasService {
 
     async getStats(id) {
 
-       
-     
+
+
         return fetch(`${this.url}/${id}/stats`)
 
             .then(response => {

@@ -75,6 +75,10 @@ func (dm *mockDataManager) SeenCamera(id string) error {
 	panic("not implemented") // TODO: Implement
 }
 
+func (dm *mockDataManager) GetLatestFile(cameraID string, fileType int) (*entities.File, error) {
+	panic("nyi")
+}
+
 func (dm *mockDataManager) ListCameras() ([]*entities.Camera, error) {
 	return []*entities.Camera{
 		{

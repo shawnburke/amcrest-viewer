@@ -20,7 +20,7 @@ export default class TimeScroll extends React.Component {
 
     log(_s) {
 
-        //console.log(_s);
+        console.log(_s);
     }
 
     mouseDown(ev) {
@@ -142,24 +142,55 @@ export default class TimeScroll extends React.Component {
 
         var item_ids = el.attributes.item_ids.value;
 
-        var ids = item_ids.split(",");
+        if (!item_ids) {
+            return null;
+        }
+
+        var ids = item_ids.split(",").map(id => Number(id));
+
+        ids.sort((a, b) => a - b);
 
         var items = this.props.items;
+
+        if (!el.item_map) {
+            el.item_map = {}
+
+            var now = new Date();
+            ids.forEach(id => {
+                id = Number(id);
+
+                if (el.item_map[id]) {
+                    return;
+                }
+
+                // note this might miss items if the indexes aren't in 
+                // time order, but it's too slow otherwise.
+                var index = items.findIndex(mi => mi.id === id);
+                if (index === -1) {
+                    el.item_map[index] = "x";
+                    console.error(`Couldn't find index for id ${id}`);
+                    return;
+                }
+                el.item_map[id] = items[index];
+                items = items.slice(index);
+            });
+            console.log(`Map create time for ${item_ids.length} elements out of ${this.props.items.length}: ${new Date().getTime() - now.getTime()}ms`)
+        }
 
         while (ids.length > 0) {
 
             const target = Number(ids[0]);
-            var candidateIndex = items.findIndex(mi => mi.id === target);
+            var item = el.item_map[target];
+
+            if (!item || item === "x") {
+                console.error(`Couldn't find ${target}`);
+                continue;
+            }
 
             ids = ids.slice(1);
 
-            if (candidateIndex === -1) {
-                continue;
-            }
-            var c = items[candidateIndex];
-
-            if (this.fileContains(c, unixTime)) {
-                return c;
+            if (this.fileContains(item, unixTime)) {
+                return item;
             }
         }
         return null;
@@ -189,12 +220,7 @@ export default class TimeScroll extends React.Component {
         }
 
         return Number(s) * 1000;
-
-
     }
-
-
-
 
     scrollToTime(t) {
 
@@ -301,15 +327,12 @@ export default class TimeScroll extends React.Component {
         parent.scrollLeft = newScroll;
     }
 
-
-
-
     getItemId(key) {
         return `ts-${this.idBase}-${key}`;
     }
 
     renderMediaItem(mi) {
-        var seconds = (mi.end.getTime() - mi.start.getTime()) / 1000;
+        var seconds = (toUnix(mi.end) - toUnix(mi.start)) / 1000;
 
         var color = mi.video ? "navy" : "gold";
 
@@ -318,8 +341,8 @@ export default class TimeScroll extends React.Component {
         }
 
         var startTime = new Date(mi.start).toLocaleTimeString();
-        
-        
+
+
         var w = this.myRef.current.clientWidth / 2;
 
         var motionItem = <div id={this.getItemId(mi.id)}
@@ -344,9 +367,9 @@ export default class TimeScroll extends React.Component {
                 paddingLeft: "5px",
                 paddingTop: "10px",
             }}>
-                <span role="img" aria-label="icon">🎥</span>
-                <span>{startTime} ({seconds}s)</span>
-            </div>;
+            <span role="img" aria-label="icon">🎥</span>
+            <span>{startTime} ({seconds}s)</span>
+        </div>;
         return motionItem;
     }
 

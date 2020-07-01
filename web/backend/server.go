@@ -187,19 +187,36 @@ func (s *Server) createCamera(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type getCameraResult struct {
+	*entities.Camera
+	LatestSnapshot *entities.File `json:"latest_snapshot,omitempty"`
+}
+
 func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
 
 	strID := mux.Vars(r)["camera-id"]
 
-	stats, err := s.data.GetCamera(strID)
+	cam, err := s.data.GetCamera(strID)
 
 	if s.writeError(err, w, 0) {
-
 		return
 	}
 
-	s.writeJson(stats, w, 200)
+	res := &getCameraResult{
+		Camera: cam,
+	}
 
+	if ls := r.URL.Query().Get("latest_snapshot"); ls == "true" || ls == "1" {
+		f, err := s.data.GetLatestFile(strID, 0)
+
+		if err != nil {
+			if s.writeError(err, w, 0) {
+				return
+			}
+		}
+		res.LatestSnapshot = f
+	}
+	s.writeJson(res, w, 200)
 }
 
 func (s *Server) getCameraStats(w http.ResponseWriter, r *http.Request) {
@@ -301,7 +318,27 @@ func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.writeJson(cams, w, 0)
+	res := make([]*getCameraResult, 0, len(cams))
+
+	for i, cam := range cams {
+
+		r1 := &getCameraResult{Camera: cam}
+
+		if ls := r.URL.Query().Get("latest_snapshot"); ls == "true" || ls == "1" {
+
+			f, err := s.data.GetLatestFile(cam.CameraID(), 0)
+
+			if err != nil {
+				if s.writeError(err, w, 0) {
+					return
+				}
+			}
+			r1.LatestSnapshot = f
+		}
+		res[i] = r1
+	}
+
+	s.writeJson(res, w, 0)
 
 }
 

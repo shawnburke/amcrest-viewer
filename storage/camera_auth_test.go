@@ -73,6 +73,10 @@ func (mr *mockRepo) ListCameras() ([]*entities.Camera, error) {
 
 }
 
+func (mr *mockRepo) GetLatestFile(cameraID string, fileType int) (*entities.File, error) {
+	panic("nyi")
+}
+
 func (mr *mockRepo) GetCameraStats(id string, start *time.Time, end *time.Time, breakdown string) (*data.CameraStats, error) {
 	panic("not implemented") // TODO: Implement
 }

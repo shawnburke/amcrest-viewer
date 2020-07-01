@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/config"
 	"go.uber.org/zap"
 
+	c "github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/ftp"
-	 c "github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 	"github.com/stretchr/testify/require"
@@ -27,7 +28,7 @@ func init() {
 
 func TestIngestParse(t *testing.T) {
 
-	ac, err := New(zap.NewNop(), tz)
+	ac, err := New(zap.NewNop(), tz, config.NopProvider{})
 	require.NoError(t, err)
 
 	ct := ac.Instance
@@ -62,7 +63,7 @@ func TestIngestParse(t *testing.T) {
 		},
 		{
 			P:     "/AMC0009L_M35704/2020-05-28/001/jpg/09/32/52[M][0@0][0].idx",
-			Error:c.ErrIngestDelete,
+			Error: c.ErrIngestDelete,
 		},
 	}
 

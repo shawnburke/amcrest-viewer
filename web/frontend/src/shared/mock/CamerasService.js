@@ -1,12 +1,21 @@
 
-import {GetStats} from "./file_data.js";
+import { GetStats } from "./file_data.js";
 
 class CamerasService {
 
     constructor() {
 
+
+        var latest = {
+            "id": 7156,
+            "camera_id": 1,
+            "path": "/1591027084.jpg",
+            "type": 0,
+            "timestamp": "2020-06-16T03:07:09Z",
+            "length": 32503
+        };
         this.cameras = [
-            { name: "Garage Cam", type: "amcrest", id: "amcrest-1" },
+            { name: "Garage Cam", type: "amcrest", id: "amcrest-1", latest_snapshot: latest },
             { name: "Front Cam", type: "amcrest", id: "amcrest-2" },
         ];
 
@@ -36,8 +45,8 @@ class CamerasService {
 
     async getStats(id) {
 
-       
-      
+
+
         return Promise.resolve(GetStats());
 
     }
