@@ -2,6 +2,8 @@ package common
 
 import "time"
 
+const SnapshotFrequency = time.Minute
+
 type Time interface {
 	Now() time.Time
 }

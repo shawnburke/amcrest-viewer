@@ -2,7 +2,7 @@ class CamerasService {
 
     constructor(root) {
 
-        this.url = (root || "") + "/api/cameras?latest_snapshot=1";
+        this.url = (root || "") + "/api/cameras";
 
     }
 
@@ -13,7 +13,7 @@ class CamerasService {
 
     async retrieveItems() {
 
-        return fetch(this.url)
+        return fetch(`${this.url}?latest_snapshot=1`)
 
             .then(response => {
 
@@ -46,7 +46,7 @@ class CamerasService {
 
 
 
-        return fetch(this.url + "/" + id)
+        return fetch(`${this.url}/${id}?latest_snapshot=1`)
 
             .then(response => {
 

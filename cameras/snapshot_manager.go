@@ -27,7 +27,7 @@ func NewSnapshotManager(
 	cfg config.Provider) error {
 
 	sm := &snapshotManager{
-		interval: time.Minute,
+		interval: common.SnapshotFrequency,
 		data:     data,
 		logger:   logger,
 		registry: registry,

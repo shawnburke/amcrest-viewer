@@ -1,7 +1,6 @@
 package common
 
-
 type Capabilities struct {
-	Snapshot bool
+	Snapshot   bool
 	LiveStream bool
 }

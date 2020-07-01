@@ -129,14 +129,18 @@ export class FileManager {
         if (windowChange && !batching) {
             this.log(`Changing window to ${value.window.start} => ${value.window.end}`)
         }
-        var positionChange = value.position;
+        var positionChange = value.position !== undefined;
         if (positionChange && !batching) {
             this.log(`Setting position to ${value.position}`);
         }
 
-        var fileChange = value.file;
+        var fileChange = value.file !== undefined;
         if (fileChange && !batching) {
-            this.log(`Setting file to ${value.file.id} ${value.file.path}`)
+            if (value.file) {
+                this.log(`Setting file to ${value.file.id} ${value.file.path}`);
+            } else{
+                this.log(`Clearing file`);
+            }
         }
 
         Object.assign(this, value);
@@ -226,7 +230,7 @@ export class FileManager {
 
     setPosition(time, file) {
 
-        var boxed = this.boxTime(time, this.window.start, this.window.end, 'min');
+        var boxed = time && this.boxTime(time, this.window.start, this.window.end, 'min');
 
         if (this.timeEqual(boxed, this.position)) {
             return true;
@@ -235,16 +239,16 @@ export class FileManager {
         try {
             this._startBatch();
 
-            this._onchange({ position: new Date(boxed) });
+            this._onchange({ position: boxed && new Date(boxed) });
 
             // find the file
-            if (!file && this.files) {
-                file = this.files.find(f => this.isInFile(time, f));
+            if (!file && this.files && boxed) {
+                file = this.files.find(f => this.isInFile(boxed, f));
             }
 
-            if (file) {
-                this.setCurrentFile(file);
-            }
+            
+            this.setCurrentFile(file);
+            
         }
         finally {
             this._endBatch();
@@ -280,7 +284,7 @@ export class FileManager {
 
                 this._onchange({ files: files });
 
-                var pos = this.boxTime(this.position, start, end);
+                var pos = this.position && this.boxTime(this.position, start, end);
                 var lastFile = null;
 
                 // find the last file
@@ -321,24 +325,35 @@ export class FileManager {
             return true;
         }
 
-        file = this.files.find(f => f.id === newid);
-
-        if (!file) {
-            console.warn(`Can't find file ${newid}`);
-            return false;
+        if (newid) {
+            file = this.files.find(f => f.id === newid);
+            if (!file) {
+                console.warn(`Can't find file ${newid}`);
+                return false;
+            }
         }
 
-        // set position if not in file
-        var boxed = this.boxTime(file.timestamp, this.window.start, this.window.end);
 
-        if (!this.timeEqual(boxed, file.timestamp)) {
-            console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.window.start} => ${this.window.end}`);
-            return false;
+
+        var update = { 
+            file: file || null 
         }
 
-        this.setPosition(file.timestamp, file);
+        if (file) {
+            // set position if not in file
+            var boxed = this.boxTime(file.timestamp, this.window.start, this.window.end);
 
-        this._onchange({ file: file });
+            if (!this.timeEqual(boxed, file.timestamp)) {
+                console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.window.start} => ${this.window.end}`);
+                return false;
+            }
+
+            this.setPosition(file.timestamp, file);
+        } else {
+            update.position = null;
+        }
+       
+        this._onchange(update);
         return true;
 
     }

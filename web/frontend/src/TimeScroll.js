@@ -127,7 +127,7 @@ export default class TimeScroll extends React.Component {
             nextProps.endTime === this.props.endTime &&
             nextProps.position !== this.props.position;
 
-        if (positionOnlyChange) {
+        if (positionOnlyChange && nextProps.position) {
 
             if (this.mouseAnchor) {
                 return false;
@@ -443,8 +443,30 @@ export default class TimeScroll extends React.Component {
         var id = this.getItemId(`ti-${unixStart}`);
         var itemIds = fileItems.map(i => `${i.id}`);
 
+        var children = []
+
+        fileItems.forEach(fi => {
+
+            var leftPercent = ((toUnix(fi.start)-unixStart) / ms)*100;
+            var widthPercent = 100* ((toUnix(fi.end) - toUnix(fi.start)) / ms);
+
+            var childItem = <div style={{
+                display: "inline-block",
+                position:"absolute",
+                background:"darkred",
+                height: "2px",
+                top:"85%",
+                left: leftPercent + "%",
+                width: Math.max(1,widthPercent) + "%",
+            }}>&nbsp;</div>;
+
+            children.push(childItem);
+
+        });
+
         var hourItem = <div key={id} className={cls} id={id} item_ids={itemIds.join(',')} time={unixStart} seconds={seconds} style={{
             display: "inline-block",
+            position:"relative",
             height: "100%",
             width: w + "px",
             borderLeft: borderLeft,
@@ -452,7 +474,10 @@ export default class TimeScroll extends React.Component {
             background: background,
             padding: "2px",
             textAlign: "left"
-        }}>{label}</div>;
+        }}>
+            <span>{label}</span>
+            {children}
+        </div>;
 
 
         return hourItem;
@@ -555,6 +580,7 @@ export default class TimeScroll extends React.Component {
             }}>
             <div id={this.getItemId("divider")} style={{
                 position: "absolute",
+                zIndex:"1000",
                 width: dividerWidth + "px",
                 background: "yellow",
                 height: "75px",

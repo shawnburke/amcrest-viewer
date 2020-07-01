@@ -159,6 +159,10 @@ func (im *ingestManager) ingest(mf *models.MediaFile, data []byte) error {
 		// fall through
 	case models.JPG:
 		fileType = entities.FileTypeJpg
+		if mf.Duration == nil {
+			freq := common.SnapshotFrequency
+			mf.Duration = &freq
+		}
 	default:
 		return fmt.Errorf("Unknown file type: %v", mf.Type)
 	}

@@ -74,13 +74,13 @@ class CameraView extends React.Component {
             })
         }
 
-        if (change.file) {
+        if (change.file !== undefined) {
             this.setState({
                 source: change.file
             })
         }
 
-        if (change.position) {
+        if (change.position !== undefined) {
             this.setState({
                 position: change.position
             })
@@ -103,7 +103,7 @@ class CameraView extends React.Component {
             return []
         }
 
-        const jpgSeconds = 1;
+        const jpgSeconds = 60;
 
         var items = files.map(f => {
 
@@ -125,14 +125,16 @@ class CameraView extends React.Component {
     }
 
 
-
-
-
     render() {
 
         document.title = "Camera Viewer - " + this.props.cameraid;
 
         var windowHeight = window.innerHeight;
+        var pos = "";
+
+        if (this.state.position) {
+            pos = this.state.position.toLocaleTimeString();
+        }
 
         return <div style={{ background: "black", color: "white" }}> <Row>
             <Col>
@@ -155,7 +157,7 @@ class CameraView extends React.Component {
                     />
                 </Col>
                 <Col xs={3}>
-                    <span>{this.state.position.toLocaleTimeString()}</span>
+                    <span>{pos}</span>
                 </Col>
 
             </Row>
