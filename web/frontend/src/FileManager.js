@@ -32,6 +32,7 @@ export class FileManager {
         this.camerasServer = broker.newCamsService();
 
         this.maxWindow = day;
+        this.refreshIntervalSeconds = 15;
 
         // initialize info
         var today = new Date();
@@ -56,6 +57,11 @@ export class FileManager {
         this.camerasServer.getStats(this.camid).then(
             s => {
                 this.setRange(new Date(s.min_date), new Date(s.max_date));
+
+                setTimeout(() => {
+                    console.log("Refreshing range");
+                    this.start();
+                }, this.refreshIntervalSeconds * 1000)
             }
         );
     }
@@ -138,7 +144,7 @@ export class FileManager {
         if (fileChange && !batching) {
             if (value.file) {
                 this.log(`Setting file to ${value.file.id} ${value.file.path}`);
-            } else{
+            } else {
                 this.log(`Clearing file`);
             }
         }
@@ -162,7 +168,7 @@ export class FileManager {
             throw new Error("bad range");
         }
 
-        if (min === this.range.min && max === this.range.max) {
+        if (this.timeEqual(min, this.range.min) && this.timeEqual(max, this.range.max)) {
             return;
         }
 
@@ -176,13 +182,13 @@ export class FileManager {
                 },
             });
 
-            this.setWindow(this.window.start, this.window.end);
+            this.setWindow(this.window.start, this.window.end, true);
         } finally {
             this._endBatch();
         }
     }
 
-    setWindow(start, end) {
+    setWindow(start, end, reload) {
 
         if (end < start) {
             throw new Error("bad window");
@@ -194,7 +200,7 @@ export class FileManager {
         boxedStart = this.snapTime(boxedStart, "day", -1);
         boxedEnd = this.snapTime(boxedEnd, "day", 1);
 
-        if (boxedStart === this.window.start && boxedEnd === this.window.end) {
+        if (!reload && this.timeEqual(boxedStart, this.window.start) && this.timeEqual(boxedEnd, this.window.end)) {
             return true;
         }
 
@@ -246,9 +252,9 @@ export class FileManager {
                 file = this.files.find(f => this.isInFile(boxed, f));
             }
 
-            
+
             this.setCurrentFile(file);
-            
+
         }
         finally {
             this._endBatch();
@@ -284,13 +290,12 @@ export class FileManager {
 
                 this._onchange({ files: files });
 
-                var pos = this.position && this.boxTime(this.position, start, end);
+                var pos = this.position && this.boxTime(this.position, start, end, "max");
                 var lastFile = null;
 
                 // find the last file
-                if (pos !== this.position && files.length) {
+                if (!this.timeEqual(pos, this.position) && files.length) {
                     lastFile = files[files.length - 1];
-
                     pos = lastFile.timestamp;
                 }
 
@@ -335,8 +340,8 @@ export class FileManager {
 
 
 
-        var update = { 
-            file: file || null 
+        var update = {
+            file: file || null
         }
 
         if (file) {
@@ -352,7 +357,7 @@ export class FileManager {
         } else {
             update.position = null;
         }
-       
+
         this._onchange(update);
         return true;
 

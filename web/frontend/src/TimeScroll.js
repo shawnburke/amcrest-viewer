@@ -141,6 +141,12 @@ export default class TimeScroll extends React.Component {
         return true;
     }
 
+    componentDidUpdate() {
+        if (this.props.position) {
+            this.scrollToTime(this.toUnix(this.props.position));
+        }
+    }
+
     // given an element and a time, return
     // the file item at that time.
     getElementItem(el, unixTime) {
@@ -447,17 +453,17 @@ export default class TimeScroll extends React.Component {
 
         fileItems.forEach(fi => {
 
-            var leftPercent = ((toUnix(fi.start)-unixStart) / ms)*100;
-            var widthPercent = 100* ((toUnix(fi.end) - toUnix(fi.start)) / ms);
+            var leftPercent = ((toUnix(fi.start) - unixStart) / ms) * 100;
+            var widthPercent = 100 * ((toUnix(fi.end) - toUnix(fi.start)) / ms);
 
             var childItem = <div style={{
                 display: "inline-block",
-                position:"absolute",
-                background:"darkred",
+                position: "absolute",
+                background: "darkred",
                 height: "2px",
-                top:"85%",
+                top: "85%",
                 left: leftPercent + "%",
-                width: Math.max(1,widthPercent) + "%",
+                width: Math.max(1, widthPercent) + "%",
             }}>&nbsp;</div>;
 
             children.push(childItem);
@@ -466,7 +472,7 @@ export default class TimeScroll extends React.Component {
 
         var hourItem = <div key={id} className={cls} id={id} item_ids={itemIds.join(',')} time={unixStart} seconds={seconds} style={{
             display: "inline-block",
-            position:"relative",
+            position: "relative",
             height: "100%",
             width: w + "px",
             borderLeft: borderLeft,
@@ -580,7 +586,7 @@ export default class TimeScroll extends React.Component {
             }}>
             <div id={this.getItemId("divider")} style={{
                 position: "absolute",
-                zIndex:"1000",
+                zIndex: "1000",
                 width: dividerWidth + "px",
                 background: "yellow",
                 height: "75px",
