@@ -128,6 +128,11 @@ export default class TimeScroll extends React.Component {
             nextProps.position !== this.props.position;
 
         if (positionOnlyChange) {
+
+            if (this.mouseAnchor) {
+                return false;
+            }
+
             var t = this.toUnix(nextProps.position);
             this.scrollToTime(t);
             return false;
@@ -167,9 +172,14 @@ export default class TimeScroll extends React.Component {
                 // time order, but it's too slow otherwise.
                 var index = items.findIndex(mi => mi.id === id);
                 if (index === -1) {
-                    el.item_map[index] = "x";
-                    console.error(`Couldn't find index for id ${id}`);
-                    return;
+                    // try from beginning
+                    index = this.props.items.findIndex(mi => mi.id === id);
+                    if (index === -1) {
+                        el.item_map[index] = "x";
+                        console.error(`Couldn't find index for id ${id}`);
+                        return;
+                    }
+                    items = this.props.items;
                 }
                 el.item_map[id] = items[index];
                 items = items.slice(index);
@@ -287,7 +297,15 @@ export default class TimeScroll extends React.Component {
 
         if (selPoint) {
             var el = document.elementFromPoint(selPoint.x, selPoint.y);
-            if (el) {
+            while (el !== this.myRef.current) {
+
+                var t = this.getElementTime(el);
+
+                if (!t) {
+                    el = el.parentElement;
+                    continue;
+                }
+
                 var elRect = el.getBoundingClientRect();
                 var ratio = (selPoint.x - elRect.x) / elRect.width;
                 return {
