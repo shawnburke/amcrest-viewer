@@ -318,7 +318,7 @@ func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := make([]*getCameraResult, 0, len(cams))
+	res := make([]*getCameraResult, len(cams))
 
 	for i, cam := range cams {
 
