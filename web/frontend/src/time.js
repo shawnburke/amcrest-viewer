@@ -25,6 +25,11 @@ export function toUnix(t) {
     return Number(t);
 }
 
+export function iso(t) {
+    var d = new Date(t);
+    return d.toISOString();
+}
+
 export function snapTime(t, unit, bias) {
 
     var wasDate = false;

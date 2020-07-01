@@ -1,5 +1,5 @@
 import React from 'react';
-import { boxTime, toUnix, hour } from './time';
+import { boxTime, toUnix, hour, iso } from './time';
 
 
 var tsCounter = 0;
@@ -190,9 +190,12 @@ export default class TimeScroll extends React.Component {
             ids = ids.slice(1);
 
             if (this.fileContains(item, unixTime)) {
+                this.log(`Found item ${item.id} at ${iso(unixTime)}`)
                 return item;
             }
         }
+
+        this.log(`No items in ${el.id} between ${iso(item.start)} => ${iso(item.end)} for ${iso(unixTime)}`)
         return null;
     }
 
