@@ -169,7 +169,7 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 
 	if !ac.cfg.ReturnSnapshot {
 		res.Close()
-		res = nil
+		return nil, nil
 	}
 
 	return res, nil
