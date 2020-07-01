@@ -214,7 +214,8 @@ func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		res.LatestSnapshot = f
+		updated := s.updateFilePaths(strID, f)
+		res.LatestSnapshot = updated[0]
 	}
 	s.writeJson(res, w, 200)
 }
@@ -333,7 +334,8 @@ func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			r1.LatestSnapshot = f
+			updated := s.updateFilePaths(cam.CameraID(), f)
+			r1.LatestSnapshot = updated[0]
 		}
 		res[i] = r1
 	}
