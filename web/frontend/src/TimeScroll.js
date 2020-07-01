@@ -36,7 +36,7 @@ export default class TimeScroll extends React.Component {
             var newScroll = (ev.currentTarget.scrollLeft - deltaX);
 
             newScroll = Math.max(newScroll, 0);
-            newScroll = Math.min(newScroll, ev.currentTarget.scrollLeftMax)
+            newScroll = Math.min(newScroll, ev.currentTarget.scrollLeftMax || ev.currentTarget.scrollWidth)
 
             ev.currentTarget.scrollLeft = newScroll;
 

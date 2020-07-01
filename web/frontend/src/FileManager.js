@@ -56,6 +56,13 @@ export class FileManager {
     start() {
         this.camerasServer.getStats(this.camid).then(
             s => {
+
+                if (!s) {
+                    // in case of server error
+                    console.error(`Call to server cameras/${this.camid}/stats failed.`)
+                    return;
+                }
+
                 this.setRange(new Date(s.min_date), new Date(s.max_date));
 
                 setTimeout(() => {
@@ -294,7 +301,7 @@ export class FileManager {
                 var lastFile = null;
 
                 // find the last file
-                if (!this.timeEqual(pos, this.position) && files.length) {
+                if ((!pos || !this.timeEqual(pos, this.position)) && files.length) {
                     lastFile = files[files.length - 1];
                     pos = lastFile.timestamp;
                 }
