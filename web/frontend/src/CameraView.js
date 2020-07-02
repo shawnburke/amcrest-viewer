@@ -128,7 +128,7 @@ class CameraView extends React.Component {
     render() {
 
         document.title = "Camera Viewer - " + this.props.cameraid;
-
+        const secondaryBackground = "#EEE";
         var windowHeight = window.innerHeight;
         var pos = "";
 
@@ -136,19 +136,21 @@ class CameraView extends React.Component {
             pos = this.state.position.toLocaleTimeString();
         }
 
-        return <div style={{ background: "black", color: "white" }}> <Row>
-            <Col>
-                <div style={{
-                    width: "100%",
+        return <div style={{}}>
+            <Row>
+                <Col style={{
+                    position: "relative",
                     background: "black",
                     color: "white",
                     height: windowHeight * .4,
-                }}><Player file={this.state.source} position={this.state.position} /></div>
-            </Col>
-        </Row>
-            <Row>
+                    borderRadius: "5px 5px 0px 0px",
+                }}>
+                    <Player file={this.state.source} position={this.state.position} />
+                </Col>
+            </Row>
+            <Row style={{ background: secondaryBackground }}>
 
-                <Col xs={9}>
+                <Col xs={8}>
                     <DatePicker
                         minDate={this.state.range.min}
                         maxDate={this.state.range.max}
@@ -156,28 +158,35 @@ class CameraView extends React.Component {
                         onChange={date => this.setDate(date)}
                     />
                 </Col>
-                <Col xs={3}>
-                    <span>{pos}</span>
+                <Col xs={4} style={{ textAlign: "right" }}>
+                    {pos}
                 </Col>
 
             </Row>
-            <div style={{ margin: "2px" }}>
-                <TimeScroll
-                    startTime={this.state.window.start}
-                    endTime={this.state.window.end}
-                    items={this.state.mediaItems}
-                    position={this.state.position}
-                    onTimeChange={this.onTimeScrollChange.bind(this)}
-                />
-            </div>
+            <Row>
+                <Col style={{ margin: "2px", background: "black" }}>
 
-            <FileList
-                selected={this.state.source}
-                onSelectedFileChange={this.onSelectedFileChange.bind(this)}
-                files={this.fileManager.files}
-            />
+                    <TimeScroll
+                        startTime={this.state.window.start}
+                        endTime={this.state.window.end}
+                        items={this.state.mediaItems}
+                        position={this.state.position}
+                        onTimeChange={this.onTimeScrollChange.bind(this)}
+                    />
 
-        </div>
+                </Col>
+            </Row>
+            <Row>
+                <Col style={{ background: secondaryBackground }}>
+                    <FileList
+                        selected={this.state.source}
+                        onSelectedFileChange={this.onSelectedFileChange.bind(this)}
+                        files={this.fileManager.files}
+                    />
+                </Col>
+            </Row>
+        </div >
+
     }
 
     setDate(d) {

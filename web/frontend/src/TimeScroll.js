@@ -248,7 +248,9 @@ export default class TimeScroll extends React.Component {
         var hourTime = t - (t % hour);
         var nextHour = hourTime + hour;
 
+        // make sure they are in order
         var hours = document.getElementsByClassName("hour");
+        hours = Array.from(hours).sort((h1, h2) => h1.id.localeCompare(h2.id));
 
         // walk the hours looking for the one that matches this hour.
 
@@ -257,7 +259,10 @@ export default class TimeScroll extends React.Component {
             var hourEl = hours[i];
             var et = this.getElementTime(hourEl);
 
-            if (et === hourTime) {
+            // look for an element that is in the same hour
+            // as the target.  once we find that,
+            // start walking siblings
+            if (et >= hourTime && et < nextHour) {
 
                 // now walk siblings.
                 //
@@ -281,7 +286,6 @@ export default class TimeScroll extends React.Component {
                 }
                 break;
             }
-
         }
     }
 
@@ -470,7 +474,7 @@ export default class TimeScroll extends React.Component {
 
         });
 
-        var hourItem = <div key={id} className={cls} id={id} item_ids={itemIds.join(',')} time={unixStart} seconds={seconds} style={{
+        var timeItem = <div key={id} className={cls} id={id} item_ids={itemIds.join(',')} time={unixStart} seconds={seconds} style={{
             display: "inline-block",
             position: "relative",
             height: "100%",
@@ -486,7 +490,7 @@ export default class TimeScroll extends React.Component {
         </div>;
 
 
-        return hourItem;
+        return timeItem;
     }
 
     render() {

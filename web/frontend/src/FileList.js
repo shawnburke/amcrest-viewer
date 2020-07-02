@@ -147,11 +147,15 @@ class FileRow extends React.Component {
         var style = {
             paddingBottom: "2px"
         };
+
+        var selectedStyle = {
+
+        }
+
         const f = this.props.file;
 
         if (this.props.selected) {
-            style.background = "yellow";
-            style.color = "black";
+            style.background = "lightskyblue";
         }
 
 
@@ -159,15 +163,15 @@ class FileRow extends React.Component {
             id={this.props.id} onClick={this.props.onClick} key={'filerow' - f.id} style={style} file={f} >
             <Col xs={3} style={{ textAlign: "left" }}>
                 <img src={f.image} alt="thumb" style={{
-                    height: "70px"
+                    height: "70px",
+                    border: 'thin solid black'
                 }} />
             </Col>
-            <Col xs={3} style={{ textAlign: "left" }}>
+            <Col xs={8} style={{ textAlign: "left" }}>
                 <div>{f.timestamp.toLocaleTimeString()}</div>
 
                 <div>{f.duration_seconds}s</div>
             </Col>
-            <Col ><a href={f.path} target="_vid">{this.last(f.path.split('/'))}</a></Col>
         </Row>;
 
 

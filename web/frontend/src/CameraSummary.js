@@ -4,6 +4,12 @@ import { Row, Col } from 'react-bootstrap';
 
 
 class CameraSummary extends React.Component {
+    getSnapshotTime(c) {
+        if (c.latest_snapshot) {
+            return new Date(c.latest_snapshot.timestamp).toLocaleString();
+        }
+        return "";
+    }
     render() {
         document.title = "Camera Viewer";
         var rows = this.props.cameras.map((c) => {
@@ -13,20 +19,42 @@ class CameraSummary extends React.Component {
 
             if (c.latest_snapshot) {
                 snapshot = [<img style={{
-                    maxHeight: "100px"
+                    maxWidth: "100%",
+                    border: "thin solid black",
                 }} src={c.latest_snapshot.path} />];
             }
 
+            const radius = "5px";
+            const boxShadow = "2px 2px 8px #888888";
+
             return <Row key={c.name} style={{
                 border: "thin black solid",
-                background: "silver",
+                background: "#DDD",
                 padding: "5px",
-                margin: "5px"
-
+                margin: "5px",
+                MozBorderRadius: radius,
+                WebkitBorderRadius: radius,
+                MozBoxShadow: boxShadow,
+                WebkitBoxShadow: boxShadow,
+                boxShadow: boxShadow,
             }}>
                 <Col>
-                    <a href={'#cameras/' + c.id}><h1>{c.name}</h1></a>
-                    {snapshot}
+                    <a href={'#cameras/' + c.id}>
+                        {snapshot}
+                        <Row>
+                            <Col>
+                                <div style={{ textAlign: "left" }}>
+                                    <h4>{c.name}</h4>
+                                </div>
+                            </Col>
+                            <Col>
+                                <div style={{ textAlign: "right", fontSize: ".75em" }}>
+                                    {this.getSnapshotTime(c)}
+                                </div>
+                            </Col>
+                        </Row>
+
+                    </a>
                 </Col>
             </Row>
 
