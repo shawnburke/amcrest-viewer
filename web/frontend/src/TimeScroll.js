@@ -198,13 +198,12 @@ export default class TimeScroll extends React.Component {
             const target = Number(ids[0]);
             var item = el.item_map[target];
 
+            ids = ids.slice(1);
+
             if (!item || item === "x") {
                 console.error(`Couldn't find ${target}`);
                 continue;
             }
-
-            ids = ids.slice(1);
-
             if (this.fileContains(item, unixTime)) {
                 this.log(`Found item ${item.id} at ${iso(unixTime)}`)
                 return item;
