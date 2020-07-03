@@ -148,9 +148,6 @@ class FileRow extends React.Component {
             paddingBottom: "2px"
         };
 
-        var selectedStyle = {
-
-        }
 
         const f = this.props.file;
 

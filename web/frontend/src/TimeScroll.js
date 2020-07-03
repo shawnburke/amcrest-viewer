@@ -92,8 +92,10 @@ export default class TimeScroll extends React.Component {
         if (!el.attributes.time) {
             return;
         }
-        const sec = el.attributes.seconds.value;
-        const time = this.getElementTime(el);
+
+        const range = this.getElementRange(el);
+        const sec = range.seconds;
+        const time = range.start;
 
         var newTime = time + (1000 * sec * ratio);
 
@@ -193,6 +195,7 @@ export default class TimeScroll extends React.Component {
             console.log(`Map create time for ${item_ids.length} elements out of ${this.props.items.length}: ${new Date().getTime() - now.getTime()}ms`)
         }
 
+       
         while (ids.length > 0) {
 
             const target = Number(ids[0]);
@@ -204,40 +207,52 @@ export default class TimeScroll extends React.Component {
                 console.error(`Couldn't find ${target}`);
                 continue;
             }
-            if (this.fileContains(item, unixTime)) {
+            if (this.itemContains(item, unixTime)) {
                 this.log(`Found item ${item.id} at ${iso(unixTime)}`)
                 return item;
             }
         }
 
-        this.log(`No items in ${el.id} between ${iso(item.start)} => ${iso(item.end)} for ${iso(unixTime)}`)
+        var elRange = this.getElementRange(el);
+        this.log(`No items in ${el.id} between ${iso(elRange.start)} => ${iso(elRange.end)} for ${iso(unixTime)}`)
         return null;
     }
 
-    fileContains(f, time) {
-        var unixStart = toUnix(f.start);
-        var unixEnd = toUnix(f.end);
+    itemContains(item, time) {
+        if (!item.start) {
+            throw new Error("bad item:" + JSON.stringify(item))
+        }
+        var unixStart = toUnix(item.start);
+        var unixEnd = toUnix(item.end);
+        time = toUnix(time);
         return time >= unixStart && time < unixEnd;
     }
 
-    getElementTime(el) {
-        var childTime = el.attributes.time && el.attributes.time.value;
 
-        if (!childTime) {
-            return null;
+    getElementRange(el) {
+
+        var start = el.attributes.time && el.attributes.time.value;
+
+        if (!start) {
+            return {invalid: true}
         }
 
-        return this.toUnix(childTime);
-    }
+        var seconds = el.attributes.seconds && el.attributes.seconds.value;
+        seconds = seconds || 0;
 
-    getElementDuration(el) {
-        var s = el.attributes.seconds && el.attributes.seconds.value;
+        var ms = seconds * 1000;
 
-        if (!s) {
-            return 0;
+        start = toUnix(start)
+        var range = {
+            start: start,
+            seconds: seconds,
+            ms: ms,
+            end: start + ms,
+        };
+        range.contains = function(ts) {
+            return this.itemContains(range, ts);
         }
-
-        return Number(s) * 1000;
+        return range;
     }
 
     scrollToTime(t) {
@@ -256,27 +271,24 @@ export default class TimeScroll extends React.Component {
         for (var i = 0; i < hours.length; i++) {
 
             var hourEl = hours[i];
-            var et = this.getElementTime(hourEl);
-
+            var elRange = this.getElementRange(hourEl);
+           
             // look for an element that is in the same hour
             // as the target.  once we find that,
             // start walking siblings
-            if (et >= hourTime && et < nextHour) {
+            if (elRange.start >= hourTime && elRange.start < nextHour) {
 
                 // now walk siblings.
                 //
                 while (hourEl) {
-                    et = this.getElementTime(hourEl);
+                    elRange = this.getElementRange(hourEl);
 
-                    if (et > nextHour) {
+                    if (elRange.start > nextHour) {
                         return;
                     }
 
-                    var d = this.getElementDuration(hourEl);
-                    var elEnd = et + d;
-
-                    if (t < elEnd) {
-                        var ratio = ((t - et)) / d;
+                    if (t < elRange.end) {
+                        var ratio = ((t - elRange.start)) / elRange.ms;
                         this.scrollToElement(hourEl, ratio);
                         return;
                     }
@@ -308,9 +320,9 @@ export default class TimeScroll extends React.Component {
             var el = document.elementFromPoint(selPoint.x, selPoint.y);
             while (el !== this.myRef.current) {
 
-                var t = this.getElementTime(el);
+                var r = this.getElementRange(el);
 
-                if (!t) {
+                if (r.invalid) {
                     el = el.parentElement;
                     continue;
                 }

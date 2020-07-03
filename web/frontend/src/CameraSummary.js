@@ -18,7 +18,7 @@ class CameraSummary extends React.Component {
             var snapshot = [<span></span>];
 
             if (c.latest_snapshot) {
-                snapshot = [<img style={{
+                snapshot = [<img alt="snapshot" style={{
                     maxWidth: "100%",
                     border: "thin solid black",
                 }} src={c.latest_snapshot.path} />];
