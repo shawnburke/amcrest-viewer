@@ -44,8 +44,9 @@ func New(
 ) (AmcrestResult, error) {
 
 	amcrest := &amcrestCameraType{
-		logger: logger,
-		local:  localTime,
+		logger:  logger,
+		local:   localTime,
+		cameras: map[int]*amcrestApi{},
 	}
 
 	if val := cfg.Get(configKey); val.HasValue() {
@@ -65,6 +66,7 @@ type amcrestCameraType struct {
 	local   *time.Location
 	cfg     amcrestConfig
 	cliPath *string
+	cameras map[int]*amcrestApi
 }
 
 func (ac *amcrestCameraType) Name() string {
@@ -90,6 +92,18 @@ func (ac *amcrestCameraType) Capabilities() common.Capabilities {
 	return common.Capabilities{
 		Snapshot: ac.amcrestCliPath() != "",
 	}
+}
+
+func (ac *amcrestCameraType) getApi(cam *entities.Camera) *amcrestApi {
+	api, ok := ac.cameras[cam.ID]
+	if !ok {
+		api = &amcrestApi{
+			Camera: cam,
+			logger: ac.logger,
+		}
+		ac.cameras[cam.ID] = api
+	}
+	return api
 }
 
 func (ac *amcrestCameraType) ParseFilePath(cam *entities.Camera, p string) (*models.MediaFile, error) {

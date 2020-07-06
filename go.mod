@@ -5,10 +5,12 @@ go 1.12
 replace github.com/shawnburke/amcrest-viewer/web => ./web
 
 require (
+	github.com/bobziuchkovski/digest v0.0.0-20160204210651-26857231d60c
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190712054601-1149070ae46b
 	github.com/golang-migrate/migrate/v4 v4.11.0
 	github.com/gorilla/mux v1.7.4
+	github.com/icholy/digest v0.1.7
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
