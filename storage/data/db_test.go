@@ -194,6 +194,23 @@ func TestFileAddGetList(t *testing.T) {
 	require.Equal(t, 1145, cs.FileSize)
 	require.Equal(t, 10, cs.FileCount)
 	require.Equal(t, start.Truncate(time.Second), cs.MinDate)
+
+	res, err = rep.ListFiles(cam.CameraID(), nil)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res, 10)
+
+	// delete the files
+	for _, file := range res {
+		deleted, err := rep.DeleteFile(file.ID)
+		require.True(t, deleted)
+		require.NoError(t, err)
+	}
+
+	res, err = rep.ListFiles(cam.CameraID(), nil)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res, 0)
 }
 
 func dumpTables(db *sqlx.DB) {

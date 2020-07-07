@@ -86,7 +86,7 @@ func (mr *mockRepo) AddFile(path string, t int, cameraID string, l int, timestam
 	panic("not implemented") // TODO: Implement
 }
 
-func (mr *mockRepo) DeleteFile(id int) error {
+func (mr *mockRepo) DeleteFile(id int) (bool, error) {
 	panic("not implemented") // TODO: Implement
 }
 

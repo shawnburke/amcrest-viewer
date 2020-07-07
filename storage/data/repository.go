@@ -29,7 +29,7 @@ type Repository interface {
 
 	// File operations
 	AddFile(path string, t int, cameraID string, length int, timestamp time.Time, duration *time.Duration) (*entities.File, error)
-	DeleteFile(id int) error
+	DeleteFile(id int) (bool, error)
 	GetFile(id int) (*entities.File, error)
 	GetLatestFile(cameraID string, fileType int) (*entities.File, error)
 
@@ -453,9 +453,19 @@ func (sr *sqlRepository) AddFile(
 	return sr.GetFile(int(id))
 }
 
-func (sr *sqlRepository) DeleteFile(id int) error {
-	_, err := sr.db.Queryx(`DELETE * FROM files WHERE ID=$1`, id)
-	return err
+func (sr *sqlRepository) DeleteFile(id int) (bool, error) {
+	r, err := sr.db.Exec(`DELETE FROM files WHERE ID=$1`, id)
+
+	if err != nil {
+		return false, err
+	}
+
+	ra, err := r.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return ra == 1, nil
 }
 
 func (sr *sqlRepository) GetFile(id int) (*entities.File, error) {

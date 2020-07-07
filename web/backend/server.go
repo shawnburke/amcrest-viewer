@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/shawnburke/amcrest-viewer/common"
+	"github.com/shawnburke/amcrest-viewer/storage"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/shawnburke/amcrest-viewer/storage/file"
@@ -34,6 +35,7 @@ type HttpParams struct {
 	Data   data.Repository
 	Files  file.Manager
 	Config config.Provider
+	GC     storage.GCManager
 }
 
 func New(p HttpParams) HttpServer {
@@ -44,6 +46,7 @@ func New(p HttpParams) HttpServer {
 		args:     p.Args,
 		data:     p.Data,
 		files:    p.Files,
+		gc:       p.GC,
 	}
 
 	frontendPath := ""
@@ -77,6 +80,7 @@ type Server struct {
 
 	data  data.Repository
 	files file.Manager
+	gc    storage.GCManager
 }
 
 func (s *Server) Start() error {
@@ -465,6 +469,19 @@ func (s *Server) getFileInfo(w http.ResponseWriter, r *http.Request) {
 	s.writeJson(fi[0], w, 200)
 }
 
+func (s *Server) adminTriggerGC(w http.ResponseWriter, r *http.Request) {
+	if s.gc != nil {
+		err := s.gc.Cleanup()
+		if s.writeError(err, w, 500) {
+			return
+		}
+		w.WriteHeader(200)
+		return
+	}
+	w.Write([]byte("GC not available"))
+	w.WriteHeader(404)
+}
+
 const mimeTextPlain = "text/plain"
 
 func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
@@ -540,6 +557,8 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files/{file-id}").HandlerFunc(s.getFile)
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files/{file-id}/info").HandlerFunc(s.getFileInfo)
+
+	s.r.Methods("POST").Path("/api/admin/gc").HandlerFunc(s.adminTriggerGC)
 
 	s.Logger.Info("web server path", zap.String("path", frontendPath))
 	// website

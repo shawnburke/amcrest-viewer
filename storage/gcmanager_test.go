@@ -101,9 +101,9 @@ func (dm *mockDataManager) AddFile(path string, t int, cameraID string, length i
 	panic("not implemented") // TODO: Implement
 }
 
-func (dm *mockDataManager) DeleteFile(id int) error {
+func (dm *mockDataManager) DeleteFile(id int) (bool, error) {
 	dm.deletedFiles = append(dm.deletedFiles, id)
-	return nil
+	return true, nil
 }
 
 func (dm *mockDataManager) GetFile(id int) (*entities.File, error) {

@@ -2,8 +2,11 @@ package storage
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
 	"github.com/shawnburke/amcrest-viewer/storage/file"
@@ -14,6 +17,7 @@ import (
 type GCManager interface {
 	Start() error
 	Stop() error
+	Cleanup() error
 }
 
 func NewGCManager(
@@ -50,6 +54,7 @@ func NewGCManager(
 }
 
 type gcManager struct {
+	sync.Mutex
 	logger   *zap.Logger
 	period   time.Duration
 	data     data.Repository
@@ -68,6 +73,10 @@ func (gc *gcManager) Start() error {
 }
 
 func (gc *gcManager) cleanupCore() error {
+
+	gc.Lock()
+	defer gc.Unlock()
+
 	// get the list of cameras
 	cams, err := gc.data.ListCameras()
 	if err != nil {
@@ -75,11 +84,15 @@ func (gc *gcManager) cleanupCore() error {
 		return err
 	}
 
+	errs := []error{}
+
 	for _, cam := range cams {
 		camCount := 0
 		mbCount := 0
 		// get the files from the db for this camera
 		cutoff := gc.time.Now().AddDate(0, 0, cam.MaxFileAgeDays*-1)
+
+		gc.logger.Info("Running GC cleanup", zap.String("camera-id", cam.CameraID()), zap.Time("before", cutoff))
 
 		filter := &data.ListFilesFilter{
 			End: &cutoff,
@@ -97,12 +110,21 @@ func (gc *gcManager) cleanupCore() error {
 				continue
 			}
 
-			err = gc.data.DeleteFile(file.ID)
+			found, err := gc.data.DeleteFile(file.ID)
 			if err != nil {
 				gc.logger.Error("Error deleting file from DB",
 					zap.Int("file-id", file.ID),
 					zap.String("file-path", file.Path),
 					zap.Error(err))
+				errs = append(errs, fmt.Errorf("Error deleting file %d from disk: %w", file.ID, err))
+				continue
+			}
+
+			if !found {
+				gc.logger.Warn("Tried to delete non-existent file",
+					zap.String("camera-id", cam.CameraID()),
+					zap.Int("file-id", file.ID),
+				)
 			}
 
 			_, err = gc.files.DeleteFile(file.Path)
@@ -112,6 +134,8 @@ func (gc *gcManager) cleanupCore() error {
 					zap.String("file-path", file.Path),
 					zap.Error(err),
 				)
+				errs = append(errs, fmt.Errorf("Error deleting file %d from disk: %w", file.ID, err))
+				continue
 			}
 			camCount++
 			mbCount += (file.Length / (1024 * 1024))
@@ -120,11 +144,20 @@ func (gc *gcManager) cleanupCore() error {
 
 		// TODO: size-based cleanup
 	}
+
+	if len(errs) > 0 {
+		messages := ""
+
+		for _, err := range errs {
+			messages = messages + "\n" + err.Error()
+		}
+		return errors.New("Errors doing GC:\n" + messages)
+	}
+
 	return nil
 }
 
 func (gc *gcManager) runCleanup() {
-
 	ticker := time.NewTicker(gc.period)
 
 	for {
@@ -140,6 +173,10 @@ func (gc *gcManager) runCleanup() {
 		gc.cleanupCore()
 	}
 
+}
+
+func (gc *gcManager) Cleanup() error {
+	return gc.cleanupCore()
 }
 
 func (gc *gcManager) Stop() error {
