@@ -66,7 +66,7 @@ func (us userSpaces) Get(user string) *userSpace {
 	}
 
 	s = newUserSpace(user, path.Join(us.root, user))
-	us.logger.Info("Creating new space", zap.String("user", user), zap.String("root", s.root))
+	us.logger.Info("Creating new user space", zap.String("user", user), zap.String("root", s.root))
 	us.spaces[user] = s
 	return s
 }
@@ -146,7 +146,7 @@ func (us *userSpace) CreateDriver() ftps.Driver {
 }
 
 func (fd *proxyDriver) Init(c *ftps.Conn) {
-	fd.logger.Info("Connection initiated")
+	fd.logger.Debug("Connection initiated")
 	fd.conn = c
 }
 
@@ -157,10 +157,6 @@ func (fd *proxyDriver) driver() ftps.Driver {
 		user := fd.conn.LoginUser()
 		fd.userSpace = fd.usersSpaces.Get(user)
 		fd.userDriver = fd.userSpace.CreateDriver()
-		fd.logger.Info("Created userspace",
-			zap.String("user", user),
-			zap.String("ip", fd.conn.PublicIp()),
-		)
 	}
 	return fd.userDriver
 }
@@ -172,7 +168,7 @@ const cleanupTime = time.Minute * 5
 //         - an error if the file doesn't exist or the user lacks
 //           permissions
 func (fd *proxyDriver) Stat(p string) (ftps.FileInfo, error) {
-	fd.logger.Info("STAT", zap.String("path", p))
+	fd.logger.Debug("STAT", zap.String("path", p))
 	return fd.driver().Stat(p)
 }
 
@@ -180,7 +176,7 @@ func (fd *proxyDriver) Stat(p string) (ftps.FileInfo, error) {
 // returns - true if the current user is permitted to change to the
 //           requested path
 func (fd *proxyDriver) ChangeDir(p string) error {
-	fd.logger.Info("CWD", zap.String("path", p))
+	fd.logger.Debug("CWD", zap.String("path", p))
 
 	return fd.driver().ChangeDir(p)
 }
@@ -189,28 +185,28 @@ func (fd *proxyDriver) ChangeDir(p string) error {
 // returns - error
 //           path
 func (fd *proxyDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
-	fd.logger.Info("LIST", zap.String("path", p))
+	fd.logger.Debug("LIST", zap.String("path", p))
 	return fd.driver().ListDir(p, r)
 }
 
 // params  - path
 // returns - nil if the directory was deleted or any error encountered
 func (fd *proxyDriver) DeleteDir(p string) error {
-	fd.logger.Info("RMDIR", zap.String("path", p))
+	fd.logger.Debug("RMDIR", zap.String("path", p))
 	return fd.driver().DeleteDir(p)
 }
 
 // params  - path
 // returns - nil if the file was deleted or any error encountered
 func (fd *proxyDriver) DeleteFile(p string) error {
-	fd.logger.Info("RM", zap.String("path", p))
+	fd.logger.Debug("RM", zap.String("path", p))
 	return fd.driver().DeleteFile(p)
 }
 
 // params  - from_path, to_path
 // returns - nil if the file was renamed or any error encountered
 func (fd *proxyDriver) Rename(s string, d string) error {
-	fd.logger.Info("REN", zap.String("path", s), zap.String("dest", d))
+	fd.logger.Debug("REN", zap.String("path", s), zap.String("dest", d))
 
 	srcFile, err := fd.toFtpFile(s)
 	if err != nil {
@@ -243,7 +239,7 @@ func (fd *proxyDriver) Rename(s string, d string) error {
 // params  - path
 // returns - nil if the new directory was created or any error encountered
 func (fd *proxyDriver) MakeDir(p string) error {
-	fd.logger.Info("MKDIR", zap.String("path", p))
+	fd.logger.Debug("MKDIR", zap.String("path", p))
 	return fd.driver().MakeDir(p)
 }
 
@@ -251,8 +247,6 @@ func (fd *proxyDriver) MakeDir(p string) error {
 // returns - a string containing the file data to send to the client
 func (fd *proxyDriver) GetFile(p string, n int64) (int64, io.ReadCloser, error) {
 	fd.logger.Error("GET", zap.String("path", p))
-
-	// return fd.driver().GetFile(p, n)
 	return 0, nil, os.ErrInvalid
 }
 
@@ -260,7 +254,7 @@ func (fd *proxyDriver) GetFile(p string, n int64) (int64, io.ReadCloser, error) 
 // returns - the number of bytes writen and the first error encountered while writing, if any.
 func (fd *proxyDriver) PutFile(destPath string, data io.Reader, appendData bool) (int64, error) {
 
-	fd.logger.Info("PUT", zap.String("path", destPath))
+	fd.logger.Debug("PUT", zap.String("path", destPath))
 
 	n, err := fd.driver().PutFile(destPath, data, appendData)
 
@@ -273,6 +267,8 @@ func (fd *proxyDriver) PutFile(destPath string, data io.Reader, appendData bool)
 	if err != nil {
 		return 0, err
 	}
+
+	fd.logger.Info("FTP Received file", zap.String("user", fd.conn.LoginUser()), zap.String("path", f.FullName))
 
 	fd.bus.Send(NewFileCreateEvent(f))
 

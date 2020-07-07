@@ -11,11 +11,11 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
+	"github.com/shawnburke/amcrest-viewer/cameras"
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/ftp"
 	"github.com/shawnburke/amcrest-viewer/ingest"
 	"github.com/shawnburke/amcrest-viewer/storage"
-	"github.com/shawnburke/amcrest-viewer/cameras"
 	web "github.com/shawnburke/amcrest-viewer/web/backend"
 )
 
@@ -54,7 +54,7 @@ func buildGraph(cfg config.Provider) fx.Option {
 		}),
 		// basics
 		fx.Provide(configFunc),
-		fx.Provide(zap.NewDevelopment),
+		fx.Provide(logger),
 		fx.Provide(tz),
 		fx.Provide(common.NewTime),
 		fx.Provide(common.NewEventBus),
@@ -79,6 +79,15 @@ func tz() *time.Location {
 		panic(err)
 	}
 	return loc
+}
+
+func logger() (*zap.Logger, error) {
+
+	cfg := zap.NewDevelopmentConfig()
+
+	cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+
+	return cfg.Build()
 }
 
 func register(lifecycle fx.Lifecycle, ftps ftp.FtpServer, web web.HttpServer, logger *zap.Logger) {

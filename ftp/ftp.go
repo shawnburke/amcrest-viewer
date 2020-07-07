@@ -52,6 +52,7 @@ func (fs *ftpFileSystem) Start() error {
 		Port:     fs.port,
 		Hostname: fs.host,
 		Auth:     createAuth(fs.auth, fs.bus, fs.logger),
+		Logger:   &zapLogger{logger: fs.logger, debug: true},
 	}
 
 	fs.server = ftps.NewServer(opts)
@@ -80,4 +81,45 @@ func (fs *ftpFileSystem) Stop() error {
 		return server.Shutdown()
 	}
 	return nil
+}
+
+type zapLogger struct {
+	logger *zap.Logger
+	debug  bool
+}
+
+func (logger *zapLogger) log(sessionId string, format string, v ...interface{}) {
+	sugared := logger.logger.Sugar()
+
+	f := sugared.Infof
+
+	if logger.debug {
+		f = sugared.Debugf
+	}
+
+	v2 := []interface{}{sessionId}
+	v2 = append(v2, v...)
+	f("%s: "+format, v2...)
+}
+
+func (logger *zapLogger) Print(sessionId string, message interface{}) {
+
+	logger.log(sessionId, "%s", message)
+}
+
+func (logger *zapLogger) Printf(sessionId string, format string, v ...interface{}) {
+	logger.log(sessionId, format, v...)
+}
+
+func (logger *zapLogger) PrintCommand(sessionId string, command string, params string) {
+
+	if command == "PASS" {
+		logger.log(sessionId, "%> PASS ****")
+	} else {
+		logger.log(sessionId, " > %s %s", command, params)
+	}
+}
+
+func (logger *zapLogger) PrintResponse(sessionId string, code int, message string) {
+	logger.log(sessionId, " < %d %s", code, message)
 }
