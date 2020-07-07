@@ -196,6 +196,14 @@ type getCameraResult struct {
 	LatestSnapshot *entities.File `json:"latest_snapshot,omitempty"`
 }
 
+func newCameraResult(cam *entities.Camera) *getCameraResult {
+	cr := &getCameraResult{
+		Camera: cam,
+	}
+	cr.CameraCreds.Password = nil
+	return cr
+}
+
 func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
 
 	strID := mux.Vars(r)["camera-id"]
@@ -206,9 +214,7 @@ func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := &getCameraResult{
-		Camera: cam,
-	}
+	res := newCameraResult(cam)
 
 	if ls := r.URL.Query().Get("latest_snapshot"); ls == "true" || ls == "1" {
 		f, err := s.data.GetLatestFile(strID, 0)
@@ -327,7 +333,7 @@ func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
 
 	for i, cam := range cams {
 
-		r1 := &getCameraResult{Camera: cam}
+		r1 := newCameraResult(cam)
 
 		if ls := r.URL.Query().Get("latest_snapshot"); ls == "true" || ls == "1" {
 

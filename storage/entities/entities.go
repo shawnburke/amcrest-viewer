@@ -19,8 +19,8 @@ type Camera struct {
 }
 
 type CameraCreds struct {
-	Username *string `db:"Username" json:"username"`
-	Password *string `db:"Password" json:"password"`
+	Username *string `db:"Username" json:"username,omitempty"`
+	Password *string `db:"Password" json:"password,omitempty"`
 }
 
 func (c Camera) CameraID() string {
