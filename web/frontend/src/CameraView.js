@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-import { Row, Col,Button } from 'react-bootstrap';
+import { Row, Col, Button } from 'react-bootstrap';
 
 import ServiceBroker from "./shared/ServiceBroker";
 import Player from "./Player";
@@ -18,12 +18,12 @@ class CameraView extends React.Component {
         super(props);
 
         // TODO: fix hack
-        this.camid=this.props.cameraid;
+        this.camid = this.props.cameraid;
 
         if (this.camid.toString().indexOf("-") === -1) {
-            this.camid= "amcrest-" + this.camid;
+            this.camid = "amcrest-" + this.camid;
         }
-      
+
         this.serviceBroker = new ServiceBroker();
 
         this.fileManager = new FileManager(this.camid, this.serviceBroker);
@@ -110,7 +110,7 @@ class CameraView extends React.Component {
         this.fileManager.setPosition(time, item && item.file);
 
         this.stopLiveView();
-    
+
     }
 
     onSelectedFileChange(f) {
@@ -145,8 +145,9 @@ class CameraView extends React.Component {
                 source: {
                     path: uri,
                     type: 2,
-                }
-            })
+                },
+            });
+            this.fileManager.setPosition(new Date())
         });
     }
 
@@ -228,10 +229,10 @@ class CameraView extends React.Component {
 
                 </Col>
                 <Col xs={1} ><Button style={{
-                    marginTop:"20px",
+                    marginTop: "20px",
                     background: this.state.source && this.state.source.type === 2 ? "red" : "blue",
                 }}
-                onClick={this.onLiveClick.bind(this)}>Live</Button></Col>
+                    onClick={this.onLiveClick.bind(this)}>Live</Button></Col>
             </Row>
             <Row>
                 <Col style={{ background: secondaryBackground }}>

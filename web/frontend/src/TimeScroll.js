@@ -195,7 +195,7 @@ export default class TimeScroll extends React.Component {
             console.log(`Map create time for ${item_ids.length} elements out of ${this.props.items.length}: ${new Date().getTime() - now.getTime()}ms`)
         }
 
-       
+
         while (ids.length > 0) {
 
             const target = Number(ids[0]);
@@ -231,10 +231,10 @@ export default class TimeScroll extends React.Component {
 
     getElementRange(el) {
 
-        var start = el.attributes.time && el.attributes.time.value;
+        var start = el && el.attributes.time && el.attributes.time.value;
 
         if (!start) {
-            return {invalid: true}
+            return { invalid: true }
         }
 
         var seconds = el.attributes.seconds && el.attributes.seconds.value;
@@ -249,7 +249,7 @@ export default class TimeScroll extends React.Component {
             ms: ms,
             end: start + ms,
         };
-        range.contains = function(ts) {
+        range.contains = function (ts) {
             return this.itemContains(range, ts);
         }
         return range;
@@ -272,7 +272,7 @@ export default class TimeScroll extends React.Component {
 
             var hourEl = hours[i];
             var elRange = this.getElementRange(hourEl);
-           
+
             // look for an element that is in the same hour
             // as the target.  once we find that,
             // start walking siblings
