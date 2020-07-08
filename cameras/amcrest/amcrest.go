@@ -90,7 +90,8 @@ func (ac *amcrestCameraType) amcrestCliPath() string {
 func (ac *amcrestCameraType) Capabilities() common.Capabilities {
 
 	return common.Capabilities{
-		Snapshot: ac.amcrestCliPath() != "",
+		LiveStream: true,
+		Snapshot:   ac.amcrestCliPath() != "",
 	}
 }
 
@@ -187,6 +188,22 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 	}
 
 	return res, nil
+}
+
+func (ac *amcrestCameraType) RtspUri(cam *entities.Camera) (string, error) {
+
+	if cam.Host == nil || cam.Username == nil || cam.Password == nil {
+		return "", fmt.Errorf("RTSP requires camera host, user, password")
+	}
+
+	uri := fmt.Sprintf(
+		"rtsp://%s:%s@%s:554/cam/realmonitor?channel=1&subtype=1",
+		*cam.Username,
+		*cam.Password,
+		*cam.Host,
+	)
+
+	return uri, nil
 }
 
 type deleteOnClose struct {

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -18,6 +19,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
+	"github.com/shawnburke/amcrest-viewer/cameras"
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
@@ -36,6 +38,7 @@ type HttpParams struct {
 	Files  file.Manager
 	Config config.Provider
 	GC     storage.GCManager
+	Rtsp   cameras.RtspServer
 }
 
 func New(p HttpParams) HttpServer {
@@ -47,6 +50,7 @@ func New(p HttpParams) HttpServer {
 		data:     p.Data,
 		files:    p.Files,
 		gc:       p.GC,
+		rtsp:     p.Rtsp,
 	}
 
 	frontendPath := ""
@@ -81,6 +85,7 @@ type Server struct {
 	data  data.Repository
 	files file.Manager
 	gc    storage.GCManager
+	rtsp  cameras.RtspServer
 }
 
 func (s *Server) Start() error {
@@ -249,6 +254,66 @@ func (s *Server) getCameraStats(w http.ResponseWriter, r *http.Request) {
 
 	s.writeJson(cam, w, 200)
 
+}
+
+const streamMarker = "/live/"
+
+func (s *Server) getCameraLiveStream(w http.ResponseWriter, r *http.Request) {
+
+	// get the RTSP support for this camera
+
+	strID := mux.Vars(r)["camera-id"]
+
+	rtspPath, err := s.rtsp.StreamPath(strID)
+
+	if s.writeError(err, w, 500) {
+		return
+	}
+
+	rtspPath = fmt.Sprintf("/api/cameras/%s%s%s", strID, streamMarker, rtspPath)
+
+	// make sure we didn't get any double slashes
+	rtspPath = strings.Replace(rtspPath, "//", "/", -1)
+
+	if r.URL.Query().Get("redirect") != "false" {
+		// redirect to the RTSP path
+		//
+		http.Redirect(w, r, rtspPath, 301)
+		return
+	}
+
+	res := struct {
+		URI string `json:"uri"`
+	}{
+		URI: rtspPath,
+	}
+
+	s.writeJson(res, w, 200)
+
+}
+
+func (s *Server) handleCameraLiveStream(w http.ResponseWriter, r *http.Request) {
+
+	// get the RTSP support for this camera
+
+	strID := mux.Vars(r)["camera-id"]
+
+	p := r.URL.Path
+
+	markerIndex := strings.Index(p, streamMarker)
+
+	if markerIndex == -1 {
+		w.WriteHeader(400)
+		return
+	}
+
+	p = p[markerIndex+len(streamMarker):]
+
+	err := s.rtsp.Handle(strID, p, w, r)
+
+	if s.writeError(err, w, 500) {
+		return
+	}
 }
 
 func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
@@ -554,6 +619,11 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
 	s.r.Methods("GET").Path("/api/cameras").HandlerFunc(s.listCameras)
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}").HandlerFunc(s.getCamera)
+	s.r.Methods("GET").Path("/api/cameras/{camera-id}/live").HandlerFunc(s.getCameraLiveStream)
+
+	// RTSP
+	s.r.Methods("GET").PathPrefix("/api/cameras/{camera-id}/live/stream").HandlerFunc(s.handleCameraLiveStream)
+
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/stats").HandlerFunc(s.getCameraStats)
 
 	s.r.Methods("PUT").Path("/api/cameras/{camera-id}").HandlerFunc(s.updateCamera)

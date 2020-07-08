@@ -12,6 +12,7 @@ import (
 var Module = fx.Options(
 	fx.Provide(amcrest.New),
 	fx.Provide(NewRegistry),
+	fx.Provide(NewRtsp),
 	fx.Invoke(NewSnapshotManager),
 )
 

@@ -77,6 +77,38 @@ class CamerasService {
 
     }
 
+    async getLiveStreamUrl(id) {
+        return fetch(`${this.url}/${id}/live?redirect=false`)
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                this.handleResponseError(response);
+
+            }
+
+            return response.json();
+
+        })
+
+        .then(item => {
+            if (!item || !item.uri) {
+                console.log(`Didn't get uri from live request`)
+            }
+            return item.uri;
+
+        }
+
+        )
+
+        .catch(error => {
+
+            this.handleError(error);
+
+        });
+    }
+
     async getStats(id) {
 
 

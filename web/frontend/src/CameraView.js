@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-import { Row, Col } from 'react-bootstrap';
+import { Row, Col,Button } from 'react-bootstrap';
 
 import ServiceBroker from "./shared/ServiceBroker";
 import Player from "./Player";
@@ -18,9 +18,15 @@ class CameraView extends React.Component {
         super(props);
 
         // TODO: fix hack
-        var camid = "amcrest-" + this.props.cameraid;
+        this.camid=this.props.cameraid;
 
-        this.fileManager = new FileManager(camid, new ServiceBroker());
+        if (this.camid.toString().indexOf("-") === -1) {
+            this.camid= "amcrest-" + this.camid;
+        }
+      
+        this.serviceBroker = new ServiceBroker();
+
+        this.fileManager = new FileManager(this.camid, this.serviceBroker);
 
 
         this.fileManager.onChange = this._fileManagerChange.bind(this);
@@ -80,6 +86,13 @@ class CameraView extends React.Component {
             })
         }
 
+        if (change.source !== undefined) {
+            this.setState({
+                source: change.source
+            })
+        }
+
+
         if (change.position !== undefined) {
             this.setState({
                 position: change.position
@@ -87,15 +100,54 @@ class CameraView extends React.Component {
         }
     }
 
+    isLiveView() {
+        var isLive = this.state.source && this.state.source.type === 2;
+        return isLive;
+    }
+
     onTimeScrollChange(time, item) {
 
         this.fileManager.setPosition(time, item && item.file);
+
+        this.stopLiveView();
+    
     }
 
     onSelectedFileChange(f) {
 
         this.fileManager.setCurrentFile(f);
 
+    }
+
+    stopLiveView() {
+        if (this.isLiveView()) {
+            var fmState = this.fileManager.getState();
+            if (fmState.file) {
+                this.setState({
+                    source: fmState.file,
+                })
+            }
+            return true
+        }
+        return false;
+    }
+
+    onLiveClick() {
+
+        if (this.stopLiveView()) {
+            return;
+        }
+
+        var fileService = this.serviceBroker.newCamsService();
+
+        fileService.getLiveStreamUrl(this.camid).then(uri => {
+            this.setState({
+                source: {
+                    path: uri,
+                    type: 2,
+                }
+            })
+        });
     }
 
     getTimeItems(files) {
@@ -164,7 +216,7 @@ class CameraView extends React.Component {
 
             </Row>
             <Row>
-                <Col style={{ margin: "2px", background: "black" }}>
+                <Col xs={10} style={{ margin: "2px", background: "black" }}>
 
                     <TimeScroll
                         startTime={this.state.window.start}
@@ -175,6 +227,11 @@ class CameraView extends React.Component {
                     />
 
                 </Col>
+                <Col xs={1} ><Button style={{
+                    marginTop:"20px",
+                    background: this.state.source && this.state.source.type === 2 ? "red" : "blue",
+                }}
+                onClick={this.onLiveClick.bind(this)}>Live</Button></Col>
             </Row>
             <Row>
                 <Col style={{ background: secondaryBackground }}>

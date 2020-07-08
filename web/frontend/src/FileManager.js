@@ -168,6 +168,15 @@ export class FileManager {
         };
     }
 
+    getState() {
+        return {
+            range: this.range,
+            window: this.window,
+            file: this.file,
+            position: this.position,
+        }
+    }
+
 
 
     setRange(min, max) {

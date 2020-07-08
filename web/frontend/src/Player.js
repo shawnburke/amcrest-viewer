@@ -21,9 +21,10 @@ export default class Player extends React.Component {
             return;
         }
 
-        if (!this.videoReady) {
+        if (!this.videoReady || this.live) {
             return;
         }
+
         var delta = toUnix(this.props.position) - toUnix(this.props.file.start);
         this.player.seekTo(delta / 1000, "seconds");
     }
@@ -47,20 +48,16 @@ export default class Player extends React.Component {
         return true;
     }
 
+    renderVideoPlayer(val, live) {
 
-    render() {
-
-        if (this.props.file == null) {
-            return <div></div>;
+        // for debugging
+        if (live && val.path === "prompt") {
+            val.path = window.prompt("Enter streaming source");
         }
+        this.live = live;
 
-
-        var val = this.props.file;
-
-
-        if (val.type === 1) {
-            return <ReactPlayer
-                controls
+        return <ReactPlayer
+                controls={!live}
                 ref={this.playerRef}
                 url={val.path}
                 width="100%"
@@ -74,15 +71,35 @@ export default class Player extends React.Component {
                 }}
                 onReady={this.onVideoReady.bind(this)}
             />;
+    }
+
+    renderImage(val) {
+        return <img alt="view" src={val.path} style={{
+            height: "100%"
+        }} />;
+    }
+
+    render() {
+
+        if (this.props.file == null) {
+            return <div></div>;
         }
 
-        if (val.type === 0) {
-            return <img alt="view" src={val.path} style={{
-                height: "100%"
-            }} />;
-        }
 
-        return <div></div>;
+        var val = this.props.file;
+
+        switch (val.type) {
+            case 1:
+            case 2:
+              return this.renderVideoPlayer(val, val.type===2)
+            
+            case 0:
+                return this.renderImage(val);
+
+            default:
+                console.error(`Unknown media file type ${val.type}`);
+                return <div>Bad file type</div>
+        }
 
     }
 }

@@ -27,6 +27,11 @@ class CamerasService {
 
     }
 
+
+    async getLiveStreamUrl(id) { 
+        return Promise.resolve("prompt");
+    }
+
     async getItem(id) {
 
         for (var i = 0; i < this.cameras.length; i++) {

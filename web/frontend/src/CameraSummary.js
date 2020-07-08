@@ -6,9 +6,13 @@ import { Row, Col } from 'react-bootstrap';
 class CameraSummary extends React.Component {
     getSnapshotTime(c) {
         if (c.latest_snapshot) {
-            return new Date(c.latest_snapshot.timestamp).toLocaleString();
+            var d = new Date(c.latest_snapshot.timestamp);
+            return {
+                label:d.toLocaleString(),
+                seconds_old: Math.trunc((new Date().getTime() - d.getTime())/ 1000),
+            } ;
         }
-        return "";
+        return {};
     }
     render() {
         document.title = "Camera Viewer";
@@ -26,6 +30,7 @@ class CameraSummary extends React.Component {
 
             const radius = "5px";
             const boxShadow = "2px 2px 8px #888888";
+            var snapshotTime = this.getSnapshotTime(c)
 
             return <Row key={c.name} style={{
                 border: "thin black solid",
@@ -49,8 +54,10 @@ class CameraSummary extends React.Component {
                             </Col>
                             <Col>
                                 <div style={{ textAlign: "right", fontSize: ".75em" }}>
-                                    {this.getSnapshotTime(c)}
+                                    {snapshotTime.label}<br/>
+                                    {snapshotTime.seconds_old}s
                                 </div>
+                                
                             </Col>
                         </Row>
 
