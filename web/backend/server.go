@@ -275,6 +275,8 @@ func (s *Server) getCameraLiveStream(w http.ResponseWriter, r *http.Request) {
 	// make sure we didn't get any double slashes
 	rtspPath = strings.Replace(rtspPath, "//", "/", -1)
 
+	w.Header().Add("Cache-Control", "no-store")
+
 	if r.URL.Query().Get("redirect") != "false" {
 		// redirect to the RTSP path
 		//

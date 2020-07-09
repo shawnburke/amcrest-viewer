@@ -166,11 +166,14 @@ func (r *rtspServer) Handle(cameraID string, path string, w http.ResponseWriter,
 			zap.Int("status-code", resp.StatusCode),
 			zap.String("path", p),
 		)
+		w.WriteHeader(resp.StatusCode)
+		return nil
 	}
 
 	for k, v := range resp.Header {
 		w.Header().Add(k, v[0])
 	}
+	w.Header().Add("Cache-Control", "no-store")
 
 	bytes, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()

@@ -21,7 +21,7 @@ export default class Player extends React.Component {
             return;
         }
 
-        if (!this.videoReady || this.live) {
+        if (!this.videoReady || this.live || !this.props.position) {
             return;
         }
 
