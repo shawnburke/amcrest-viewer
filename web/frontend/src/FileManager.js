@@ -65,6 +65,11 @@ export class FileManager {
 
                 if (s.canLiveStream === false) {
                     this.liveDisabled = true;
+                } else {
+                    // kick live so it's fast if user tries it.
+                    this.camerasServer.getLiveStreamUrl(this.camid).then(uri => {
+                        console.log(`Live streaming preload complete`)
+                    })
                 }
 
                 this.setRange(new Date(s.min_date), new Date(s.max_date));
