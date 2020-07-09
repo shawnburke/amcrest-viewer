@@ -80,11 +80,7 @@ class CameraView extends React.Component {
             })
         }
 
-        if (change.file !== undefined) {
-            this.setState({
-                source: change.file
-            })
-        }
+       
 
         if (change.source !== undefined) {
             this.setState({
@@ -93,11 +89,20 @@ class CameraView extends React.Component {
         }
 
 
-        if (change.position !== undefined) {
-            this.setState({
-                position: change.position
-            })
+        if (!this.isLiveView()) {
+            if (change.file !== undefined) {
+                this.setState({
+                    source: change.file
+                })
+            }
+
+            if (change.position !== undefined) {
+                this.setState({
+                    position: change.position
+                })
+            }
         }
+       
     }
 
     isLiveView() {
@@ -122,11 +127,11 @@ class CameraView extends React.Component {
     stopLiveView() {
         if (this.isLiveView()) {
             var fmState = this.fileManager.getState();
-            if (fmState.file) {
-                this.setState({
-                    source: fmState.file,
-                })
-            }
+
+            this.setState({
+                source: fmState.file,
+                position: fmState.position,
+            }) 
             return true
         }
         return false;
@@ -138,20 +143,26 @@ class CameraView extends React.Component {
             return;
         }
 
-        ev.currentTarget.disabled = true;
+        var target = ev.currentTarget
+
+        target.disabled = true;
 
 
         var fileService = this.serviceBroker.newCamsService();
+        
 
         fileService.getLiveStreamUrl(this.camid).then(uri => {
-            ev.currentTarget.disabled = false;
-            console.log(`Received live stream URL: ${uri}, setting state`);
+
             this.fileManager.setPosition(new Date());
+            target.disabled = false;
+            console.log(`Received live stream URL: ${uri}, setting state`);
+            
             this.setState({
                 source: {
                     path: uri,
                     type: 2,
                 },
+                position: new Date(),
             });
         });
     }
