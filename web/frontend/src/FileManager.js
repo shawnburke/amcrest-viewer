@@ -63,11 +63,21 @@ export class FileManager {
                     return;
                 }
 
+                if (s.canLiveStream === false) {
+                    this.liveDisabled = true;
+                }
+
                 this.setRange(new Date(s.min_date), new Date(s.max_date));
 
                 setTimeout(() => {
                     console.log("Refreshing range");
-                    this.start();
+                    try {
+                        this._refreshing = true;
+                        this.start();
+                    }
+                    finally {
+                        this._refreshing = false;
+                    }
                 }, this.refreshIntervalSeconds * 1000)
             }
         );
@@ -174,10 +184,76 @@ export class FileManager {
             window: this.window,
             file: this.file,
             position: this.position,
+            live: this.isLive(),
         }
     }
 
 
+    isLive() {
+        return this.file && this.file.type === 2;
+    }
+
+
+    async startLive() {
+
+        if (this.isLive()) {
+            return Promise.resolve(true);
+        }
+
+        if (this.liveDisabled) {
+            console.log(`Live not supported by ${this.camid}`)
+            return Promise.resolve(false);
+        }
+
+        console.log(`Initiating live view for ${this.camid}`)
+
+        return this.camerasServer.getLiveStreamUrl(this.camid).then(uri => {
+
+            try {
+                this._startBatch();
+
+                // for debugging
+                if (uri === "prompt") {
+                    uri = window.prompt("Enter streaming source");
+                    if (uri === "") {
+                        return false;
+                    }
+                }
+
+                console.log(`Live URL: ${uri}`)
+
+                var file = {
+                    type: 2,
+                    path: uri,
+                }
+                this.setPosition(this.window.end, file);
+            } finally {
+                this._endBatch();
+            }
+            return true;
+        });
+    }
+
+    stopLive() {
+        if (!this.isLive()) {
+            return
+        }
+
+        try {
+            this._startBatch();
+
+
+            console.log(`Stopping live `)
+
+            this.setPosition(new Date());
+
+            this.selectLastFile();
+        }
+        finally {
+            this._endBatch();
+        }
+
+    }
 
     setRange(min, max) {
         if (max < min) {
@@ -252,7 +328,7 @@ export class FileManager {
 
     setPosition(time, file) {
 
-        var boxed = time && this.boxTime(time, this.window.start, this.window.end, 'min');
+        var boxed = time && this.boxTime(time, this.window.start, this.window.end);
 
         if (this.timeEqual(boxed, this.position)) {
             return true;
@@ -260,21 +336,31 @@ export class FileManager {
 
         try {
             this._startBatch();
-
             this._onchange({ position: boxed && new Date(boxed) });
 
             // find the file
             if (!file && this.files && boxed) {
                 file = this.files.find(f => this.isInFile(boxed, f));
             }
-
-
             this.setCurrentFile(file);
-
         }
         finally {
             this._endBatch();
         }
+    }
+
+    selectLastFile(pos) {
+
+        var lastFile = null;
+
+        // find the last file
+        var files = this.files;
+        if ((!pos || !this.timeEqual(pos, this.position)) && files.length) {
+            lastFile = files[files.length - 1];
+            pos = lastFile.timestamp;
+        }
+
+        this.setPosition(pos, lastFile);
     }
 
     refreshFiles(start, end) {
@@ -307,15 +393,11 @@ export class FileManager {
                 this._onchange({ files: files });
 
                 var pos = this.position && this.boxTime(this.position, start, end, "max");
-                var lastFile = null;
+                var liveRefresh = this.isLive() && this._refreshing;
 
-                // find the last file
-                if ((!pos || !this.timeEqual(pos, this.position)) && files.length) {
-                    lastFile = files[files.length - 1];
-                    pos = lastFile.timestamp;
+                if (!liveRefresh) {
+                    this.selectLastFile(pos);
                 }
-
-                this.setPosition(pos, lastFile);
             }
             finally {
                 this._endBatch();
@@ -324,20 +406,6 @@ export class FileManager {
         })
     }
 
-    timeEqual(t1, t2) {
-        if (t1 === t2) {
-            return true;
-        }
-
-        if (!t1 || !t2) {
-            return false;
-        }
-
-        t1 = toUnix(t1);
-        t2 = toUnix(t2);
-
-        return t1 === t2;
-    }
 
     setCurrentFile(file) {
         var oldid = this.file && this.file.id;
@@ -354,13 +422,11 @@ export class FileManager {
             }
         }
 
-
-
         var update = {
             file: file || null
         }
 
-        if (file) {
+        if (file && file.type !== 2) {
             // set position if not in file
             var boxed = this.boxTime(file.timestamp, this.window.start, this.window.end);
 
@@ -371,13 +437,32 @@ export class FileManager {
 
             this.setPosition(file.timestamp, file);
         } else {
-            update.position = null;
+            update.position = this.window.end;
         }
 
         this._onchange(update);
         return true;
 
     }
+
+    //
+    // Utility Functions
+    //
+    timeEqual(t1, t2) {
+        if (t1 === t2) {
+            return true;
+        }
+
+        if (!t1 || !t2) {
+            return false;
+        }
+
+        t1 = toUnix(t1);
+        t2 = toUnix(t2);
+
+        return t1 === t2;
+    }
+
 
     dateAdd(date, n, unit) {
 

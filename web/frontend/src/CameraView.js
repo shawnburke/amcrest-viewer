@@ -80,7 +80,7 @@ class CameraView extends React.Component {
             })
         }
 
-       
+
 
         if (change.source !== undefined) {
             this.setState({
@@ -89,20 +89,20 @@ class CameraView extends React.Component {
         }
 
 
-        if (!this.isLiveView()) {
-            if (change.file !== undefined) {
-                this.setState({
-                    source: change.file
-                })
-            }
 
-            if (change.position !== undefined) {
-                this.setState({
-                    position: change.position
-                })
-            }
+        if (change.file !== undefined) {
+            this.setState({
+                source: change.file
+            })
         }
-       
+
+        if (change.position !== undefined) {
+            this.setState({
+                position: change.position
+            })
+        }
+
+
     }
 
     isLiveView() {
@@ -114,8 +114,6 @@ class CameraView extends React.Component {
 
         this.fileManager.setPosition(time, item && item.file);
 
-        this.stopLiveView();
-
     }
 
     onSelectedFileChange(f) {
@@ -125,46 +123,22 @@ class CameraView extends React.Component {
     }
 
     stopLiveView() {
-        if (this.isLiveView()) {
-            var fmState = this.fileManager.getState();
-
-            this.setState({
-                source: fmState.file,
-                position: fmState.position,
-            }) 
-            return true
-        }
-        return false;
+        this.fileManager.stopLive();
     }
 
     onLiveClick(ev) {
 
-        if (this.stopLiveView()) {
+        if (this.isLiveView()) {
+            this.stopLiveView();
             return;
         }
 
-        var target = ev.currentTarget
+        var target = ev.currentTarget;
 
         target.disabled = true;
-
-
-        var fileService = this.serviceBroker.newCamsService();
-        
-
-        fileService.getLiveStreamUrl(this.camid).then(uri => {
-
-            this.fileManager.setPosition(new Date());
+        this.fileManager.startLive().then(_success => {
             target.disabled = false;
-            console.log(`Received live stream URL: ${uri}, setting state`);
-            
-            this.setState({
-                source: {
-                    path: uri,
-                    type: 2,
-                },
-                position: new Date(),
-            });
-        });
+        })
     }
 
     getTimeItems(files) {

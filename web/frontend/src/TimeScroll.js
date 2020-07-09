@@ -139,7 +139,6 @@ export default class TimeScroll extends React.Component {
             this.scrollToTime(t);
             return false;
         }
-        delete this.mappedItems;
         return true;
     }
 
@@ -351,7 +350,7 @@ export default class TimeScroll extends React.Component {
 
         var cur = this.elementFromScroll();
 
-        if (cur && el === cur.element) {
+        if ((cur && el === cur.element) || !cur) {
             return;
         }
 

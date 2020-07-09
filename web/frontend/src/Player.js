@@ -50,27 +50,24 @@ export default class Player extends React.Component {
 
     renderVideoPlayer(val, live) {
 
-        // for debugging
-        if (live && val.path === "prompt") {
-            val.path = window.prompt("Enter streaming source");
-        }
+
         this.live = live;
 
         return <ReactPlayer
-                controls={!live}
-                ref={this.playerRef}
-                url={val.path}
-                width="100%"
-                height="100%"
-                playsinline={true}
-                playing={true}
-                volume={0}
-                muted={true}
-                style={{
-                    height: "100%"
-                }}
-                onReady={this.onVideoReady.bind(this)}
-            />;
+            controls={!live}
+            ref={this.playerRef}
+            url={val.path}
+            width="100%"
+            height="100%"
+            playsinline={true}
+            playing={true}
+            volume={0}
+            muted={true}
+            style={{
+                height: "100%"
+            }}
+            onReady={this.onVideoReady.bind(this)}
+        />;
     }
 
     renderImage(val) {
@@ -91,8 +88,8 @@ export default class Player extends React.Component {
         switch (val.type) {
             case 1:
             case 2:
-              return this.renderVideoPlayer(val, val.type===2)
-            
+                return this.renderVideoPlayer(val, val.type === 2)
+
             case 0:
                 return this.renderImage(val);
 
