@@ -61,7 +61,6 @@ type rtspServer struct {
 }
 
 func (r *rtspServer) start() error {
-	//config := config.InitConfig()
 
 	endpoints := config.EndpointYML{}
 	endpoints.Endpoints.List.Enabled = true
@@ -70,6 +69,17 @@ func (r *rtspServer) start() error {
 	endpoints.Endpoints.Static.Enabled = true
 
 	config := &config.Specification{
+		Process: config.Process{ // TODO: get cleanup opts from config
+			CleanupEnabled: true,
+			CleanupTime:    5 * time.Minute,
+			Audio:          true,
+		},
+		ProcessLogging: config.ProcessLogging{
+			Enabled:    true,
+			MaxSize:    25,
+			MaxBackups: 1,
+			MaxAge:     1,
+		},
 		Debug: true,
 		Port:  rtspServerPort,
 		CORS: config.CORS{
