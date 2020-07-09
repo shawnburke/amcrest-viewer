@@ -132,22 +132,27 @@ class CameraView extends React.Component {
         return false;
     }
 
-    onLiveClick() {
+    onLiveClick(ev) {
 
         if (this.stopLiveView()) {
             return;
         }
 
+        ev.currentTarget.disabled = true;
+
+
         var fileService = this.serviceBroker.newCamsService();
 
         fileService.getLiveStreamUrl(this.camid).then(uri => {
+            ev.currentTarget.disabled = false;
+            console.log(`Received live stream URL: ${uri}, setting state`);
+            this.fileManager.setPosition(new Date());
             this.setState({
                 source: {
                     path: uri,
                     type: 2,
                 },
             });
-            this.fileManager.setPosition(new Date())
         });
     }
 

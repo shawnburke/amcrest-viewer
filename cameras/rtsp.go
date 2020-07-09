@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/Roverr/rtsp-stream/core"
 	"github.com/Roverr/rtsp-stream/core/config"
@@ -54,7 +57,7 @@ type rtspServer struct {
 	data           data.Repository
 	logger         *zap.Logger
 	tempDir        string
-	shuttingDown	int
+	shuttingDown   int
 }
 
 func (r *rtspServer) start() error {
@@ -67,7 +70,8 @@ func (r *rtspServer) start() error {
 	endpoints.Endpoints.Static.Enabled = true
 
 	config := &config.Specification{
-		Port: rtspServerPort,
+		Debug: true,
+		Port:  rtspServerPort,
 		CORS: config.CORS{
 			Enabled: true,
 		},
@@ -158,7 +162,7 @@ func (r *rtspServer) Handle(cameraID string, path string, w http.ResponseWriter,
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		r.logger.Warn("RTSP static handler failed", 
+		r.logger.Warn("RTSP static handler failed",
 			zap.Int("status-code", resp.StatusCode),
 			zap.String("path", p),
 		)
@@ -177,6 +181,24 @@ func (r *rtspServer) Handle(cameraID string, path string, w http.ResponseWriter,
 
 	w.Write(bytes)
 	return nil
+}
+
+var durationParse = regexp.MustCompile(`(?m)^#EXT-X-TARGETDURATION:(\d+(.\d+)?)$`)
+
+func (r *rtspServer) getTargetDuration(playlist string) float64 {
+	match := durationParse.FindAllStringSubmatch(playlist, 1)
+
+	if match == nil {
+		return 0
+	}
+
+	duration := match[0][1]
+	val, err := strconv.ParseFloat(duration, 64)
+	if err != nil {
+		r.logger.Error("Can't parse media duration", zap.String("val", duration), zap.Error(err))
+		return 0
+	}
+	return val
 }
 
 func (r *rtspServer) StreamPath(cameraID string) (string, error) {
@@ -216,7 +238,7 @@ func (r *rtspServer) StreamPath(cameraID string) (string, error) {
 		Alias string `json:"alias,omitempty"`
 	}{
 		URI: rtspURL,
-		//Alias: cam.CameraID(),
+		//Alias: cam.CameraID(), // causes a bug in the rtsp lib
 	}
 
 	raw, err := json.Marshal(body)
@@ -256,6 +278,32 @@ func (r *rtspServer) StreamPath(cameraID string) (string, error) {
 
 	if !stream.Running {
 		return "", fmt.Errorf("Started stream but it is not running id=%s", stream.ID)
+	}
+
+	// wait until we get a non zero duration result
+	//
+	target := fmt.Sprintf("http://localhost:%d/%s", rtspServerPort, stream.URI)
+	for until := time.Now().Add(time.Second * 10); time.Now().Before(until); {
+		response, err := client.Get(target)
+		if err != nil {
+			r.logger.Error("Error calling stream endpoint", zap.Error(err), zap.String("uri", target))
+			break
+		}
+
+		bytes, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			r.logger.Error("Error reading body from stream endpoint", zap.Error(err), zap.String("uri", target))
+			break
+		}
+		playlist := string(bytes)
+
+		duration := r.getTargetDuration(playlist)
+		if duration > 0 {
+			break
+		}
+		sleep := time.Second
+		r.logger.Info("RTSP media index is not ready, sleeping", zap.Duration("sleep", sleep))
+		time.Sleep(sleep)
 	}
 
 	// pick out the URI & return it
