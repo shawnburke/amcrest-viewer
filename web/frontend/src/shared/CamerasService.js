@@ -1,7 +1,11 @@
+
+import {updateFile} from "./FilesService"
+
 class CamerasService {
 
     constructor(root) {
 
+        this.root = root;
         this.url = (root || "") + "/api/cameras";
 
     }
@@ -30,7 +34,11 @@ class CamerasService {
             .then(items => {
 
                 return items.map(item => {
-                    return this.updateId(item);
+                    var cam = this.updateId(item);
+                    if (cam.latest_snapshot) {
+                        updateFile(cam.latest_snapshot, this.root)
+                    }
+                    return cam;
                 });
             })
 
@@ -95,6 +103,9 @@ class CamerasService {
         .then(item => {
             if (!item || !item.uri) {
                 console.log(`Didn't get uri from live request`)
+            }
+            if (this.root) {
+                item.uri = this.root + item.uri;
             }
             return item.uri;
 
@@ -267,7 +278,7 @@ class CamerasService {
 
     handleError(error) {
 
-        console.log(error.message);
+        console.error(error.message);
 
     }
 

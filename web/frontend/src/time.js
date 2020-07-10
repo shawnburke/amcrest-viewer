@@ -80,3 +80,99 @@ export function snapTime(t, unit, bias) {
     }
     return t;
 }
+
+export class Range{
+    constructor(start, end) {
+        this.start = new Time(start);
+        this.end = new Time(end);
+    }
+
+    contains(t) {
+        t = new Time(t);
+        return this.start.before(t, true) && this.end.after(t);
+    }
+}
+
+
+export class Time {
+    constructor(val) {
+
+        if (!val) {
+            val = new Date();
+        }
+
+
+        if (val.unix) {
+            this.unix = val.unix;
+            this.date = new Date(val.unix);
+            return;
+        }
+     
+
+        if (val.getTime) {
+            val = val.getTime();
+        }
+        this.unix = val;
+        this.date = new Date(val);
+    }
+
+    iso() {
+        return this.date.toISOString()
+    }
+
+    locale() {
+        return this.date.toLocaleString()
+    }
+
+    localeTime() {
+        return this.date.toTimeLocaleString();
+    }
+
+    after(t, inclusive) {
+        t = new Time(t);
+
+        if (inclusive) {
+            return t.unix >= this.unix;
+        }
+        return t.unix > this.unix;
+    }
+
+    before (t, inclusive) {
+
+        t = new Time(t);
+
+        if (inclusive) {
+            return t.unix <= this.unix;
+        }
+        
+        return t.unix < this.unix;
+    }
+
+    same(t) {
+        t = new Time(t);
+        return t.unix === this.unix;
+    }
+
+    offset(n, type) {
+        var start = this.unix;
+
+        switch (type) {
+            case "hour":
+                start += n * hour;
+                break;
+            case "minute":
+                start += n * 1000*60;
+                break;
+            case "second":
+                start += n * 1000;
+                break;
+            case "day":
+                start += n * day;
+                break; 
+            default:
+                start += n * Number(type);
+                break;
+        }
+        return new Time(start);
+    }
+}

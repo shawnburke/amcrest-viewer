@@ -16,6 +16,7 @@ export default class TimeScroll extends React.Component {
         this.state = {
             current: new Date(),
         }
+        this._updating = 0;
     }
 
     log(_s) {
@@ -38,7 +39,7 @@ export default class TimeScroll extends React.Component {
             newScroll = Math.max(newScroll, 0);
             newScroll = Math.min(newScroll, ev.currentTarget.scrollLeftMax || ev.currentTarget.scrollWidth)
 
-            ev.currentTarget.scrollLeft = newScroll;
+            this.setScroll(newScroll, true);
 
             this.mouseAnchor = [ev.screenX, ev.screenY];
 
@@ -102,10 +103,16 @@ export default class TimeScroll extends React.Component {
         var item = this.getElementItem(el, newTime);
 
 
-        if (this.props.onTimeChange) {
+        if (this.props.onTimeChange && !this._updating) {
+
+            if (!item) {
+                console.log("no item")
+            }
+
+            this.log(`Notifying scroll=${this.myRef.current.scrollLeft}, Time=${new Date(range.start).toISOString()}, Item=${item && item.id}`);
             this.props.onTimeChange(newTime, item);
         }
-        this.log(`Scrolled to ${this.myRef.current.scrollLeft}, Item=${item && item.id}`);
+        
     }
 
     boxTime(t, min, max) {
@@ -120,7 +127,7 @@ export default class TimeScroll extends React.Component {
 
     shouldComponentUpdate(nextProps, _nextState) {
 
-
+       // this._updating++;
         var firstItemIdNext = nextProps.items && nextProps.items.length && nextProps.items[0].id;
         var firstItemIdProps = this.props.items && this.props.items.length && this.props.items[0].id;
 
@@ -146,6 +153,7 @@ export default class TimeScroll extends React.Component {
         if (this.props.position) {
             this.scrollToTime(this.toUnix(this.props.position));
         }
+     //   this._updating--;
     }
 
     // given an element and a time, return
@@ -364,8 +372,24 @@ export default class TimeScroll extends React.Component {
 
         var parent = this.myRef.current;
         var newScroll = left + extra;
+        this.setScroll(newScroll);
+    }
+
+    setScroll(newScroll, userAction) {
+
+        var parent = this.myRef.current;
         this.log(`Scrolling ${parent.scrollLeft} => ${newScroll}`);
-        parent.scrollLeft = newScroll;
+        try {
+            if (!userAction) {
+                this._updating++;
+            }
+            parent.scrollLeft = newScroll;
+        } finally {
+            if (!userAction) {
+                this._updating--;
+            }
+        }
+
     }
 
     getItemId(key) {

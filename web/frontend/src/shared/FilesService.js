@@ -2,17 +2,12 @@ class FilesService {
 
     constructor(camera, root) {
 
+        this.root = root;
         this.url = (root||"") + `/api/cameras/${camera}/files`;
 
     }
 
-    updateTimestamp(f) {
-        if (typeof f.timestamp === "string") {
-            f.timestamp = new Date(f.timestamp);
-        }
-        return f;
-    }
-
+    
     async retrieveItems(startDate, endDate, sort) {
 
         console.log(`Fetching ${startDate.toString()} => ${endDate.toString()} (${sort})`);
@@ -30,7 +25,7 @@ class FilesService {
             })
 
             .then(items => {
-                items.forEach(f => this.updateTimestamp(f))
+                items.forEach(f => updateFile(f, this.root))
                 return items;
             })
 
@@ -76,5 +71,17 @@ class FilesService {
         console.log(error.message);
     }
 }
+
+export function updateFile(f, root) {
+    if (typeof f.timestamp === "string") {
+        f.timestamp = new Date(f.timestamp);
+    }
+
+    if (root) {
+        f.path = root + f.path;
+    }
+    return f;
+}
+
 
 export default FilesService;

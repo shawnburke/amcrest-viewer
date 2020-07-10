@@ -1,4 +1,4 @@
-import { hour, month, day, toUnix } from './time';
+import { hour, month, day, toUnix, Time } from './time';
 
 // FileManager takes in a list of files
 // and manages them by time
@@ -40,14 +40,32 @@ export class FileManager {
             min: this.dateAdd(today, -1, "month"),
             max: today,
         }
-
+        
         this.window = {
             start: this.dateAdd(today, -1, "day"),
             end: today,
         }
-
+    
         this.position = this.dateAdd(today, -1, "hour");
+        this.timify();
     }
+
+    timify() {
+        if (this.range) {
+            this.range.tmin = new Time(this.range.min);
+            this.range.tmax = new Time(this.range.tmax);
+        }
+
+        if (this.window) {
+            this.window.tstart = new Time(this.window.start);
+            this.window.tend = new Time(this.window.end);
+        }
+
+        if (this.position) {
+            this.tposition = new Time(this.position);
+        }
+    }
+
 
     log(s) {
         console.log(s);
@@ -73,8 +91,9 @@ export class FileManager {
             this.liveDisabled = true;
         } else {
             // kick live so it's fast if user tries it.
+            var start = Date.now();
             this.camerasServer.getLiveStreamUrl(this.camid).then(uri => {
-                this.log(`Live streaming preload complete`)
+                this.log(`Live streaming ready @ ${uri} (${(new Date().getTime() - start) / 1000}s)`)
             });
         }
 
@@ -82,7 +101,7 @@ export class FileManager {
 
         if (refreshInterval) {
                 setTimeout(() => {
-                    this.log("Refreshing range");
+                    this.log("Timed range refresh");
                     try {
                         this._refreshing = true;
                         this.start();
@@ -156,17 +175,21 @@ export class FileManager {
 
         var batching = this._batch && this._batch.count > 0;
 
+        var printSpan = function(s,e) {
+            return `${new Time(s).iso()} => ${new Time(e).iso()}`;
+        }
+
         var rangeChange = value.range;
         if (rangeChange && !batching) {
-            this.log(`Changing range to ${value.range.min} => ${value.range.max}`);
+            this.log(`Range:\n\tOld: ${printSpan(this.range.min, this.range.max)}\n\tNew: ${printSpan(value.range.min, value.range.max)}`);
         }
         var windowChange = value.window;
         if (windowChange && !batching) {
-            this.log(`Changing window to ${value.window.start} => ${value.window.end}`)
+            this.log(`Window:\n\tOld: ${printSpan(this.window.start, this.window.end)}\n\tNew: ${printSpan(value.window.start, value.window.end)}`)
         }
         var positionChange = value.position !== undefined;
         if (positionChange && !batching) {
-            this.log(`Setting position to ${value.position}`);
+            this.log(`Pos:\n\tOld: ${new Time(this.position).iso()}\n\tNew: ${new Time(value.position).iso()}`);
         }
 
         var fileChange = value.file !== undefined;
@@ -179,6 +202,7 @@ export class FileManager {
         }
 
         Object.assign(this, value);
+        this.timify();
 
         if (batching) {
             Object.assign(this._batch.value, value);
@@ -238,8 +262,12 @@ export class FileManager {
                 var file = {
                     type: 2,
                     path: uri,
+                
                 }
+
                 this.setPosition(this.window.end, file);
+                this.setCurrentFile(file);
+                
             } finally {
                 this._endBatch();
             }
@@ -308,7 +336,7 @@ export class FileManager {
         boxedEnd = this.snapTime(boxedEnd, "day", 1);
 
         if (!reload && this.timeEqual(boxedStart, this.window.start) && this.timeEqual(boxedEnd, this.window.end)) {
-            return promise.resolve(true);
+            return Promise.resolve(true);
         }
 
         var windowSize = toUnix(boxedEnd) - toUnix(boxedStart);
