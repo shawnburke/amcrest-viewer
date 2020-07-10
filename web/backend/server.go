@@ -614,8 +614,18 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (s *Server) enableCors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) Setup(frontendPath string) http.Handler {
 	s.r = mux.NewRouter()
+
+	s.r.Use(s.enableCors)
 
 	// cameras
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
