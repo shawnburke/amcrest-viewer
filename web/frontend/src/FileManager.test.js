@@ -1,10 +1,7 @@
-import React from 'react';
-import { render } from '@testing-library/react';
-import App from './App';
 import { FileManager } from './FileManager';
 import ServiceBroker from './shared/ServiceBroker';
-import FilesService from './shared/mock/FilesService';
 import { setData } from './shared/mock/file_data';
+import { Time } from './time'
 
 var files = [
     {
@@ -127,39 +124,103 @@ var files = [
 
 
 
-setData(files)
+
 
 describe('FileManager', () => {
-    describe('SetStats', () => {
 
-    var broker = new ServiceBroker(true);
-   
-  
-      it('should set range and window', () => {
-            var fm = new FileManager("test-1", broker);
+    setData(files)
 
-            fm.start().then(() => {
+    describe('Setup', () => {
 
-                var state = fm.getState();
+        var broker = new ServiceBroker(true);
 
-              
-                var firstFile = fm.files[0];
-                var lastFile = fm.files[fm.files.length-1];
-                expect(state.range).toEqual({ 
-                    min: firstFile.timestamp,
-                    max:lastFile.timestamp,
-                });
+        var fm = new FileManager("test-1", broker);
+        fm.log = function () { }
 
-                expect(state.window).toEqual({ 
-                    start: new Date("2020-06-16T00:00:00Z"),
-                    end: new Date("2020-06-17T00:00Z"),
-                });
 
-                expect (state.file.id).toEqual(lastFile.id);
-                expect (state.position).toEqual(lastFile.timestamp);
+        it('Should properly init time.', async () => {
+            await fm.start()
+
+            var state = fm.getState();
+            var files = fm.state.files;
+
+            var firstFile = files[0];
+            var lastFile = files[files.length - 1];
+            expect(state.range).toEqual({
+                min: firstFile.timestamp,
+                max: lastFile.timestamp,
             });
 
-            
-      });
-    });
-  });
+            expect(state.window).toEqual({
+                start: new Date("2020-06-16T00:00:00Z"),
+                end: new Date("2020-06-17T00:00Z"),
+            });
+
+            expect(state.file.id).toEqual(lastFile.id);
+            expect(state.position).toEqual(lastFile.timestamp);
+
+
+        });
+
+        it('Should handle a stats update properly', async () => {
+
+            await fm.start()
+
+            var state = fm.getState();
+            var tmin = new Time(state.range.min);
+            var tmax = new Time(state.range.max);
+
+            var min = tmin.offset(19, "second")
+            var max = tmax.offset(74, "second")
+
+            await fm._setStats({ min_date: min.date, max_date: max.date })
+
+            state = fm.getState();
+
+            expect(state.range).toEqual({
+                min: min.date,
+                max: max.date,
+            });
+
+
+        });
+
+
+
+        it('Should correctly box min', async () => {
+
+            await fm.start()
+
+            var state = fm.getState();
+            var pos = new Time(state.position)
+
+
+            var tmin = pos.offset(-10, "day");
+            await fm.setPosition(tmin.unix);
+
+            const s = fm.getState();
+
+            expect(s.position).toEqual(s.window.start);
+
+
+        });
+
+        it('Should correctly box max', async () => {
+
+            await fm.start()
+
+            var state = fm.getState();
+            var pos = new Time(state.position)
+
+            var tmax = pos.offset(10, "day");
+            await fm.setPosition(tmax.unix);
+
+            const s = fm.getState();
+
+            expect(s.position).toEqual(s.window.end);
+
+
+        });
+
+    })
+});

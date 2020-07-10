@@ -81,7 +81,7 @@ export function snapTime(t, unit, bias) {
     return t;
 }
 
-export class Range{
+export class Range {
     constructor(start, end) {
         this.start = new Time(start);
         this.end = new Time(end);
@@ -96,7 +96,6 @@ export class Range{
 
 export class Time {
     constructor(val) {
-
         if (!val) {
             val = new Date();
         }
@@ -107,17 +106,25 @@ export class Time {
             this.date = new Date(val.unix);
             return;
         }
-     
+
 
         if (val.getTime) {
             val = val.getTime();
         }
         this.unix = val;
         this.date = new Date(val);
+
+        if (this.date.toString() === "Invalid Date") {
+            console.error(val);
+        }
     }
 
+    toString() {
+        return this.iso();
+    }
     iso() {
-        return this.date.toISOString()
+
+        return this.date.toISOString();
     }
 
     locale() {
@@ -137,14 +144,14 @@ export class Time {
         return t.unix > this.unix;
     }
 
-    before (t, inclusive) {
+    before(t, inclusive) {
 
         t = new Time(t);
 
         if (inclusive) {
             return t.unix <= this.unix;
         }
-        
+
         return t.unix < this.unix;
     }
 
@@ -161,14 +168,14 @@ export class Time {
                 start += n * hour;
                 break;
             case "minute":
-                start += n * 1000*60;
+                start += n * 1000 * 60;
                 break;
             case "second":
                 start += n * 1000;
                 break;
             case "day":
                 start += n * day;
-                break; 
+                break;
             default:
                 start += n * Number(type);
                 break;

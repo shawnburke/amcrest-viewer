@@ -34,36 +34,38 @@ export class FileManager {
         this.maxWindow = day;
         this.refreshIntervalSeconds = 15;
 
+
         // initialize info
         var today = new Date();
-        this.range = {
+        this.state = {}
+        this.state.range = {
             min: this.dateAdd(today, -1, "month"),
             max: today,
         }
-        
-        this.window = {
+
+        this.state.window = {
             start: this.dateAdd(today, -1, "day"),
             end: today,
         }
-    
-        this.position = this.dateAdd(today, -1, "hour");
+
+        this.state.position = this.dateAdd(today, -1, "hour");
         this.timify();
     }
 
     timify() {
-        if (this.range) {
-            this.range.tmin = new Time(this.range.min);
-            this.range.tmax = new Time(this.range.tmax);
-        }
+        // if (this.state.range) {
+        //     this.state.range.tmin = new Time(this.state.range.min);
+        //     this.state.range.tmax = new Time(this.state.range.tmax);
+        // }
 
-        if (this.window) {
-            this.window.tstart = new Time(this.window.start);
-            this.window.tend = new Time(this.window.end);
-        }
+        // if (this.state.window) {
+        //     this.state.window.tstart = new Time(this.state.window.start);
+        //     this.state.window.tend = new Time(this.state.window.end);
+        // }
 
-        if (this.position) {
-            this.tposition = new Time(this.position);
-        }
+        // if (this.state.position) {
+        //     this.tposition = new Time(this.state.position);
+        // }
     }
 
 
@@ -100,16 +102,16 @@ export class FileManager {
         var promise = this.setRange(new Date(stats.min_date), new Date(stats.max_date));
 
         if (refreshInterval) {
-                setTimeout(() => {
-                    this.log("Timed range refresh");
-                    try {
-                        this._refreshing = true;
-                        this.start();
-                    }
-                    finally {
-                        this._refreshing = false;
-                    }
-                }, refreshInterval);
+            setTimeout(() => {
+                this.log("Timed range refresh");
+                try {
+                    this._refreshing = true;
+                    this.start();
+                }
+                finally {
+                    this._refreshing = false;
+                }
+            }, refreshInterval);
         }
         return promise;
     }
@@ -142,6 +144,7 @@ export class FileManager {
 
         if (++batch.count === 1) {
             batch.value = {}
+            batch.state = Object.assign({}, this.state)
             batch.promise = new Promise((resolve) => {
                 batch.resolve = resolve;
             });
@@ -159,15 +162,15 @@ export class FileManager {
         var promise = this._batch.promise;
         var resolve = this._batch.resolve;
         if (--this._batch.count === 0) {
-            this._onchange(this._batch.value);
+            this._onchange(this._batch.value, this._batch.state);
             delete this._batch.value;
             delete this._batch.promise;
-            resolve();
+            resolve(this._batch.state, this.state);
         }
         return promise;
     }
 
-    _onchange(value) {
+    _onchange(value, old) {
 
         if (!value) {
             return;
@@ -175,21 +178,24 @@ export class FileManager {
 
         var batching = this._batch && this._batch.count > 0;
 
-        var printSpan = function(s,e) {
+        var old = old || this.state;
+
+
+        var printSpan = function (s, e) {
             return `${new Time(s).iso()} => ${new Time(e).iso()}`;
         }
 
         var rangeChange = value.range;
         if (rangeChange && !batching) {
-            this.log(`Range:\n\tOld: ${printSpan(this.range.min, this.range.max)}\n\tNew: ${printSpan(value.range.min, value.range.max)}`);
+            this.log(`Range:\n\tOld: ${printSpan(old.range.min, old.range.max)}\n\tNew: ${printSpan(value.range.min, value.range.max)}`);
         }
         var windowChange = value.window;
         if (windowChange && !batching) {
-            this.log(`Window:\n\tOld: ${printSpan(this.window.start, this.window.end)}\n\tNew: ${printSpan(value.window.start, value.window.end)}`)
+            this.log(`Window:\n\tOld: ${printSpan(old.window.start, old.window.end)}\n\tNew: ${printSpan(value.window.start, value.window.end)}`)
         }
         var positionChange = value.position !== undefined;
         if (positionChange && !batching) {
-            this.log(`Pos:\n\tOld: ${new Time(this.position).iso()}\n\tNew: ${new Time(value.position).iso()}`);
+            this.log(`Pos:\n\tOld: ${new Time(old.position).iso()}\n\tNew: ${new Time(value.position).iso()}`);
         }
 
         var fileChange = value.file !== undefined;
@@ -201,7 +207,7 @@ export class FileManager {
             }
         }
 
-        Object.assign(this, value);
+        Object.assign(this.state, value);
         this.timify();
 
         if (batching) {
@@ -215,19 +221,17 @@ export class FileManager {
     }
 
     getState() {
-        return {
-            range: this.range,
-            window: this.window,
-            file: this.file,
-            fileCount: this.files && this.files.length || 0,
-            position: this.position,
+        var state = Object.assign({
+            fileCount: this.state.files && this.state.files.length || 0,
             live: this.isLive(),
-        }
+        }, this.state);
+        delete state.files;
+        return state;
     }
 
 
     isLive() {
-        return this.file && this.file.type === 2;
+        return this.state.file && this.state.file.type === 2;
     }
 
 
@@ -262,12 +266,12 @@ export class FileManager {
                 var file = {
                     type: 2,
                     path: uri,
-                
+
                 }
 
-                this.setPosition(this.window.end, file);
+                this.setPosition(this.state.window.end, file);
                 this.setCurrentFile(file);
-                
+
             } finally {
                 this._endBatch();
             }
@@ -282,12 +286,8 @@ export class FileManager {
 
         try {
             this._startBatch();
-
-
             console.log(`Stopping live `)
-
             this.setPosition(new Date());
-
             this.selectLastFile();
         }
         finally {
@@ -301,7 +301,7 @@ export class FileManager {
             throw new Error("bad range");
         }
 
-        if (this.timeEqual(min, this.range.min) && this.timeEqual(max, this.range.max)) {
+        if (this.timeEqual(min, this.state.range.min) && this.timeEqual(max, this.state.range.max)) {
             return Promise.resolve();
         }
 
@@ -316,7 +316,7 @@ export class FileManager {
                 },
             });
 
-            promise = this.setWindow(this.window.start, this.window.end, true);
+            promise = this.setWindow(this.state.window.start, this.state.window.end, true);
         } finally {
             this._endBatch();
         }
@@ -329,13 +329,13 @@ export class FileManager {
             throw new Error("bad window");
         }
 
-        var boxedStart = this.boxTime(start, this.range.min, this.range.max, "min");
-        var boxedEnd = this.boxTime(end, this.range.min, this.range.max, "max");
+        var boxedStart = this.boxTime(start, this.state.range.min, this.state.range.max, "min");
+        var boxedEnd = this.boxTime(end, this.state.range.min, this.state.range.max, "max");
 
         boxedStart = this.snapTime(boxedStart, "day", -1);
         boxedEnd = this.snapTime(boxedEnd, "day", 1);
 
-        if (!reload && this.timeEqual(boxedStart, this.window.start) && this.timeEqual(boxedEnd, this.window.end)) {
+        if (!reload && this.timeEqual(boxedStart, this.state.window.start) && this.timeEqual(boxedEnd, this.state.window.end)) {
             return Promise.resolve(true);
         }
 
@@ -371,9 +371,9 @@ export class FileManager {
 
     setPosition(time, file) {
 
-        var boxed = time && this.boxTime(time, this.window.start, this.window.end);
+        var boxed = time && this.boxTime(time, this.state.window.start, this.state.window.end);
 
-        if (this.timeEqual(boxed, this.position)) {
+        if (this.timeEqual(boxed, this.state.position)) {
             return Promise.resolve(true);
         }
 
@@ -383,8 +383,8 @@ export class FileManager {
             this._onchange({ position: boxed && new Date(boxed) });
 
             // find the file
-            if (!file && this.files && boxed) {
-                file = this.files.find(f => this.isInFile(boxed, f));
+            if (!file && this.state.files && boxed) {
+                file = this.state.files.find(f => this.isInFile(boxed, f));
             }
             promise = this.setCurrentFile(file);
         }
@@ -399,8 +399,8 @@ export class FileManager {
         var lastFile = null;
 
         // find the last file
-        var files = this.files;
-        if ((!pos || !this.timeEqual(pos, this.position)) && files.length) {
+        var files = this.state.files || [];
+        if ((!pos || !this.timeEqual(pos, this.state.position)) && files.length) {
             lastFile = files[files.length - 1];
             pos = lastFile.timestamp;
         }
@@ -437,7 +437,7 @@ export class FileManager {
 
                 this._onchange({ files: files });
 
-                var pos = this.position && this.boxTime(this.position, start, end, "max");
+                var pos = this.state.position && this.boxTime(this.state.position, start, end, "max");
                 var liveRefresh = this.isLive() && this._refreshing;
 
                 if (!liveRefresh) {
@@ -460,7 +460,7 @@ export class FileManager {
         }
 
         if (newid) {
-            file = this.files.find(f => f.id === newid);
+            file = this.state.files.find(f => f.id === newid);
             if (!file) {
                 console.warn(`Can't find file ${newid}`);
                 return Promise.resolve(false);
@@ -475,16 +475,16 @@ export class FileManager {
 
         if (file && file.type !== 2) {
             // set position if not in file
-            var boxed = this.boxTime(file.timestamp, this.window.start, this.window.end);
+            var boxed = this.boxTime(file.timestamp, this.state.window.start, this.state.window.end);
 
             if (!this.timeEqual(boxed, file.timestamp)) {
-                console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.window.start} => ${this.window.end}`);
+                console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.state.window.start} => ${this.state.window.end}`);
                 return Promise.resolve(false);
             }
 
             promise = this.setPosition(file.timestamp, file);
         } else {
-            update.position = this.window.end;
+            update.position = this.state.window.end;
         }
 
         this._onchange(update);
