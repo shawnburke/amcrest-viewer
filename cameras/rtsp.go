@@ -80,8 +80,8 @@ func (r *rtspServer) start() error {
 			MaxBackups: 1,
 			MaxAge:     1,
 		},
-		Debug: true,
-		Port:  rtspServerPort,
+		//	Debug: true,
+		Port: rtspServerPort,
 		CORS: config.CORS{
 			Enabled: true,
 		},
@@ -250,8 +250,8 @@ func (r *rtspServer) StreamPath(cameraID string) (string, error) {
 		URI   string `json:"uri"`
 		Alias string `json:"alias,omitempty"`
 	}{
-		URI: rtspURL,
-		//Alias: cam.CameraID(), // causes a bug in the rtsp lib
+		URI:   rtspURL,
+		Alias: cam.CameraID(), // causes a bug in the rtsp lib
 	}
 
 	raw, err := json.Marshal(body)
