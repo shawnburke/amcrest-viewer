@@ -3,11 +3,14 @@ import {GetData} from './file_data';
 class FilesService {
 
     
+    constructor(cam, root, files) {
+        this.files = files;
+    }
 
     async retrieveItems(startDate, endDate, sort) {
-        console.log(`Retrieve ${startDate} => ${endDate} (${sort})`);
+        console.log(`Retrieve ${startDate} => ${endDate} (${sort}) [supplied=${Boolean(this.files)}]`);
 
-        var files = GetData(startDate, endDate, sort);
+        var files = GetData(startDate, endDate, sort, this.files);
         return Promise.resolve(files);
 
     }

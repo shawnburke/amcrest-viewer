@@ -2830,35 +2830,61 @@ var data = [
     }
 ];
 
+
 const jpg1 = "/1591027084.jpg";
 const jpg2 = "/1593216147.jpg";
 
-data.forEach(f => {
+export function setData(d) {
 
-    f.timestamp = new Date(f.timestamp);
-    f.old_path = f.path;
+    var first = null;
+    var last = null;
 
-    switch (f.type) {
-        case 0:
+    d.forEach(f => {
 
-            f.path = jpg1;
-            break;
-        case 1:
-            f.path = "/1591028951.mp4";
-            break
-        default:
-            break;
+        f.timestamp = new Date(f.timestamp);
+
+        if (!first || f.timestamp < first) {
+            first = f.timestamp;
+        }
+
+        if (!last || f.timestamp > last) {
+            last = f.timestamp;
+        }
+        f.old_path = f.path;
+
+        switch (f.type) {
+            case 0:
+
+                f.path = jpg1;
+                break;
+            case 1:
+                f.path = "/1591028951.mp4";
+                break
+            default:
+                break;
+        }
+    })
+
+    const subset = -1;
+
+
+    if (subset > 0) {
+        d = d.filter((_v, i) => i < subset);
     }
-})
 
-const subset = -1;
-
-
-if (subset > 0) {
-    data = data.filter((_v, i) => i < subset);
+   
+    d = d.concat(generateSnapshots(first, last, 60 * 1000, d));
+   
+    console.log(`Setting mock data with ${d.length} items`)
+    data = d;
 }
 
-function generateSnapshots(start, _end, interval) {
+setData(data)
+
+function generateSnapshots(start, _end, interval, d) {
+
+    d = d || data;
+
     var unixStart = start.getTime();
     
     // walk the data and everywhere there is not an existing file
@@ -2868,8 +2894,8 @@ function generateSnapshots(start, _end, interval) {
     var snapshots = [];
     var pos = unixStart;
 
-    for (var i = 0; i < data.length; i++) {
-        var nextItem = data[i];
+    for (var i = 0; i < d.length; i++) {
+        var nextItem = d[i];
         var nextUnixStart = nextItem.timestamp.getTime();
 
         while (pos < nextUnixStart) {
@@ -2894,9 +2920,11 @@ function generateSnapshots(start, _end, interval) {
     return snapshots;
 }
 
-export function GetData(start, end, sort) {
+export function GetData(start, end, sort, files) {
 
+    var d = files || data;
 
+ 
     if (!start.getTime) {
         start = new Date(start);
     }
@@ -2907,25 +2935,23 @@ export function GetData(start, end, sort) {
         end = new Date(end);
     }
 
-    var result = data.filter(f => f.timestamp >= start && f.timestamp < end);
-
-    result = result.concat(generateSnapshots(start, end, 60 * 1000));
-
     if (sort === "desc") {
-        result = result.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        d = d.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     } else {
-        result = result.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        d = d.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     }
-    return result;
+    return d.filter(f => f.timestamp >= start && f.timestamp < end);
 }
 
 var stats;
 export function GetStats() {
     if (!stats) {
+
+        var items = GetData(new Date("2000-01-01T00:00:00Z"), new Date(), "asc")
         var res =
         {
-            min_date: data[0].timestamp,
-            max_date: data[data.length - 1].timestamp,
+            min_date: items[0].timestamp,
+            max_date: items[items.length - 1].timestamp,
             file_count: 0,
             file_size: 0
         }

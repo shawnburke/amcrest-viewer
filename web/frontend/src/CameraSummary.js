@@ -14,15 +14,18 @@ class CameraSummary extends React.Component {
         }
         return {};
     }
-    render() {
+    componentDidUpdate() {
         document.title = "Camera Viewer";
+    }
+    render() {
+        
         var rows = this.props.cameras.map((c) => {
 
 
-            var snapshot = [<span></span>];
+            var snapshot = [<span key='span0'></span>];
 
             if (c.latest_snapshot) {
-                snapshot = [<img alt="snapshot" style={{
+                snapshot = [<img  key='snapshot-0' alt="snapshot" style={{
                     maxWidth: "100%",
                     border: "thin solid black",
                 }} src={c.latest_snapshot.path} />];

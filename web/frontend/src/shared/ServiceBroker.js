@@ -10,14 +10,21 @@ import FilesService from "./FilesService";
 
 class ServiceBroker {
 
-    constructor() {
-        this.camsService = this.useMock() ? CamsServiceMock : CamsService;
-        this.filesService = this.useMock() ? FilesServiceMock : FilesService;
+    constructor(camsService, filesService) {
+
+        if (camsService === true) {
+            this.mock = true;
+        } else {
+            this.cs = camsService;
+            this.fs = filesService;
+        }
+        this.camsServiceCtor = this.useMock() ? CamsServiceMock : CamsService;
+        this.filesServiceCtor = this.useMock() ? FilesServiceMock : FilesService;
     }
 
 
     useMock() {
-        return process.env.NODE_ENV !== "production" && this.root() === "";
+        return this.mock || (process.env.NODE_ENV !== "production" && this.root() === "");
     }
 
     root() {
@@ -26,11 +33,11 @@ class ServiceBroker {
     }
 
     newCamsService() {
-        return new this.camsService(this.root());
+        return this.cs || new this.camsServiceCtor(this.root());
     }
 
     newFilesService(cam) {
-        return new this.filesService(cam, this.root())
+        return this.fs || new this.filesServiceCtor(cam, this.root())
     }
 }
 

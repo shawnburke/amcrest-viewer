@@ -53,8 +53,8 @@ export class FileManager {
         console.log(s);
     }
 
-    start() {
-        this.camerasServer.getStats(this.camid).then(
+    async start() {
+        return this.camerasServer.getStats(this.camid).then(
             s => {
 
                 if (!s) {
@@ -63,19 +63,26 @@ export class FileManager {
                     return;
                 }
 
-                if (s.canLiveStream === false) {
-                    this.liveDisabled = true;
-                } else {
-                    // kick live so it's fast if user tries it.
-                    this.camerasServer.getLiveStreamUrl(this.camid).then(uri => {
-                        console.log(`Live streaming preload complete`)
-                    })
-                }
+                return this._setStats(s, this.refreshIntervalSeconds * 1000);
+            }
+        );
+    }
 
-                this.setRange(new Date(s.min_date), new Date(s.max_date));
+    _setStats(stats, refreshInterval) {
+        if (stats.canLiveStream === false) {
+            this.liveDisabled = true;
+        } else {
+            // kick live so it's fast if user tries it.
+            this.camerasServer.getLiveStreamUrl(this.camid).then(uri => {
+                this.log(`Live streaming preload complete`)
+            });
+        }
 
+        var promise = this.setRange(new Date(stats.min_date), new Date(stats.max_date));
+
+        if (refreshInterval) {
                 setTimeout(() => {
-                    console.log("Refreshing range");
+                    this.log("Refreshing range");
                     try {
                         this._refreshing = true;
                         this.start();
@@ -83,9 +90,9 @@ export class FileManager {
                     finally {
                         this._refreshing = false;
                     }
-                }, this.refreshIntervalSeconds * 1000)
-            }
-        );
+                }, refreshInterval);
+        }
+        return promise;
     }
 
 
@@ -188,6 +195,7 @@ export class FileManager {
             range: this.range,
             window: this.window,
             file: this.file,
+            fileCount: this.files && this.files.length || 0,
             position: this.position,
             live: this.isLive(),
         }
@@ -266,9 +274,10 @@ export class FileManager {
         }
 
         if (this.timeEqual(min, this.range.min) && this.timeEqual(max, this.range.max)) {
-            return;
+            return Promise.resolve();
         }
 
+        var promise = Promise.resolve();
         try {
             this._startBatch();
 
@@ -279,10 +288,11 @@ export class FileManager {
                 },
             });
 
-            this.setWindow(this.window.start, this.window.end, true);
+            promise = this.setWindow(this.window.start, this.window.end, true);
         } finally {
             this._endBatch();
         }
+        return promise;
     }
 
     setWindow(start, end, reload) {
@@ -298,7 +308,7 @@ export class FileManager {
         boxedEnd = this.snapTime(boxedEnd, "day", 1);
 
         if (!reload && this.timeEqual(boxedStart, this.window.start) && this.timeEqual(boxedEnd, this.window.end)) {
-            return true;
+            return promise.resolve(true);
         }
 
         var windowSize = toUnix(boxedEnd) - toUnix(boxedStart);
@@ -317,13 +327,13 @@ export class FileManager {
             });
 
             promise.then(() => {
-                this.refreshFiles(boxedStart, boxedEnd);
+                return this.refreshFiles(boxedStart, boxedEnd);
             });
 
         } finally {
             this._endBatch();
         }
-
+        return promise;
     }
 
     isInFile(time, file) {
@@ -336,9 +346,10 @@ export class FileManager {
         var boxed = time && this.boxTime(time, this.window.start, this.window.end);
 
         if (this.timeEqual(boxed, this.position)) {
-            return true;
+            return Promise.resolve(true);
         }
 
+        var promise = Promise.resolve(true);
         try {
             this._startBatch();
             this._onchange({ position: boxed && new Date(boxed) });
@@ -347,11 +358,12 @@ export class FileManager {
             if (!file && this.files && boxed) {
                 file = this.files.find(f => this.isInFile(boxed, f));
             }
-            this.setCurrentFile(file);
+            promise = this.setCurrentFile(file);
         }
         finally {
             this._endBatch();
         }
+        return promise;
     }
 
     selectLastFile(pos) {
@@ -370,7 +382,7 @@ export class FileManager {
 
     refreshFiles(start, end) {
         this.log(`Loading files for range ${start} => ${end}`)
-        this.loadFiles(start, end).then(items => {
+        return this.loadFiles(start, end).then(items => {
 
             this.log(`Loaded ${items.length} files`);
 
@@ -416,14 +428,14 @@ export class FileManager {
         var oldid = this.file && this.file.id;
         var newid = file && file.id;
         if (oldid === newid) {
-            return true;
+            return Promise.resolve(true);
         }
 
         if (newid) {
             file = this.files.find(f => f.id === newid);
             if (!file) {
                 console.warn(`Can't find file ${newid}`);
-                return false;
+                return Promise.resolve(false);
             }
         }
 
@@ -431,23 +443,24 @@ export class FileManager {
             file: file || null
         }
 
+        var promise = Promise.resolve(true);
+
         if (file && file.type !== 2) {
             // set position if not in file
             var boxed = this.boxTime(file.timestamp, this.window.start, this.window.end);
 
             if (!this.timeEqual(boxed, file.timestamp)) {
                 console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.window.start} => ${this.window.end}`);
-                return false;
+                return Promise.resolve(false);
             }
 
-            this.setPosition(file.timestamp, file);
+            promise = this.setPosition(file.timestamp, file);
         } else {
             update.position = this.window.end;
         }
 
         this._onchange(update);
-        return true;
-
+        return promise;
     }
 
     //
