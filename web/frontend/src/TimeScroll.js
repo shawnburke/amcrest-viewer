@@ -109,10 +109,10 @@ export default class TimeScroll extends React.Component {
                 console.log("no item")
             }
 
-            this.log(`Notifying scroll=${this.myRef.current.scrollLeft}, Time=${new Date(range.start).toISOString()}, Item=${item && item.id}`);
+            this.log(`Notifying scroll=${this.myRef.current.scrollLeft}, Time=${new Date(newTime).toISOString()}, Item=${item && item.id}`);
             this.props.onTimeChange(newTime, item);
         }
-        
+
     }
 
     boxTime(t, min, max) {
@@ -127,7 +127,7 @@ export default class TimeScroll extends React.Component {
 
     shouldComponentUpdate(nextProps, _nextState) {
 
-       // this._updating++;
+        // this._updating++;
         var firstItemIdNext = nextProps.items && nextProps.items.length && nextProps.items[0].id;
         var firstItemIdProps = this.props.items && this.props.items.length && this.props.items[0].id;
 
@@ -153,7 +153,7 @@ export default class TimeScroll extends React.Component {
         if (this.props.position) {
             this.scrollToTime(this.toUnix(this.props.position));
         }
-     //   this._updating--;
+        //   this._updating--;
     }
 
     // given an element and a time, return

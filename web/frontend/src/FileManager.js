@@ -453,7 +453,7 @@ export class FileManager {
 
 
     setCurrentFile(file) {
-        var oldid = this.file && this.file.id;
+        var oldid = this.state.file && this.state.file.id;
         var newid = file && file.id;
         if (oldid === newid) {
             return Promise.resolve(true);
