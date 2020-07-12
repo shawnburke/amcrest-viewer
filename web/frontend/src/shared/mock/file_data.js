@@ -1,4 +1,148 @@
-var data = [
+
+import {Time} from '../../time';
+
+var data = []
+
+
+
+const jpg1 = "/1591027084.jpg";
+const jpg2 = "/1593216147.jpg";
+
+
+
+export function setData(d) {
+
+    var first = null;
+    var last = null;
+
+    d.forEach(f => {
+
+        f.timestamp = new Time(f.timestamp);
+
+        if (!first || f.timestamp.before(first)) {
+            first = f.timestamp;
+        }
+
+        if (!last || f.timestamp.after(last)) {
+            last = f.timestamp;
+        }
+        f.old_path = f.path;
+
+        switch (f.type) {
+            case 0:
+
+                f.path = jpg1;
+                break;
+            case 1:
+                f.path = "/1591028951.mp4";
+                break
+            default:
+                break;
+        }
+    })
+
+    const subset = -1;
+
+
+    if (subset > 0) {
+        d = d.filter((_v, i) => i < subset);
+    }
+
+   
+    d = d.concat(generateSnapshots(first, last, 60 * 1000, d));
+   
+    console.log(`Setting mock data with ${d.length} items`)
+    data = d;
+}
+
+
+
+function generateSnapshots(start, _end, interval, d) {
+
+    d = d || data;
+
+    if (!start) {
+        return;
+    }
+
+    var unixStart = start.unix;
+    
+    // walk the data and everywhere there is not an existing file
+    // add one of the static files
+    //
+
+    var snapshots = [];
+    var pos = unixStart;
+
+    for (var i = 0; i < d.length; i++) {
+        var nextItem = d[i];
+        var nextUnixStart = nextItem.timestamp.unix;
+
+        while (pos < nextUnixStart) {
+            snapshots.push(
+                {
+                    "id": 100000 + snapshots.length,
+                    "camera_id": 1,
+                    "path": snapshots.length % 2 === 0 ? jpg1 : jpg2,
+                    "type": 0,
+                    "timestamp": new Time(pos),
+                    "length": 33168,
+                    "duration_seconds": Math.trunc(interval / 1000)
+                }
+            );
+            pos += interval;
+        }
+
+        // snap to after
+        var nextUnixEnd = nextUnixStart + interval + (nextItem.duration_seconds || 5) * 1000;
+        pos = nextUnixEnd;
+    }
+    return snapshots;
+}
+
+export function GetData(start, end, sort, files) {
+
+    var d = files || data;
+
+ 
+
+    if (!end) {
+        end = new Time();
+    } 
+
+    if (sort === "desc") {
+        d = d.sort((a, b) => b.timestamp.unix - a.timestamp.unix);
+    } else {
+        d = d.sort((a, b) => a.timestamp.unix - b.timestamp.unix);
+    }
+    return d.filter(f => f.timestamp.after(start, true) && f.timestamp.before(end));
+}
+
+var stats;
+export function GetStats() {
+    if (!stats) {
+
+        var items = GetData(new Time("2000-01-01T00:00:00Z"), new Time(), "asc")
+        var res =
+        {
+            min_date: items[0].timestamp,
+            max_date: items[items.length - 1].timestamp,
+            file_count: 0,
+            file_size: 0
+        }
+
+        data.forEach(v => {
+            res.file_count++;
+            res.file_size += v.length;
+        })
+
+        stats = res;
+    }
+    return stats;
+}
+
+
+ data = [
     {
         "id": 7158,
         "camera_id": 1,
@@ -2831,138 +2975,6 @@ var data = [
 ];
 
 
-const jpg1 = "/1591027084.jpg";
-const jpg2 = "/1593216147.jpg";
 
-export function setData(d) {
-
-    var first = null;
-    var last = null;
-
-    d.forEach(f => {
-
-        f.timestamp = new Date(f.timestamp);
-
-        if (!first || f.timestamp < first) {
-            first = f.timestamp;
-        }
-
-        if (!last || f.timestamp > last) {
-            last = f.timestamp;
-        }
-        f.old_path = f.path;
-
-        switch (f.type) {
-            case 0:
-
-                f.path = jpg1;
-                break;
-            case 1:
-                f.path = "/1591028951.mp4";
-                break
-            default:
-                break;
-        }
-    })
-
-    const subset = -1;
-
-
-    if (subset > 0) {
-        d = d.filter((_v, i) => i < subset);
-    }
-
-   
-    d = d.concat(generateSnapshots(first, last, 60 * 1000, d));
-   
-    console.log(`Setting mock data with ${d.length} items`)
-    data = d;
-}
 
 setData(data)
-
-function generateSnapshots(start, _end, interval, d) {
-
-    d = d || data;
-
-    var unixStart = start.getTime();
-    
-    // walk the data and everywhere there is not an existing file
-    // add one of the static files
-    //
-
-    var snapshots = [];
-    var pos = unixStart;
-
-    for (var i = 0; i < d.length; i++) {
-        var nextItem = d[i];
-        var nextUnixStart = nextItem.timestamp.getTime();
-
-        while (pos < nextUnixStart) {
-            snapshots.push(
-                {
-                    "id": 100000 + snapshots.length,
-                    "camera_id": 1,
-                    "path": snapshots.length % 2 === 0 ? jpg1 : jpg2,
-                    "type": 0,
-                    "timestamp": new Date(pos),
-                    "length": 33168,
-                    "duration_seconds": Math.trunc(interval / 1000)
-                }
-            );
-            pos += interval;
-        }
-
-        // snap to after
-        var nextUnixEnd = nextUnixStart + interval + (nextItem.duration_seconds || 5) * 1000;
-        pos = nextUnixEnd;
-    }
-    return snapshots;
-}
-
-export function GetData(start, end, sort, files) {
-
-    var d = files || data;
-
- 
-    if (!start.getTime) {
-        start = new Date(start);
-    }
-
-    if (!end) {
-        end = new Date();
-    } else if (!start.getTime) {
-        end = new Date(end);
-    }
-
-    if (sort === "desc") {
-        d = d.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    } else {
-        d = d.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-    }
-    return d.filter(f => f.timestamp >= start && f.timestamp < end);
-}
-
-var stats;
-export function GetStats() {
-    if (!stats) {
-
-        var items = GetData(new Date("2000-01-01T00:00:00Z"), new Date(), "asc")
-        var res =
-        {
-            min_date: items[0].timestamp,
-            max_date: items[items.length - 1].timestamp,
-            file_count: 0,
-            file_size: 0
-        }
-
-        data.forEach(v => {
-            res.file_count++;
-            res.file_size += v.length;
-        })
-
-        stats = res;
-    }
-    return stats;
-}
-

@@ -135,7 +135,7 @@ describe('FileManager', () => {
         var broker = new ServiceBroker(true);
 
         var fm = new FileManager("test-1", broker);
-        fm.log = function () { }
+       // fm.log = function () { }
 
 
         it('Should properly init time.', async () => {
@@ -152,8 +152,8 @@ describe('FileManager', () => {
             });
 
             expect(state.window).toEqual({
-                start: new Date("2020-06-16T00:00:00Z"),
-                end: new Date("2020-06-17T00:00Z"),
+                start: new Time("2020-06-16T00:00:00Z"),
+                end: new Time("2020-06-17T00:00Z"),
             });
 
             expect(state.file.id).toEqual(lastFile.id);
@@ -173,16 +173,12 @@ describe('FileManager', () => {
             var min = tmin.offset(19, "second")
             var max = tmax.offset(74, "second")
 
-            await fm._setStats({ min_date: min.date, max_date: max.date })
+            await fm._setStats({ min_date: min, max_date: max })
 
             state = fm.getState();
 
-            expect(state.range).toEqual({
-                min: min.date,
-                max: max.date,
-            });
-
-
+            expect(state.range.min.unix).toEqual(min.unix);
+            expect(state.range.max.unix).toEqual(max.unix);
         });
 
 
@@ -196,11 +192,12 @@ describe('FileManager', () => {
 
 
             var tmin = pos.offset(-10, "day");
-            await fm.setPosition(tmin.unix);
+            console.log(`Setting Pos: ${tmin.iso()}`)
+            await fm.setPosition(tmin);
 
             const s = fm.getState();
 
-            expect(s.position).toEqual(s.window.start);
+            expect(s.position.date).toEqual(s.window.start.date);
 
 
         });
@@ -213,11 +210,11 @@ describe('FileManager', () => {
             var pos = new Time(state.position)
 
             var tmax = pos.offset(10, "day");
-            await fm.setPosition(tmax.unix);
+            await fm.setPosition(tmax);
 
             const s = fm.getState();
 
-            expect(s.position).toEqual(s.window.end);
+            expect(s.position.unix).toEqual(s.window.end.unix);
 
 
         });

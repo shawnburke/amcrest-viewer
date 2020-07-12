@@ -8,7 +8,7 @@ class FilesService {
     }
 
     async retrieveItems(startDate, endDate, sort) {
-        console.log(`Retrieve ${startDate} => ${endDate} (${sort}) [supplied=${Boolean(this.files)}]`);
+        console.log(`Retrieve ${startDate.iso()} => ${endDate.iso()} (${sort}) [supplied=${Boolean(this.files)}]`);
 
         var files = GetData(startDate, endDate, sort, this.files);
         return Promise.resolve(files);

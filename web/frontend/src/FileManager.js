@@ -1,4 +1,4 @@
-import { hour, month, day, toUnix, Time } from './time';
+import { hour, month, day, second, Time } from './time';
 
 // FileManager takes in a list of files
 // and manages them by time
@@ -33,41 +33,24 @@ export class FileManager {
 
         this.maxWindow = day;
         this.refreshIntervalSeconds = 15;
-
+        this.state = {}
 
         // initialize info
-        var today = new Date();
-        this.state = {}
+        var today = new Time();
         this.state.range = {
-            min: this.dateAdd(today, -1, "month"),
+            min: today.add(-1, month),
             max: today,
         }
-
+        
         this.state.window = {
-            start: this.dateAdd(today, -1, "day"),
+            start: today.add(-1, day),
             end: today,
         }
-
-        this.state.position = this.dateAdd(today, -1, "hour");
-        this.timify();
+    
+        this.state.position = today.add(-1, hour);
     }
 
-    timify() {
-        // if (this.state.range) {
-        //     this.state.range.tmin = new Time(this.state.range.min);
-        //     this.state.range.tmax = new Time(this.state.range.tmax);
-        // }
-
-        // if (this.state.window) {
-        //     this.state.window.tstart = new Time(this.state.window.start);
-        //     this.state.window.tend = new Time(this.state.window.end);
-        // }
-
-        // if (this.state.position) {
-        //     this.tposition = new Time(this.state.position);
-        // }
-    }
-
+   
 
     log(s) {
         console.log(s);
@@ -91,15 +74,16 @@ export class FileManager {
     _setStats(stats, refreshInterval) {
         if (stats.canLiveStream === false) {
             this.liveDisabled = true;
-        } else {
+        } else if (!this._streamingWarmup) {
             // kick live so it's fast if user tries it.
-            var start = Date.now();
+            var start = new Time();
             this.camerasServer.getLiveStreamUrl(this.camid).then(uri => {
-                this.log(`Live streaming ready @ ${uri} (${(new Date().getTime() - start) / 1000}s)`)
+                this.log(`Live streaming ready @ ${uri} (${new Time().delta(start, second)}s)`)
+                this._streamingWarmup = true;
             });
         }
 
-        var promise = this.setRange(new Date(stats.min_date), new Date(stats.max_date));
+        var promise = this.setRange(stats.min_date, stats.max_date);
 
         if (refreshInterval) {
             setTimeout(() => {
@@ -121,11 +105,10 @@ export class FileManager {
 
         // snap them to start / end on midnight and 1s before next
         // midnight
-        start = start.toString().replace(/\d{2}:\d{2}:\d{2}/, "00:00:00")
-        start = new Date(start);
+        start = start.iso().replace(/\d{2}:\d{2}:\d{2}/, "00:00:00")
+        start = new Time(start);
 
-        end = end || new Date(start.getTime() + (24 * 60 * 60 * 1000) - 1);
-
+        end = end || start.add(-1, day);
 
         return this.filesService.retrieveItems(start, end, "");
     }
@@ -178,11 +161,8 @@ export class FileManager {
 
         var batching = this._batch && this._batch.count > 0;
 
-        var old = old || this.state;
-
-
-        var printSpan = function (s, e) {
-            return `${new Time(s).iso()} => ${new Time(e).iso()}`;
+        var printSpan = function(s,e) {
+            return `${s.iso()} => ${e.iso()}`;
         }
 
         var rangeChange = value.range;
@@ -195,7 +175,7 @@ export class FileManager {
         }
         var positionChange = value.position !== undefined;
         if (positionChange && !batching) {
-            this.log(`Pos:\n\tOld: ${new Time(old.position).iso()}\n\tNew: ${new Time(value.position).iso()}`);
+            this.log(`Pos:\n\tOld: ${this.state.position && this.state.position.iso()}\n\tNew: ${value.position.iso()}`);
         }
 
         var fileChange = value.file !== undefined;
@@ -208,7 +188,6 @@ export class FileManager {
         }
 
         Object.assign(this.state, value);
-        this.timify();
 
         if (batching) {
             Object.assign(this._batch.value, value);
@@ -222,10 +201,9 @@ export class FileManager {
 
     getState() {
         var state = Object.assign({
-            fileCount: this.state.files && this.state.files.length || 0,
+            fileCount: this.state.files && (this.state.files.length || 0),
             live: this.isLive(),
         }, this.state);
-        delete state.files;
         return state;
     }
 
@@ -287,7 +265,6 @@ export class FileManager {
         try {
             this._startBatch();
             console.log(`Stopping live `)
-            this.setPosition(new Date());
             this.selectLastFile();
         }
         finally {
@@ -301,7 +278,10 @@ export class FileManager {
             throw new Error("bad range");
         }
 
-        if (this.timeEqual(min, this.state.range.min) && this.timeEqual(max, this.state.range.max)) {
+        var oldMin = this.state.range && this.state.range.min;
+        var oldMax = this.state.range && this.state.range.max;
+
+        if (min.same(oldMin) && max.same(oldMax)) {
             return Promise.resolve();
         }
 
@@ -316,9 +296,9 @@ export class FileManager {
                 },
             });
 
-            promise = this.setWindow(this.state.window.start, this.state.window.end, true);
+           promise = this.setWindow(this.state.window.start, this.state.window.end, true);
         } finally {
-            this._endBatch();
+           promise = Promise.all([promise, this._endBatch()]);
         }
         return promise;
     }
@@ -329,123 +309,135 @@ export class FileManager {
             throw new Error("bad window");
         }
 
-        var boxedStart = this.boxTime(start, this.state.range.min, this.state.range.max, "min");
-        var boxedEnd = this.boxTime(end, this.state.range.min, this.state.range.max, "max");
+        var boxedStart = start.box(this.state.range.min, this.state.range.max);   
+        var boxedEnd = end.box(this.state.range.min, this.state.range.max);
 
-        boxedStart = this.snapTime(boxedStart, "day", -1);
-        boxedEnd = this.snapTime(boxedEnd, "day", 1);
+        boxedStart = boxedStart.floor(day);
+        boxedEnd = boxedEnd.ceil(day);
 
-        if (!reload && this.timeEqual(boxedStart, this.state.window.start) && this.timeEqual(boxedEnd, this.state.window.end)) {
+        if (!reload && boxedStart.same(this.state.window.start) && boxedEnd.same(this.state.window.end)) {
             return Promise.resolve(true);
         }
 
-        var windowSize = toUnix(boxedEnd) - toUnix(boxedStart);
+        var windowSize = boxedEnd.delta(boxedStart);
         if (windowSize > this.maxWindow) {
-            boxedStart = new Date(toUnix(boxedEnd) - this.maxWindow);
+            boxedStart = boxedEnd.add(-1 * this.maxWindow);
         }
 
         try {
-            var promise = this._startBatch();
+            this._startBatch();
 
             this._onchange({
                 window: {
-                    start: new Date(boxedStart),
-                    end: new Date(boxedEnd),
+                    start: boxedStart,
+                    end: boxedEnd,
                 }
             });
 
-            promise.then(() => {
+        } finally {
+            var promise = this._endBatch();
+
+            promise = promise.then(() => {
                 return this.refreshFiles(boxedStart, boxedEnd);
             });
-
-        } finally {
-            this._endBatch();
         }
         return promise;
     }
 
     isInFile(time, file) {
-        time = toUnix(time);
-        return time >= toUnix(file.start) && time <= toUnix(file.end);
+        return file.start.before(time, true) && file.end.after(time);
     }
 
     setPosition(time, file) {
 
-        var boxed = time && this.boxTime(time, this.state.window.start, this.state.window.end);
-
-        if (this.timeEqual(boxed, this.state.position)) {
+        var boxed = time && time.box(this.state.window.start, this.state.window.end);
+ 
+        if (boxed.same(this.state.position)) {
             return Promise.resolve(true);
         }
 
-        var promise = Promise.resolve(true);
+        var promise = null;
         try {
             this._startBatch();
-            this._onchange({ position: boxed && new Date(boxed) });
+            this._onchange({ position: boxed });
 
-            // find the file
+            // if this position is in a file, set that file
+            //
             if (!file && this.state.files && boxed) {
                 file = this.state.files.find(f => this.isInFile(boxed, f));
             }
             promise = this.setCurrentFile(file);
         }
         finally {
-            this._endBatch();
+            return Promise.all([promise, this._endBatch()]);
         }
-        return promise;
+       
     }
 
     selectLastFile(pos) {
 
+       
         var lastFile = null;
 
         // find the last file
         var files = this.state.files || [];
-        if ((!pos || !this.timeEqual(pos, this.state.position)) && files.length) {
+        if ((!pos || (!pos.same(this.state.position) && files.length))) {
+            this.log(`Selecting last file`);
             lastFile = files[files.length - 1];
             pos = lastFile.timestamp;
         }
 
-        this.setPosition(pos, lastFile);
+        return this.setPosition(pos, lastFile);
     }
 
     refreshFiles(start, end) {
-        this.log(`Loading files for range ${start} => ${end}`)
+        this.log(`Loading files for range ${start.iso()} => ${end.iso()}`)
         return this.loadFiles(start, end).then(items => {
 
             this.log(`Loaded ${items.length} files`);
 
+            var currentFileId = this.state.file && this.state.file.id;
+            var targetPos = null;
+
             // sort ascending
-            var files = items.sort((a, b) => toUnix(a.timestamp) - toUnix(b.timestamp));
+            var files = items.sort((a, b) => a.timestamp.unix - b.timestamp.unix);
 
             // set an end for each file item;
             files.forEach(file => {
                 if (!file.end) {
-                    var end = toUnix(file.timestamp);
+                    var end = file.timestamp
 
                     if (file.duration_seconds) {
-                        end += 1000 * file.duration_seconds;
+                        end = file.timestamp.add(file.duration_seconds, second)
                     } else {
-                        end += 1000;
+                        end.add(1, second);
                     }
                     file.start = file.timestamp;
                     file.end = end;
                 }
+
+                if (currentFileId === file.id) {
+                    targetPos = this.state.position;
+                    if (!this.isInFile(this.state.position, file)) {
+                        targetPos = file.timestamp;
+                    }
+                }
+                   
             });
 
             try {
-                this._startBatch();
+                var promise = this._startBatch();
 
                 this._onchange({ files: files });
 
-                var pos = this.state.position && this.boxTime(this.state.position, start, end, "max");
                 var liveRefresh = this.isLive() && this._refreshing;
 
                 if (!liveRefresh) {
-                    this.selectLastFile(pos);
+                    promise.then(() => this.selectLastFile(targetPos));
                 }
             }
             finally {
-                this._endBatch();
+                return Promise.all([promise,this._endBatch()]);
             }
 
         })
@@ -473,155 +465,26 @@ export class FileManager {
 
         var promise = Promise.resolve(true);
 
-        if (file && file.type !== 2) {
-            // set position if not in file
-            var boxed = this.boxTime(file.timestamp, this.state.window.start, this.state.window.end);
+        var isLive = file && file.type === 2;
 
-            if (!this.timeEqual(boxed, file.timestamp)) {
+        if (isLive) {
+            update.position = this.state.window.end;
+        } else if (file) {
+            // set position if not in file
+            var boxed = file.timestamp.box( this.state.window.start, this.state.window.end);
+
+            if (!boxed.same( file.timestamp)) {
                 console.warn(`Selected file timestamp ${file.timestamp} outside of window ${this.state.window.start} => ${this.state.window.end}`);
                 return Promise.resolve(false);
             }
 
             promise = this.setPosition(file.timestamp, file);
-        } else {
-            update.position = this.state.window.end;
-        }
+        } 
 
         this._onchange(update);
         return promise;
     }
 
-    //
-    // Utility Functions
-    //
-    timeEqual(t1, t2) {
-        if (t1 === t2) {
-            return true;
-        }
-
-        if (!t1 || !t2) {
-            return false;
-        }
-
-        t1 = toUnix(t1);
-        t2 = toUnix(t2);
-
-        return t1 === t2;
-    }
-
-
-    dateAdd(date, n, unit) {
-
-
-        var base = 0;
-
-        switch (unit) {
-            case "hour":
-                base = hour;
-                break;
-            case "day":
-                base = day;
-                break;
-            case "month":
-                base = month;
-                break;
-            default:
-                throw new Error("Unknown unit: " + unit);
-        }
-
-        base *= n;
-
-        if (!date) {
-            date = new Date();
-        }
-
-        return new Date(date.getTime() + base);
-    }
-
-
-    // todo: migrate to time lib
-    snapTime(t, unit, bias) {
-
-        var wasDate = false;
-        if (t.getTime) {
-            t = t.getTime();
-            wasDate = true;
-        }
-
-        var chunk = 0;
-
-
-        var offset = 0;
-
-        switch (unit) {
-            case "hour":
-                chunk = hour;
-                break;
-            case "day":
-                chunk = day;
-                offset = new Date().getTimezoneOffset() * 60 * 1000;
-                t -= offset;
-                break;
-            default:
-                throw new Error("Unknown unit: " + unit);
-        }
-
-        var delta = t % chunk;
-
-        if (!bias) {
-            bias = (delta < chunk / 2) ? -1 : 1;
-        }
-
-        switch (bias) {
-            case -1:
-                t -= delta;
-                break;
-            case 1:
-                t += (chunk - delta);
-                break;
-            default:
-        }
-
-        t += offset;
-
-        if (wasDate) {
-            t = new Date(t);
-        }
-        return t;
-    }
-
-    boxTime(t, min, max, bias) {
-
-
-        var tt = toUnix(t);
-        var wasDate = tt !== t;
-        var tmin = toUnix(min);
-        var tmax = toUnix(max);
-
-        var unboxed = tt < tmin || tt > tmax;
-
-        if (unboxed) {
-
-            switch (bias) {
-                case "min":
-                    tt = tmin;
-                    break;
-                case "max":
-                    tt = tmax;
-                    break;
-                default:
-                    if (tt < tmin) {
-                        tt = tmin;
-                    } else if (tt > tmax) {
-                        tt = tmax;
-                    }
-            }
-        }
-
-        if (wasDate) {
-            return new Date(tt);
-        }
-        return tt;
-    }
+  
 
 }

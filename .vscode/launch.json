@@ -9,48 +9,17 @@
             "program": "${workspaceFolder}/main.go"
         },
         {
-            "name": "Jest Tests",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceRoot}/web/frontend/node_modules/jest/node_modules/jest-cli/bin/jest.js",
-            "stopOnEntry": false,
-            "args": [
-                "--runInBand"
-            ],
-            "cwd": "${workspaceRoot}/web/frontend",
-            "preLaunchTask": null,
-            "runtimeExecutable": null,
-            "runtimeArgs": [
-                "--nolazy"
-            ],
-            "env": {
-                "NODE_ENV": "development"
-            },
-            ,
-            "console": "internalConsole",
-            "sourceMaps": false,
-            "outFiles": []
-        },
-        {
             "name": "Debug CRA Tests",
             "type": "node",
             "request": "launch",
             "runtimeExecutable": "${workspaceRoot}/web/frontend/node_modules/.bin/react-scripts",
-            "args": [
-                "test",
-                "--runInBand",
-                "--no-cache",
-                "--watchAll=false"
-            ],
+            "args": ["test", "--runInBand", "--no-cache", "--watchAll=false", "--unhandled-rejections=strict"],
             "cwd": "${workspaceRoot}/web/frontend",
             "protocol": "inspector",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "env": {
-                "CI": "true"
-            },
+            "env": { "CI": "true" },
             "disableOptimisticBPs": true
-        }
+          }
     ]
-]
 }

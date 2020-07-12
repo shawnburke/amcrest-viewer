@@ -1,8 +1,210 @@
 
 
-export const hour = 3600 * 1000;
+export const second = 1000;
+export const minute = second * 60;
+export const hour = 60 * minute;
 export const day = hour * 24;
+
 export const month = day * 30;
+export const year = day * 365;
+
+export class Range{
+    constructor(start, end) {
+        this.start = new Time(start);
+        this.end = new Time(end);
+    }
+
+    contains(t) {
+        t = new Time(t);
+        return this.start.before(t, true) && this.end.after(t);
+    }
+}
+
+
+export class Time {
+    constructor(val) {
+
+        if (!val) {
+            val = new Date();
+        }
+
+        var type = typeof val;
+
+        if (type === "object") {
+            type = val.constructor.name
+        }
+
+        switch (type) {
+            case "number":
+                this.unix = val;
+                this.date = new Date(val);
+                break;
+            case "string":
+                this.date = new Date(val);
+                this.unix = this.date.getTime();
+                break;
+            case "Date":
+                this.date = val;
+                this.unix = this.date.getTime();
+                break;
+            case "Time":
+                this.date = val.date;
+                this.unix = val.unix;
+                break;
+            default:
+                throw new Error(`Unknown time value: ${val} (${typeof val})`);
+        }
+
+        if (this.unix === 0 || 
+            this.date == null || 
+            Number.isNaN(this.unix) ||
+             Number.isNaN(this.date.getTime()) ) {
+            throw new Error(`Invalid Time init: ${val}`)
+        }
+    }
+
+    iso() {
+        return this.date.toISOString()
+    }
+
+    locale() {
+        return this.date.toLocaleString()
+    }
+
+    localeTime() {
+        return this.date.toTimeLocaleString();
+    }
+
+    after(t, inclusive) {
+        t = new Time(t);
+
+        if (inclusive) {
+            return this.unix >= t.unix;
+        }
+        return this.unix > t.unix;
+    }
+
+    before (t, inclusive) {
+
+        t = new Time(t);
+
+        if (inclusive) {
+            return this.unix <= t.unix;
+        }
+        
+        return this.unix < t.unix;
+    }
+
+    same(t) {
+        t = new Time(t);
+        return t.unix === this.unix;
+    }
+
+    add(n, type) {
+        return this.offset(n, type);
+    }
+
+    offset(n, type) {
+
+        if (!n) {
+            return this;
+        }
+
+        if (!type) {
+            type = 1;
+        }
+        var start = this.unix;
+    
+        var amount = 0;
+
+        switch (type) {
+            case "hour":
+                amount = hour;
+                break;
+            case "minute":
+                amount = minute;
+                break;
+            case "second":
+                amount = second;
+                break;
+            case "day":
+                amount = day;
+                break; 
+            default:
+                amount = Number(type);
+                break;
+        }
+
+        start += n * amount;
+        return new Time(start);
+    }
+
+    box(min, max) {
+        min = new Time(min);
+        max = new Time(max);
+
+        if (this.before(min)) {
+            return min;
+        }
+
+        if (this.after(max)) {
+            return max;
+        }
+        return this;
+    }
+
+    round(type) {
+
+        if (!type) {
+            return this;
+        }
+
+        var half = type / 2;
+        var floor = this.floor(type).unix;
+        var mod = this.unix % type;
+        
+        if (mod <= half) {
+            return new Time(floor);
+        }
+        return new Time(floor+type);
+    }
+
+    floor(type) {
+        if (!type) {
+            return this;
+        }
+        var mod = this.unix % type;
+        var floor = this.unix - mod;
+        return new Time(floor);
+    }
+
+    ceil(type) {
+
+        if (!type) {
+            return this;
+        }
+
+        var floor = this.floor(type);
+
+        var newTime = floor.add(1, type);
+
+        return newTime;
+    }
+
+    delta(t, type) {
+        var d = this.unix - t.unix;
+
+        if (type) {
+            d /= type;
+        }
+        return Math.round(d);
+    }
+}
+
+Time.now = function() { return new Time();}
+
+
+
 
 export function boxTime(t, min, max) {
 
@@ -79,107 +281,4 @@ export function snapTime(t, unit, bias) {
         t = new Date(t);
     }
     return t;
-}
-
-export class Range {
-    constructor(start, end) {
-        this.start = new Time(start);
-        this.end = new Time(end);
-    }
-
-    contains(t) {
-        t = new Time(t);
-        return this.start.before(t, true) && this.end.after(t);
-    }
-}
-
-
-export class Time {
-    constructor(val) {
-        if (!val) {
-            val = new Date();
-        }
-
-
-        if (val.unix) {
-            this.unix = val.unix;
-            this.date = new Date(val.unix);
-            return;
-        }
-
-
-        if (val.getTime) {
-            val = val.getTime();
-        }
-        this.unix = val;
-        this.date = new Date(val);
-
-        if (this.date.toString() === "Invalid Date") {
-            console.error(val);
-        }
-    }
-
-    toString() {
-        return this.iso();
-    }
-    iso() {
-
-        return this.date.toISOString();
-    }
-
-    locale() {
-        return this.date.toLocaleString()
-    }
-
-    localeTime() {
-        return this.date.toTimeLocaleString();
-    }
-
-    after(t, inclusive) {
-        t = new Time(t);
-
-        if (inclusive) {
-            return t.unix >= this.unix;
-        }
-        return t.unix > this.unix;
-    }
-
-    before(t, inclusive) {
-
-        t = new Time(t);
-
-        if (inclusive) {
-            return t.unix <= this.unix;
-        }
-
-        return t.unix < this.unix;
-    }
-
-    same(t) {
-        t = new Time(t);
-        return t.unix === this.unix;
-    }
-
-    offset(n, type) {
-        var start = this.unix;
-
-        switch (type) {
-            case "hour":
-                start += n * hour;
-                break;
-            case "minute":
-                start += n * 1000 * 60;
-                break;
-            case "second":
-                start += n * 1000;
-                break;
-            case "day":
-                start += n * day;
-                break;
-            default:
-                start += n * Number(type);
-                break;
-        }
-        return new Time(start);
-    }
 }

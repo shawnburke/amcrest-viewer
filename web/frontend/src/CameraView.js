@@ -8,7 +8,7 @@ import Player from "./Player";
 
 import DatePicker from "./DatePicker";
 import TimeScroll from "./TimeScroll";
-import { day, toUnix } from './time';
+import { day, second, Time } from './time';
 import { FileManager } from "./FileManager";
 import { FileList } from "./FileList"
 
@@ -33,16 +33,16 @@ class CameraView extends React.Component {
 
         this.state = {
             files: [],
-            date: new Date(),
-            position: new Date(),
+            date: new Time(),
+            position: new Time(),
             selected: 0,
             range: {
-                min: new Date(2000, 1, 1),
-                max: new Date(),
+                min: new Time("2000-01-01"),
+                max: new Time(),
             },
             window: {
-                start: new Date(new Date().getTime() - day),
-                end: new Date()
+                start: new Time().offset(-1, day),
+                end: new Time()
             },
             mediaItems: [],
         }
@@ -65,7 +65,7 @@ class CameraView extends React.Component {
 
         if (change.window) {
 
-            var d = this.fileManager.snapTime(change.window.end, "day", -1);
+            var d = change.window.end.floor(day);
 
             this.setState({
                 window: change.window,
@@ -151,9 +151,8 @@ class CameraView extends React.Component {
         var items = files.map(f => {
 
             var sec = f.duration_seconds || jpgSeconds;
-
-            var end = new Date(toUnix(f.timestamp) + (1000 * sec));
-
+            var end = f.timestamp.offset(sec, second);
+        
             return {
                 id: f.id,
                 start: f.timestamp,
@@ -176,7 +175,7 @@ class CameraView extends React.Component {
         var pos = "";
 
         if (this.state.position) {
-            pos = this.state.position.toLocaleTimeString();
+            pos = this.state.position.date.toLocaleTimeString();
         }
 
         return <div style={{}}>
@@ -198,7 +197,7 @@ class CameraView extends React.Component {
                         minDate={this.state.range.min}
                         maxDate={this.state.range.max}
                         date={this.state.date}
-                        onChange={date => this.setDate(date)}
+                        onChange={date => this.setCurrentDate(date)}
                     />
                 </Col>
                 <Col xs={4} style={{ textAlign: "right" }}>
@@ -237,16 +236,15 @@ class CameraView extends React.Component {
 
     }
 
-    setDate(d) {
+    setCurrentDate(d) {
 
-        if (d === this.state.date) {
+        if (this.state.date.same(d)) {
             return;
         }
 
-        d = this.fileManager.snapTime(d, "day", -1);
-        var e = this.fileManager.dateAdd(d, 1, "day");
-        e = new Date(new Date(e).getTime() - 1);
-
+        d = d.floor(day);
+        var e = d.add(1, day);
+       
         this.fileManager.setWindow(d, e);
     }
 }

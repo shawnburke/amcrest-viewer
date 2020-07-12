@@ -1,3 +1,5 @@
+import {Time} from "../time";
+
 class FilesService {
 
     constructor(camera, root) {
@@ -10,9 +12,9 @@ class FilesService {
     
     async retrieveItems(startDate, endDate, sort) {
 
-        console.log(`Fetching ${startDate.toString()} => ${endDate.toString()} (${sort})`);
+        console.log(`Fetching ${startDate.iso()} => ${endDate.iso()} (${sort})`);
 
-        var url = `${this.url}?start=${startDate.getTime()}&end=${endDate.getTime()}&sort=${sort}`
+        var url = `${this.url}?start=${startDate.unix}&end=${endDate.unix}&sort=${sort}`
         return fetch(url)
 
             .then(response => {
@@ -74,7 +76,7 @@ class FilesService {
 
 export function updateFile(f, root) {
     if (typeof f.timestamp === "string") {
-        f.timestamp = new Date(f.timestamp);
+        f.timestamp = new Time(f.timestamp);
     }
 
     if (root) {

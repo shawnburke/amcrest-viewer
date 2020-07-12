@@ -4,8 +4,7 @@ import React from 'react';
 
 import { Row, Col } from 'react-bootstrap';
 
-//import { day, toUnix } from './time';
-
+import {second} from "./time";
 
 export class FileList extends React.Component {
 
@@ -72,7 +71,7 @@ export class FileList extends React.Component {
                 if (f.type !== 0) {
                     return false;
                 }
-                if (curmp4 && f.timestamp < curmp4.end) {
+                if (curmp4 && f.timestamp.before( curmp4.end)) {
                     curmp4.children = curmp4.children || [];
                     curmp4.children.push(f);
                     if (curmp4.children.length === 1) {
@@ -95,7 +94,7 @@ export class FileList extends React.Component {
                 if (f.type === 1) {
                     finish();
                     curmp4 = f;
-                    f.end = new Date(f.timestamp.getTime() + (1000 * f.duration_seconds));
+                    f.end = f.timestamp.add(f.duration_seconds, second);
                 }
                 f.children = null;
                 grouped.push(f);
@@ -165,7 +164,7 @@ class FileRow extends React.Component {
                 }} />
             </Col>
             <Col xs={8} style={{ textAlign: "left" }}>
-                <div>{f.timestamp.toLocaleTimeString()}</div>
+                <div>{f.timestamp.date.toLocaleTimeString()}</div>
 
                 <div>{f.duration_seconds}s</div>
             </Col>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { boxTime, toUnix, hour, iso } from './time';
+import {  hour, Time, second } from './time';
 
 
 var tsCounter = 0;
@@ -14,7 +14,7 @@ export default class TimeScroll extends React.Component {
         this.myRef = React.createRef();
         this.idBase = tsCounter++;
         this.state = {
-            current: new Date(),
+            current: new Time(),
         }
         this._updating = 0;
     }
@@ -98,9 +98,9 @@ export default class TimeScroll extends React.Component {
         const sec = range.seconds;
         const time = range.start;
 
-        var newTime = time + (1000 * sec * ratio);
+        var newTime = time.add(sec * ratio, second);
 
-        var item = this.getElementItem(el, newTime);
+        var item = this.getElementItem(el, newTime.unix);
 
 
         if (this.props.onTimeChange && !this._updating) {
@@ -109,32 +109,24 @@ export default class TimeScroll extends React.Component {
                 console.log("no item")
             }
 
-            this.log(`Notifying scroll=${this.myRef.current.scrollLeft}, Time=${new Date(newTime).toISOString()}, Item=${item && item.id}`);
+
+            this.log(`Notifying scroll=${this.myRef.current.scrollLeft}, Time=${newTime.iso()}, Item=${item && item.id}`);
             this.props.onTimeChange(newTime, item);
         }
 
-    }
-
-    boxTime(t, min, max) {
-        return boxTime(t, min, max);
-    }
-
-    toUnix(t) {
-        return toUnix(t);
     }
 
 
 
     shouldComponentUpdate(nextProps, _nextState) {
 
-        // this._updating++;
         var firstItemIdNext = nextProps.items && nextProps.items.length && nextProps.items[0].id;
         var firstItemIdProps = this.props.items && this.props.items.length && this.props.items[0].id;
 
         const positionOnlyChange = firstItemIdNext === firstItemIdProps &&
-            nextProps.startTime === this.props.startTime &&
-            nextProps.endTime === this.props.endTime &&
-            nextProps.position !== this.props.position;
+            new Time(nextProps.startTime).same(new Time(this.props.startTime)) &&
+            new Time(nextProps.endTime).same(new Time(this.props.endTime)) &&
+            new Time(nextProps.position).same(new Time(this.props.position));
 
         if (positionOnlyChange && nextProps.position) {
 
@@ -142,7 +134,7 @@ export default class TimeScroll extends React.Component {
                 return false;
             }
 
-            var t = this.toUnix(nextProps.position);
+            var t = new Time(nextProps.position);
             this.scrollToTime(t);
             return false;
         }
@@ -151,9 +143,8 @@ export default class TimeScroll extends React.Component {
 
     componentDidUpdate() {
         if (this.props.position) {
-            this.scrollToTime(this.toUnix(this.props.position));
+            this.scrollToTime(new Time(this.props.position));
         }
-        //   this._updating--;
     }
 
     // given an element and a time, return
@@ -215,13 +206,13 @@ export default class TimeScroll extends React.Component {
                 continue;
             }
             if (this.itemContains(item, unixTime)) {
-                this.log(`Found item ${item.id} at ${iso(unixTime)}`)
+                this.log(`Found item ${item.id} at ${new Time(unixTime).iso()}`)
                 return item;
             }
         }
 
         var elRange = this.getElementRange(el);
-        this.log(`No items in ${el.id} between ${iso(elRange.start)} => ${iso(elRange.end)} for ${iso(unixTime)}`)
+        this.log(`No items in ${el.id} between ${elRange.start.iso()} => ${elRange.end.iso()} for ${new Time(unixTime).iso()}`)
         return null;
     }
 
@@ -229,10 +220,10 @@ export default class TimeScroll extends React.Component {
         if (!item.start) {
             throw new Error("bad item:" + JSON.stringify(item))
         }
-        var unixStart = toUnix(item.start);
-        var unixEnd = toUnix(item.end);
-        time = toUnix(time);
-        return time >= unixStart && time < unixEnd;
+
+        time = new Time(time);
+
+        return item.start.before(time, true) && item.end.after(time);
     }
 
 
@@ -243,18 +234,18 @@ export default class TimeScroll extends React.Component {
         if (!start) {
             return { invalid: true }
         }
+        start = Number(start);
 
         var seconds = el.attributes.seconds && el.attributes.seconds.value;
         seconds = seconds || 0;
 
-        var ms = seconds * 1000;
+        var ms = seconds * second;
 
-        start = toUnix(start)
         var range = {
-            start: start,
+            start: new Time(start),
             seconds: seconds,
             ms: ms,
-            end: start + ms,
+            end: new Time(start + ms),
         };
         range.contains = function (ts) {
             return this.itemContains(range, ts);
@@ -266,6 +257,7 @@ export default class TimeScroll extends React.Component {
 
         // snap time to hour
         //
+        t = new Time(t).unix;
         var hourTime = t - (t % hour);
         var nextHour = hourTime + hour;
 
@@ -283,19 +275,19 @@ export default class TimeScroll extends React.Component {
             // look for an element that is in the same hour
             // as the target.  once we find that,
             // start walking siblings
-            if (elRange.start >= hourTime && elRange.start < nextHour) {
+            if (elRange.start.unix >= hourTime && elRange.start.unix < nextHour) {
 
                 // now walk siblings.
                 //
                 while (hourEl) {
                     elRange = this.getElementRange(hourEl);
 
-                    if (elRange.start > nextHour) {
+                    if (elRange.start.unix > nextHour) {
                         return;
                     }
 
-                    if (t < elRange.end) {
-                        var ratio = ((t - elRange.start)) / elRange.ms;
+                    if (t < elRange.end.unix) {
+                        var ratio = ((t - elRange.start.unix)) / elRange.ms;
                         this.scrollToElement(hourEl, ratio);
                         return;
                     }
@@ -370,7 +362,6 @@ export default class TimeScroll extends React.Component {
             extra = el.clientWidth * ratio;
         }
 
-        var parent = this.myRef.current;
         var newScroll = left + extra;
         this.setScroll(newScroll);
     }
@@ -397,7 +388,7 @@ export default class TimeScroll extends React.Component {
     }
 
     renderMediaItem(mi) {
-        var seconds = (toUnix(mi.end) - toUnix(mi.start)) / 1000;
+        var seconds = mi.end.delta(mi.start, second);
 
         var color = mi.video ? "navy" : "gold";
 
@@ -405,7 +396,7 @@ export default class TimeScroll extends React.Component {
             return;
         }
 
-        var startTime = new Date(mi.start).toLocaleTimeString();
+        var startTime = mi.start.date.toLocaleTimeString();
 
 
         var w = this.myRef.current.clientWidth / 2;
@@ -414,7 +405,7 @@ export default class TimeScroll extends React.Component {
             onMouseDown={this.onMotionItemMouseDown.bind(this)}
             onMouseUp={this.onMotionItemMouseUp.bind(this)}
             title={mi.id}
-            key={`mi-${mi.id}`} item_id={mi.id} item_ids={mi.id} time={mi.start.getTime()} seconds={seconds} style={{
+            key={`mi-${mi.id}`} item_id={mi.id} item_ids={mi.id} time={mi.start.unix} seconds={seconds} style={{
                 display: "inline-block",
                 position: "relative",
                 height: "60%",
@@ -442,13 +433,21 @@ export default class TimeScroll extends React.Component {
         return window.innerWidth / 4;
     }
 
-    renderTimeItem(unixStart, ms, fileItems, isBuffer) {
+    renderTimeItem(start, ms, fileItems, isBuffer) {
+
+        var unixStart = start.unix;
 
         var topOfHour = unixStart % 3600 === 0;
         var halfHour = unixStart % 1800 === 0;
         var quarterHour = unixStart % 900 === 0;
 
         var seconds = ms / 1000;
+
+
+        if (Number.isNaN(seconds)) {
+            console.error(seconds);
+        }
+
         var w = seconds / 3600 * this.hourWidth();
 
         var label = <span>&nbsp;</span>;
@@ -491,8 +490,8 @@ export default class TimeScroll extends React.Component {
 
         fileItems.forEach(fi => {
 
-            var leftPercent = ((toUnix(fi.start) - unixStart) / ms) * 100;
-            var widthPercent = 100 * ((toUnix(fi.end) - toUnix(fi.start)) / ms);
+            var leftPercent = ((fi.start.unix - unixStart) / ms) * 100;
+            var widthPercent = 100 * ((fi.end.delta(fi.start)) / ms);
 
             var childItem = <div style={{
                 display: "inline-block",
@@ -540,10 +539,10 @@ export default class TimeScroll extends React.Component {
 
         // walk the items, creating sections as we go.
         //
-        var windowStart = toUnix(this.props.startTime);
-        var windowEnd = toUnix(this.props.endTime);
+        var windowStart = new Time(this.props.startTime).unix;
+        var windowEnd = new Time(this.props.endTime).unix;
 
-        var now = new Date().getTime();
+        var now = Time.now().unix;
 
         windowEnd = Math.min(windowEnd, now);
 
@@ -567,7 +566,7 @@ export default class TimeScroll extends React.Component {
             // get all of the items in the current hour
             // and get the next video
 
-            var hourItems = mediaItems.filter(mi => toUnix(mi.start) >= cur && toUnix(mi.start) < nextHour);
+            var hourItems = mediaItems.filter(mi => mi.start.unix >= cur && mi.start.unix < nextHour);
 
             var nextVideoIndex = hourItems.findIndex(mi => mi.video);
 
@@ -577,14 +576,14 @@ export default class TimeScroll extends React.Component {
             var hourItemsCount = hourItems.length;
 
             if (nextVideoIndex !== -1) {
-                timeItemSpan = toUnix(hourItems[nextVideoIndex].start) - curTime;
+                timeItemSpan = hourItems[nextVideoIndex].start.unix - curTime;
                 hourItemsCount = nextVideoIndex;
             }
 
 
             var isBuffer = curTime < windowStart || curTime >= windowEnd;
             var timeItem = this.renderTimeItem(
-                curTime, timeItemSpan,
+                new Time(curTime), timeItemSpan,
                 hourItems.slice(0, hourItemsCount),
                 isBuffer);
             items.push(timeItem);

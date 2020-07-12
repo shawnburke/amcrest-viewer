@@ -1,5 +1,6 @@
 
 import {updateFile} from "./FilesService"
+import { Time } from "../time";
 
 class CamerasService {
 
@@ -140,6 +141,12 @@ class CamerasService {
 
             .then(item => {
 
+                if (item.min_date) {
+                    item.min_date = new Time(item.min_date);
+                }
+                if (item.max_date) {
+                    item.max_date = new Time(item.max_date);
+                }
                 return item;
 
             }

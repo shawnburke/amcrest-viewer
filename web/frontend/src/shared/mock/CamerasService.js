@@ -1,5 +1,6 @@
 
 import { GetStats } from "./file_data.js";
+import { Time } from "../../time.js";
 
 class CamerasService {
 
@@ -11,7 +12,7 @@ class CamerasService {
             "camera_id": 1,
             "path": "/1591027084.jpg",
             "type": 0,
-            "timestamp": "2020-06-16T03:07:09Z",
+            "timestamp": new Time("2020-06-16T03:07:09Z"),
             "length": 32503
         };
         this.cameras = [

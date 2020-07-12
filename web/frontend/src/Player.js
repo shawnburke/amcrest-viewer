@@ -3,7 +3,7 @@
 
 import React from 'react';
 import ReactPlayer from 'react-player';
-import { toUnix } from './time';
+import { second } from './time';
 
 export default class Player extends React.Component {
 
@@ -25,8 +25,8 @@ export default class Player extends React.Component {
             return;
         }
 
-        var delta = toUnix(this.props.position) - toUnix(this.props.file.start);
-        this.player.seekTo(delta / 1000, "seconds");
+        var delta = this.props.position.delta(this.props.file.start, second);
+        this.player.seekTo(delta, "seconds");
     }
 
 
