@@ -30,10 +30,6 @@ export class Time {
 
         var type = typeof val;
 
-        if (type === "object") {
-            type = val.constructor.name
-        }
-
         switch (type) {
             case "number":
                 this.unix = val;
@@ -43,16 +39,20 @@ export class Time {
                 this.date = new Date(val);
                 this.unix = this.date.getTime();
                 break;
-            case "Date":
-                this.date = val;
-                this.unix = this.date.getTime();
-                break;
-            case "Time":
-                this.date = val.date;
-                this.unix = val.unix;
-                break;
+            case "object":
+                if (val instanceof Date) {
+                    this.date = val;
+                    this.unix = this.date.getTime();
+                    break;
+                }
+                if (val instanceof Time) {
+                    this.date = val.date;
+                    this.unix = val.unix;
+                    break;
+                }
+                
             default:
-                throw new Error(`Unknown time value: ${val} (${typeof val})`);
+                throw new Error(`Unknown time value: ${val} (${typeof val} / ${val.constructor && val.constructor.name})`);
         }
 
         if (this.unix === 0 || 
