@@ -141,6 +141,11 @@ export function GetStats() {
     return stats;
 }
 
+function initData() {
+
+    if (process.env.NODE_ENV === "production") {
+        return;
+    }
 
  data = [
     {
@@ -2974,7 +2979,9 @@ export function GetStats() {
     }
 ];
 
+}
 
+initData();
 
 
 setData(data)
