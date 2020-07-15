@@ -5,8 +5,8 @@ import './App.css';
 
 import CameraView from "./CameraView";
 import CameraSummary from "./CameraSummary";
-import { Container} from 'react-bootstrap';
-import {Header} from './Header';
+import { Container } from 'react-bootstrap';
+import { Header } from './Header';
 import ServiceBroker from "./shared/ServiceBroker";
 
 
@@ -27,8 +27,8 @@ class App extends React.Component {
         let broker = new ServiceBroker()
         this.camsService = broker.newCamsService();
         this.camid = this.getCamIdFromHash();
-       
-       
+
+
         this.state = {
             cameras: [],
             current: null,
@@ -40,7 +40,7 @@ class App extends React.Component {
         // cant seem to get useParams() to work.
         var m = window.location.hash.match("cameras/(.*)$")
         var id = "";
-    
+
         if (m) {
             id = m[1];
         }
@@ -49,25 +49,25 @@ class App extends React.Component {
 
     componentDidMount() {
 
-       if (this.state.cameras.length === 0){
+        if (this.state.cameras.length === 0) {
 
             this.camsService.retrieveItems().then(items => {
 
                 var state = {
-                    cameras: items 
+                    cameras: items
                 }
 
-                if (this.camid) {
+                if (this.camid && items) {
                     state.current = items.find(cam => cam.id === this.camid);
                 }
-    
+
                 this.setState(state);
 
             });
         }
     }
 
-   
+
 
     render() {
 
@@ -79,12 +79,12 @@ class App extends React.Component {
             <Router>
                 <div className="App">
                     <Container>
-                        <Header cams={cams} current={this.state.current}/>
+                        <Header cams={cams} current={this.state.current} />
                         <Route exact path="/">
                             <CameraSummary cameras={cams} />
                         </Route>
                         <Route path="/cameras/:id">
-                            <Camera/>
+                            <Camera />
                         </Route>
                     </Container>
                 </div >
@@ -98,7 +98,7 @@ function Camera(props) {
     // // the dynamic pieces of the URL.
     let { id } = useParams();
 
-  
+
     return (
         <CameraView cameraid={id} />
     );

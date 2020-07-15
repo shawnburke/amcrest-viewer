@@ -1,10 +1,12 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"image"
+	"image/jpeg"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -12,9 +14,11 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/nfnt/resize"
 	"go.uber.org/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -557,6 +561,52 @@ func (s *Server) adminTriggerGC(w http.ResponseWriter, r *http.Request) {
 
 const mimeTextPlain = "text/plain"
 
+var resizeCounter = int32(0)
+var resizeLogThreshold = int32(25)
+
+func (s *Server) resizeImage(raw []byte, maxSize int) ([]byte, error) {
+
+	start := time.Now()
+
+	defer func() {
+		delta := time.Now().Sub(start)
+
+		if atomic.AddInt32(&resizeCounter, 1)%resizeLogThreshold == 0 {
+			s.Logger.Info("resize", zap.Duration("resize", delta))
+		}
+	}()
+
+	reader := bytes.NewReader(raw)
+
+	data, _, err := image.Decode(reader)
+
+	if err != nil {
+		return raw, err
+	}
+
+	// already the right size.
+	if data.Bounds().Size().X <= maxSize {
+		return raw, nil
+	}
+
+	newImage := resize.Resize(uint(maxSize), 0, data, resize.NearestNeighbor)
+
+	if newImage == nil {
+		return raw, nil
+	}
+
+	// TODO: consider pooling buffers
+	buffer := &bytes.Buffer{}
+	buffer.Grow(len(raw))
+	err = jpeg.Encode(buffer, newImage, nil)
+
+	if err == nil {
+		return buffer.Bytes(), nil
+	}
+
+	return nil, err
+}
+
 func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 
 	idStr := mux.Vars(r)["file-id"]
@@ -576,18 +626,40 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stream := r.URL.Query().Get("stream") != ""
-
-	if stream {
+	maxWidthStr := r.URL.Query().Get("max_width")
+	if stream || maxWidthStr != "" {
 		reader, err := s.files.GetFile(fileInfo.Path)
 		if s.writeError(err, w, 400) {
 			return
 		}
+
 		defer reader.Close()
+
+		contents, err := ioutil.ReadAll(reader)
+
+		if s.writeError(err, w, 500) {
+			return
+		}
+
+		if fileInfo.Type == entities.FileTypeJpg && maxWidthStr != "" {
+
+			if maxWidth, err := strconv.Atoi(maxWidthStr); err == nil {
+
+				contents2, err := s.resizeImage(contents, maxWidth)
+
+				if err != nil {
+					s.Logger.Warn("Failed to resize image", zap.Error(err), zap.Int("file-id", fileInfo.ID))
+				}
+				if contents2 != nil {
+					contents = contents2
+				}
+			}
+		}
 
 		contentType := getContentType(fileInfo)
 
 		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Length))
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(contents)))
 
 		if dl := r.URL.Query().Get("download"); dl != "" {
 			w.Header().Set("Content-Disposition", "attachment; filename="+path.Base(fileInfo.Path))
@@ -596,7 +668,7 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 
 		// write header bytes
-		_, err = io.Copy(w, reader)
+		_, err = w.Write(contents)
 		if err != nil {
 			s.Logger.Error("Error writing file",
 				zap.String("path", fileInfo.Path),
@@ -610,6 +682,7 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 	if s.writeError(err, w, 400) {
 		return
 	}
+
 	http.ServeFile(w, r, p)
 
 }

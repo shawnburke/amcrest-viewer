@@ -5,11 +5,11 @@ class FilesService {
     constructor(camera, root) {
 
         this.root = root;
-        this.url = (root||"") + `/api/cameras/${camera}/files`;
+        this.url = (root || "") + `/api/cameras/${camera}/files`;
 
     }
 
-    
+
     async retrieveItems(startDate, endDate, sort) {
 
         console.log(`Fetching ${startDate.iso()} => ${endDate.iso()} (${sort})`);
@@ -61,7 +61,7 @@ class FilesService {
 
     }
 
-    
+
 
 
 
@@ -79,8 +79,10 @@ export function updateFile(f, root) {
         f.timestamp = new Time(f.timestamp);
     }
 
+
+
     if (root) {
-        f.path = root + f.path;
+        f.path = root + f.path + "?max_width=320";
     }
     return f;
 }
