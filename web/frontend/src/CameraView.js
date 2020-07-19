@@ -167,6 +167,16 @@ class CameraView extends React.Component {
     }
 
 
+
+    setCurrentDate(d) {
+
+        d = d.floor(day);
+        var e = d.add(1, day);
+       
+        this.fileManager.setWindow(d, e);
+    }
+
+
     render() {
 
         document.title = "Camera Viewer - " + this.props.cameraid;
@@ -236,17 +246,6 @@ class CameraView extends React.Component {
 
     }
 
-    setCurrentDate(d) {
-
-        if (this.state.date.same(d)) {
-            return;
-        }
-
-        d = d.floor(day);
-        var e = d.add(1, day);
-       
-        this.fileManager.setWindow(d, e);
-    }
 }
 
 export default CameraView;

@@ -101,6 +101,33 @@ describe('Time', () => {
 
         expect(tfloor.date).toEqual(new Date("2020-04-30T00:00:00"));
 
+        var tceil = t.ceil(day);
+        expect(tceil.date).toEqual(new Date("2020-05-01T00:00:00"));
+
+        var d2 = new Time("2020-04-30");
+
+        expect(d2.floor(day).date).toEqual(d2.date);
+        expect(d2.ceil(day).date).toEqual(d2.date);
+    });
+
+    it ("round/floor timezone correctly", () => {
+      
+        var t = new Time("2020-04-30T07:00:15-07:00");
+        var tfloor = t.floor(day, 420);
+
+        expect(tfloor.date).toEqual(new Date("2020-04-30T00:00:00-07:00"));
+
+
+        var tround = t.round(minute);
+        expect(tround.date).toEqual(new Date("2020-04-30T07:00:00-07:00"));
+
+        t = t.offset(30, second);
+
+        tround = t.round(minute);
+
+        expect(tround.date).toEqual(new Date("2020-04-30T07:01:00-07:00"));
+
+       
     });
 
 });

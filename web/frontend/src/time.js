@@ -50,7 +50,7 @@ export class Time {
                     this.unix = val.unix;
                     break;
                 }
-                
+                // fall through
             default:
                 throw new Error(`Unknown time value: ${val} (${typeof val} / ${val.constructor && val.constructor.name})`);
         }
@@ -169,13 +169,22 @@ export class Time {
         return new Time(floor+type);
     }
 
-    floor(type) {
+    _getTimezoneOffset(tzMins) {
+
+       return tzMins || this.date.getTimezoneOffset();
+    }
+
+    floor(type, tzOffsetMins) {
         if (!type) {
             return this;
         }
-        var mod = this.unix % type;
-        var floor = this.unix - mod;
-        return new Time(floor);
+
+        var tz = this._getTimezoneOffset(tzOffsetMins) * minute;
+        var unix = this.unix - tz;
+
+        var mod = unix % type;
+        var floor = unix - mod;
+        return new Time(floor + tz);
     }
 
     ceil(type) {
@@ -186,9 +195,13 @@ export class Time {
 
         var floor = this.floor(type);
 
-        var newTime = floor.add(1, type);
+        // is there any delta?
+        if (floor.unix < this.unix) {
 
-        return newTime;
+            return floor.add(1, type);
+        }
+
+        return floor;
     }
 
     delta(t, type) {
@@ -202,7 +215,20 @@ export class Time {
 }
 
 Time.now = function() { return new Time();}
+Time.same = (d1, d2) => {
 
+    var d1ms = d1 && d1.unix;
+    var d2ms = d2 && d2.unix;
+
+    return d1ms === d2ms;
+}
+
+Time.wrap = function(d) {
+    if (d instanceof Time) {
+        return d;
+    }
+    return new Time(d);
+}
 
 
 
