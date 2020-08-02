@@ -4,6 +4,7 @@ import {  hour, Time, second } from './time';
 
 var tsCounter = 0;
 const dividerWidth = 5;
+const clickThreshold = 10;
 
 export default class TimeScroll extends React.Component {
 
@@ -49,6 +50,23 @@ export default class TimeScroll extends React.Component {
 
     mouseUp(ev) {
         ev.preventDefault();
+        if (this.mouseAnchor) {
+            let deltaX = Math.abs(ev.screenX - this.mouseAnchor[0]);
+            let deltaY = Math.abs(ev.screenY - this.mouseAnchor[1]);
+            
+
+            if (deltaX < clickThreshold && deltaY < clickThreshold) {
+
+              var el = this.elementFromPoint({
+                   x: ev.clientX,
+                   y: ev.clientY,
+               });
+
+               if (el) {
+                   this.scrollToElement(el.element, el.ratio);
+               }
+            }
+        }
         this.mouseAnchor = null;
     }
 
@@ -56,7 +74,7 @@ export default class TimeScroll extends React.Component {
         var target = ev.target;
         var delta = this.myRef.current.scrollLeft - target.scrollAnchor;
         delete target.scrollAnchor;
-        if (Math.abs(delta) > 10) {
+        if (Math.abs(delta) > clickThreshold) {
             return;
         }
         ev.preventDefault();
@@ -95,10 +113,10 @@ export default class TimeScroll extends React.Component {
         }
 
         const range = this.getElementRange(el);
-        const sec = range.seconds;
         const time = range.start;
 
-        var newTime = time.add(sec * ratio, second);
+        var newTime = time.add(range.ms * ratio);
+        console.log(`Scrolling time calc: ${newTime.iso()} for scroll=${this.myRef.current.scrollLeft}`);
 
         var item = this.getElementItem(el, newTime.unix);
 
@@ -118,32 +136,11 @@ export default class TimeScroll extends React.Component {
 
 
 
-    shouldComponentUpdate(nextProps, _nextState) {
-
-        var firstItemIdNext = nextProps.items && nextProps.items.length && nextProps.items[0].id;
-        var firstItemIdProps = this.props.items && this.props.items.length && this.props.items[0].id;
-
-        const positionOnlyChange = firstItemIdNext === firstItemIdProps &&
-            new Time(nextProps.startTime).same(new Time(this.props.startTime)) &&
-            new Time(nextProps.endTime).same(new Time(this.props.endTime)) &&
-            new Time(nextProps.position).same(new Time(this.props.position));
-
-        if (positionOnlyChange && nextProps.position) {
-
-            if (this.mouseAnchor) {
-                return false;
-            }
-
-            var t = new Time(nextProps.position);
-            this.scrollToTime(t);
-            return false;
-        }
-        return true;
-    }
-
     componentDidUpdate() {
         if (this.props.position) {
-            this.scrollToTime(new Time(this.props.position));
+            var t = new Time(this.props.position);
+            console.log(`componentDidUpdate => scrollToTime(${t.iso()})`);
+            this.scrollToTime(t);
         }
     }
 
@@ -166,7 +163,6 @@ export default class TimeScroll extends React.Component {
         if (!el.item_map) {
             el.item_map = {}
 
-            var now = new Date();
             ids.forEach(id => {
                 id = Number(id);
 
@@ -190,7 +186,7 @@ export default class TimeScroll extends React.Component {
                 el.item_map[id] = items[index];
                 items = items.slice(index);
             });
-            console.log(`Map create time for ${item_ids.length} elements out of ${this.props.items.length}: ${new Date().getTime() - now.getTime()}ms`)
+
         }
 
 
@@ -269,8 +265,8 @@ export default class TimeScroll extends React.Component {
 
         for (var i = 0; i < hours.length; i++) {
 
-            var hourEl = hours[i];
-            var elRange = this.getElementRange(hourEl);
+            var currentEl = hours[i];
+            var elRange = this.getElementRange(currentEl);
 
             // look for an element that is in the same hour
             // as the target.  once we find that,
@@ -279,8 +275,8 @@ export default class TimeScroll extends React.Component {
 
                 // now walk siblings.
                 //
-                while (hourEl) {
-                    elRange = this.getElementRange(hourEl);
+                while (currentEl) {
+                    elRange = this.getElementRange(currentEl);
 
                     if (elRange.start.unix > nextHour) {
                         return;
@@ -288,11 +284,11 @@ export default class TimeScroll extends React.Component {
 
                     if (t < elRange.end.unix) {
                         var ratio = ((t - elRange.start.unix)) / elRange.ms;
-                        this.scrollToElement(hourEl, ratio);
+                        this.scrollToElement(currentEl, ratio);
                         return;
                     }
 
-                    hourEl = hourEl.nextElementSibling;
+                    currentEl = currentEl.nextElementSibling;
                 }
                 break;
             }
@@ -311,28 +307,32 @@ export default class TimeScroll extends React.Component {
         return null;
     }
 
+    elementFromPoint(pt) {
+        var el = document.elementFromPoint(pt.x, pt.y);
+        while (el && el !== this.myRef.current) {
+
+            var r = this.getElementRange(el);
+
+            if (r.invalid) {
+                el = el.parentElement;
+                continue;
+            }
+
+            var elRect = el.getBoundingClientRect();
+            var ratio = (pt.x - elRect.x) / elRect.width;
+            return {
+                element: el,
+                ratio: ratio,
+            }
+        }
+    }
+
     elementFromScroll() {
 
         var selPoint = this.getSelectionPoint();
 
         if (selPoint) {
-            var el = document.elementFromPoint(selPoint.x, selPoint.y);
-            while (el !== this.myRef.current) {
-
-                var r = this.getElementRange(el);
-
-                if (r.invalid) {
-                    el = el.parentElement;
-                    continue;
-                }
-
-                var elRect = el.getBoundingClientRect();
-                var ratio = (selPoint.x - elRect.x) / elRect.width;
-                return {
-                    element: el,
-                    ratio: ratio,
-                }
-            }
+           return this.elementFromPoint(selPoint);
         }
         return null;
     }
@@ -350,14 +350,21 @@ export default class TimeScroll extends React.Component {
 
         var cur = this.elementFromScroll();
 
-        if ((cur && el === cur.element) || !cur) {
+        if (!cur) {
+            return;
+        }
+
+        let ratioDelta = Math.abs(cur.ratio - ratio);
+        if (cur.element === el && ratioDelta < .01) {
+
+            console.log(`Skipping scrollToElement ${el.id} @ ${ratioDelta}`)
             return;
         }
 
         var left = this.getElementX(el) + dividerWidth;
 
         var extra = 0;
-
+        console.log(`Scrolling to ${el.id}, ratio=${ratio}`)
         if (ratio) {
             extra = el.clientWidth * ratio;
         }
