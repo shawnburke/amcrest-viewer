@@ -11,3 +11,4 @@ COPY settings.vscode.json /root/.vscode-remote/data/Machine/settings.json
 
 COPY bootstrap.sh /root/bootstrap.sh
 RUN /root/bootstrap.sh
+
