@@ -23,6 +23,10 @@ func TestDateParse(t *testing.T) {
 	s := &Server{}
 	d, err := s.parseTime("1590908400000")
 	require.NoError(t, err)
+	utc, err := time.LoadLocation("UTC")
+	require.NoError(t, err)
+
+	d = d.In(utc)
 	require.Equal(t, "Sun, 31 May 2020 07:00:00 +0000", d.Format(time.RFC1123Z))
 
 }
