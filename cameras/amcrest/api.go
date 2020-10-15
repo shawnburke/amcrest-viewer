@@ -22,6 +22,22 @@ type amcrestApi struct {
 	logger   *zap.Logger
 }
 
+func newAmcrestApi(host string, user string, pass string, logger *zap.Logger) *amcrestApi {
+	aa := &amcrestApi{
+		Camera: &entities.Camera{
+			Host: &host,
+			CameraCreds: entities.CameraCreds{
+				Username: &user,
+				Password: &pass,
+			},
+		},
+		logger: logger,
+	}
+
+	return aa
+
+}
+
 func (aa *amcrestApi) buildUrl(command string) string {
 	port := 80
 

@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/shawnburke/amcrest-viewer/storage/entities"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -25,16 +24,8 @@ func TestEnsureAuth(t *testing.T) {
 		return
 	}
 	logger, _ := zap.NewDevelopment()
-	aa := &amcrestApi{
-		Camera: &entities.Camera{
-			Host: &host,
-			CameraCreds: entities.CameraCreds{
-				Username: &user,
-				Password: &pass,
-			},
-		},
-		logger: logger,
-	}
+
+	aa := newAmcrestApi(host, user, pass, logger)
 
 	resp, err := aa.ExecuteString("GET", "global.cgi?action=getCurrentTime")
 

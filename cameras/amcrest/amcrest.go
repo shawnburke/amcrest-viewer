@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -145,31 +146,61 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 		return nil, fmt.Errorf("Can't create snapshot temp dir %q: %w", tempPath, err)
 	}
 	start := time.Now()
+
 	tempPath = path.Join(tempPath, fmt.Sprintf("snapshot-%d.jpg", start.Unix()))
+	var finish time.Time
 
-	cmd := exec.Command(
-		ac.amcrestCliPath(),
-		"-u",
-		*cam.Username,
-		"-p",
-		*cam.Password,
-		"-H",
-		*cam.Host,
-		"--snapshot",
-		"--save",
-		tempPath,
-	)
+	// trigger via API.
+	aa := newAmcrestApi(*cam.Host, *cam.Username, *cam.Password, ac.logger)
 
-	err = cmd.Run()
+	resp, err := aa.Execute("GET", "snapshot.cgi?channel=0")
+	api := false
+
+	if err == nil {
+		ac.logger.Error("Error getting snapshot from API", zap.Error(err))
+		finish = time.Now()
+
+		bytes, err2 := ioutil.ReadAll(resp.Body)
+
+		if err2 != nil {
+			ac.logger.Warn("Error reading from snapshot api", zap.Error(err2))
+			err = err2
+		} else {
+			if err2 = resp.Body.Close(); err2 != nil {
+				ac.logger.Warn("Error closing body", zap.Error(err))
+			}
+			err = ioutil.WriteFile(tempPath, bytes, os.ModePerm)
+			api = true
+		}
+	}
 
 	if err != nil {
-		output, _ := cmd.CombinedOutput()
-		ac.logger.Error("Error getting snapshot", zap.String("cmd", cmd.Path), zap.String("output", string(output)))
-		return nil, fmt.Errorf("Error running snapshot command: %w", err)
-	}
-	finish := time.Now()
+		cmd := exec.Command(
+			ac.amcrestCliPath(),
+			"-u",
+			*cam.Username,
+			"-p",
+			*cam.Password,
+			"-H",
+			*cam.Host,
+			"--snapshot",
+			"--save",
+			tempPath,
+		)
 
-	ac.logger.Debug("Took snapshot", zap.String("camera", cam.CameraID()), zap.Duration("time", finish.Sub(start)))
+		err = cmd.Run()
+
+		if err != nil {
+			output, _ := cmd.CombinedOutput()
+			ac.logger.Error("Error getting snapshot", zap.String("cmd", cmd.Path), zap.String("output", string(output)))
+			return nil, fmt.Errorf("Error running snapshot command: %w", err)
+		}
+		finish = time.Now()
+
+	}
+
+	ac.logger.Debug("Took snapshot",
+		zap.String("camera", cam.CameraID()), zap.Duration("time", finish.Sub(start)), zap.Bool("api", api))
 
 	f, err := os.Open(tempPath)
 
