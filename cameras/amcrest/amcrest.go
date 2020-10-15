@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"regexp"
 	"strings"
@@ -74,25 +73,13 @@ func (ac *amcrestCameraType) Name() string {
 	return amcrestIngesterType
 }
 
-const amcrestCLI = "amcrest-cli"
 
-func (ac *amcrestCameraType) amcrestCliPath() string {
-	if ac.cliPath == nil {
-
-		acp, err := exec.LookPath(amcrestCLI)
-		if err != nil {
-			ac.logger.Warn("amcrest-cli not available", zap.Error(err))
-		}
-		ac.cliPath = &acp
-	}
-	return *ac.cliPath
-}
 
 func (ac *amcrestCameraType) Capabilities() common.Capabilities {
 
 	return common.Capabilities{
 		LiveStream: true,
-		Snapshot:   ac.amcrestCliPath() != "",
+		Snapshot:   true,
 	}
 }
 
@@ -131,9 +118,6 @@ func (ac *amcrestCameraType) ParseFilePath(cam *entities.Camera, p string) (*mod
 
 func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, error) {
 
-	if ac.amcrestCliPath() == "" {
-		return nil, fmt.Errorf("Can't take snapshot for camera %q due to missing CLI", cam.CameraID())
-	}
 
 	if cam.Host == nil || cam.Username == nil || cam.Password == nil {
 		return nil, fmt.Errorf("Snapshot requires camera host, user, password")
@@ -154,53 +138,32 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 	aa := newAmcrestApi(*cam.Host, *cam.Username, *cam.Password, ac.logger)
 
 	resp, err := aa.Execute("GET", "snapshot.cgi?channel=0")
-	api := false
-
-	if err == nil {
-		ac.logger.Error("Error getting snapshot from API", zap.Error(err))
-		finish = time.Now()
-
-		bytes, err2 := ioutil.ReadAll(resp.Body)
-
-		if err2 != nil {
-			ac.logger.Warn("Error reading from snapshot api", zap.Error(err2))
-			err = err2
-		} else {
-			if err2 = resp.Body.Close(); err2 != nil {
-				ac.logger.Warn("Error closing body", zap.Error(err))
-			}
-			err = ioutil.WriteFile(tempPath, bytes, os.ModePerm)
-			api = true
-		}
-	}
-
+	
 	if err != nil {
-		cmd := exec.Command(
-			ac.amcrestCliPath(),
-			"-u",
-			*cam.Username,
-			"-p",
-			*cam.Password,
-			"-H",
-			*cam.Host,
-			"--snapshot",
-			"--save",
-			tempPath,
-		)
-
-		err = cmd.Run()
-
-		if err != nil {
-			output, _ := cmd.CombinedOutput()
-			ac.logger.Error("Error getting snapshot", zap.String("cmd", cmd.Path), zap.String("output", string(output)))
-			return nil, fmt.Errorf("Error running snapshot command: %w", err)
-		}
-		finish = time.Now()
-
+		ac.logger.Error("Error getting snapshot from API", zap.Error(err))
+		return nil, err
 	}
+
+
+	finish = time.Now()
+
+	bytes, err2 := ioutil.ReadAll(resp.Body)
+
+	if err2 != nil {
+		ac.logger.Warn("Error reading from snapshot api", zap.Error(err2))
+		err = err2
+	} else {
+		if err2 = resp.Body.Close(); err2 != nil {
+			ac.logger.Warn("Error closing body", zap.Error(err))
+		}
+		err = ioutil.WriteFile(tempPath, bytes, os.ModePerm)
+	}
+
 
 	ac.logger.Debug("Took snapshot",
-		zap.String("camera", cam.CameraID()), zap.Duration("time", finish.Sub(start)), zap.Bool("api", api))
+			zap.String("camera", cam.CameraID()), 
+			zap.Duration("time", finish.Sub(start)),
+	)
 
 	f, err := os.Open(tempPath)
 
@@ -220,6 +183,8 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 
 	return res, nil
 }
+
+
 
 func (ac *amcrestCameraType) RtspUri(cam *entities.Camera) (string, error) {
 

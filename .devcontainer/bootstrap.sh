@@ -1,8 +1,7 @@
 #! /bin/bash
 
 # Verify git, process tools installed
-apt-get update && apt-get -y install git procps ftp sqlite3 build-essential tzdata python-pip ffmpeg jq
-pip install amcrest
+apt-get update && apt-get -y install git procps ftp sqlite3 build-essential tzdata ffmpeg jq
 
 curl -sL https://deb.nodesource.com/setup_14.x | bash - && apt-get install -y nodejs
 
