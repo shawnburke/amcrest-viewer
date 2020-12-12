@@ -188,7 +188,7 @@ func (s *Server) createCamera(w http.ResponseWriter, r *http.Request) {
 
 	var host *string
 	if cam.Host != "" {
-		*host = cam.Host
+		host = &cam.Host
 	}
 	camEntity, err := s.data.AddCamera(cam.Name, cam.Type, host)
 
@@ -344,6 +344,11 @@ func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
 	if cam.Name != "" {
 		name = &cam.Name
 	}
+
+	// var host *string
+	// if cam.Host != "" {
+	// 	host = &cam.Host
+	// }
 
 	newCam, err := s.data.UpdateCamera(strID, name, nil, nil)
 	if s.writeError(err, w, 400) {
