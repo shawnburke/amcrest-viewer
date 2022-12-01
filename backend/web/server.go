@@ -322,11 +322,24 @@ func (s *Server) handleCameraLiveStream(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+type updateCamera struct {
+	models.Camera
+	Password string `json:"Password,omitempty"`
+	Username string `json:"Username,omitempty"`
+}
+
+func str(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
 
 	strID := mux.Vars(r)["camera-id"]
 
-	cam := &models.Camera{}
+	cam := &updateCamera{}
 
 	bytes, err := ioutil.ReadAll(r.Body)
 
@@ -340,29 +353,47 @@ func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var name *string
-	if cam.Name != "" {
-		name = &cam.Name
+	existingCam, err := s.data.GetCamera(strID)
+
+	if s.writeError(err, w, 0) {
+		return
 	}
 
-	// var host *string
-	// if cam.Host != "" {
-	// 	host = &cam.Host
-	// }
+	var host *string = existingCam.Host
+	if cam.Host != "" {
+		host = &cam.Host
+	}
 
-	newCam, err := s.data.UpdateCamera(strID, name, nil, nil)
+	newCam, err := s.data.UpdateCamera(strID, &existingCam.Name, host, existingCam.Enabled)
 	if s.writeError(err, w, 400) {
 		return
 	}
 
-	cam.ID = newCam.CameraID()
-	cam.Name = newCam.Name
-
-	if newCam.Host != nil {
-		cam.Host = *newCam.Host
+	var pwd *string = newCam.Host
+	if cam.Password != "" {
+		pwd = &cam.Password
 	}
 
-	s.writeJson(cam, w, 200)
+	var user *string = newCam.Username
+	if cam.Username != "" {
+		user = &cam.Username
+	}
+
+	err = s.data.UpdateCameraCreds(strID, str(host), str(user), str(pwd))
+
+	if s.writeError(err, w, 400) {
+		return
+	}
+
+	c2 := &models.Camera{
+		Host:    *newCam.Host,
+		Enabled: *newCam.Enabled,
+		ID:      newCam.CameraID(),
+		Name:    newCam.Name,
+		Type:    newCam.Type,
+	}
+
+	s.writeJson(c2, w, 200)
 
 }
 

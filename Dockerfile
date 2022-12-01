@@ -17,6 +17,8 @@ COPY frontend/ .
 RUN yarn build
 
 FROM alpine:3.14
+RUN apk update
+RUN apk add  sqlite tzdata ffmpeg
 
 WORKDIR /app
 COPY --from=gobuild /app/amcrest-server /app/amcrest-server
