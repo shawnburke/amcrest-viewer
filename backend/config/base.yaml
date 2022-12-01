@@ -10,3 +10,6 @@ files:
 
 database:
   dsn: test_data/db/cam.db
+
+log:
+  level: debug

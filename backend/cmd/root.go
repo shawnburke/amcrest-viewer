@@ -2,14 +2,13 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/shawnburke/amcrest-viewer/cameras"
 	"github.com/shawnburke/amcrest-viewer/common"
@@ -81,11 +80,17 @@ func tz() *time.Location {
 	return loc
 }
 
-func logger() (*zap.Logger, error) {
+func logger(cp config.Provider) (*zap.Logger, error) {
 
 	cfg := zap.NewDevelopmentConfig()
 
-	cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	level := zapcore.DebugLevel
+
+	val := cp.Get("log.level")
+
+	if val.HasValue() && level.UnmarshalText([]byte(val.String())) == nil {
+		cfg.Level = zap.NewAtomicLevelAt(level)
+	}
 
 	return cfg.Build()
 }
@@ -138,9 +143,4 @@ func Execute() error {
 	rootCmd.PersistentFlags().StringVar(&p.FtpPassword, "ftp-password", "admin", "Password to use for FTP")
 
 	return rootCmd.Execute()
-}
-
-func er(msg interface{}) {
-	fmt.Println("Error:", msg)
-	os.Exit(1)
 }

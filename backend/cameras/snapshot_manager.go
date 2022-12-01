@@ -36,16 +36,18 @@ func NewSnapshotManager(
 		types:    map[string]cc.Type{},
 	}
 
-	lifecycle.Append(
-		fx.Hook{
-			OnStart: func(context.Context) error {
-				return sm.start()
+	if lifecycle != nil {
+		lifecycle.Append(
+			fx.Hook{
+				OnStart: func(context.Context) error {
+					return sm.start()
+				},
+				OnStop: func(ctx context.Context) error {
+					return sm.stop()
+				},
 			},
-			OnStop: func(ctx context.Context) error {
-				return sm.stop()
-			},
-		},
-	)
+		)
+	}
 	return nil
 }
 
@@ -94,80 +96,93 @@ func (sm *snapshotManager) shouldSnapshot(cam *entities.Camera) cc.Type {
 	return nil
 }
 
+func (sm *snapshotManager) snapshotCamera(ct cc.Type, cam *entities.Camera) error {
+	reader, err := ct.Snapshot(cam)
+
+	if err != nil {
+		sm.logger.Error("Error getting snapshot", zap.String("camera", cam.CameraID()), zap.Error(err))
+		return err
+	}
+
+	if reader == nil {
+		// some cameras will also FTP
+		// the snapshot so we don't need to do this
+		// a second time
+		return err
+	}
+
+	defer reader.Close()
+
+	bytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		sm.logger.Error("Error reading file", zap.Error(err))
+		return err
+	}
+
+	ts := time.Now()
+	mediaFile := &models.MediaFile{
+		Name:      fmt.Sprintf("snapshot-%s-%d.jpg", cam.CameraID(), ts.Unix()),
+		CameraID:  cam.CameraID(),
+		Type:      models.JPG,
+		Timestamp: ts,
+	}
+
+	event := storage.NewMediaFileAvailableEvent(mediaFile, bytes)
+
+	err = sm.bus.Send(event)
+	if err != nil {
+		sm.logger.Error("Error sending snapshot event", zap.Error(err))
+	}
+	return err
+
+}
+
+func (sm *snapshotManager) snapshotCameras() error {
+	// get the cameras
+	cams, err := sm.data.ListCameras()
+
+	if err != nil {
+		sm.logger.Error("Error getting cameras", zap.Error(err))
+		return err
+	}
+
+	wg := &sync.WaitGroup{}
+
+	for _, cam := range cams {
+		sm.logger.Debug("Snapshot run", zap.String("camera", cam.Name))
+
+		ct := sm.shouldSnapshot(cam)
+		if ct == nil {
+			sm.logger.Debug("Camera does not support snapshots", zap.String("camera", cam.Name))
+			continue
+		}
+
+		wg.Add(1)
+		go func(cam *entities.Camera) {
+			defer wg.Done()
+			if err := sm.snapshotCamera(ct, cam); err != nil {
+				sm.logger.Error("Error taking snapshot", zap.String("camera", cam.Name), zap.Error(err))
+			}
+		}(cam)
+	}
+	wg.Wait()
+	return nil
+}
+
 func (sm *snapshotManager) run() {
 	ticker := time.NewTicker(sm.interval)
+	sm.logger.Info("Starting snapshot manager")
 	for {
 
+		sm.logger.Debug("Snapshot manager tick")
+		sm.snapshotCameras()
 		select {
 		case <-sm.close:
+			sm.logger.Info("Stopping snapshot manager")
 			return
 		case <-ticker.C:
 
 		}
-
-		// get the cameras
-		cams, err := sm.data.ListCameras()
-
-		if err != nil {
-			sm.logger.Error("Error getting cameras", zap.Error(err))
-			continue
-		}
-
-		wg := &sync.WaitGroup{}
-
-		for _, cam := range cams {
-
-			ct := sm.shouldSnapshot(cam)
-			if ct == nil {
-				continue
-			}
-
-			wg.Add(1)
-			go func(cam *entities.Camera) {
-
-				defer wg.Done()
-
-				reader, err := ct.Snapshot(cam)
-
-				if err != nil {
-					sm.logger.Error("Error getting snapshot", zap.String("camera", cam.CameraID()), zap.Error(err))
-					return
-				}
-
-				if reader == nil {
-					// some cameras will also FTP
-					// the snapshot so we don't need to do this
-					// a second time
-					return
-				}
-
-				defer reader.Close()
-
-				bytes, err := ioutil.ReadAll(reader)
-				if err != nil {
-					sm.logger.Error("Error reading file", zap.Error(err))
-					return
-				}
-
-				ts := time.Now()
-				mediaFile := &models.MediaFile{
-					Name:      fmt.Sprintf("snapshot-%s-%d.jpg", cam.CameraID(), ts.Unix()),
-					CameraID:  cam.CameraID(),
-					Type:      models.JPG,
-					Timestamp: ts,
-				}
-
-				event := storage.NewMediaFileAvailableEvent(mediaFile, bytes)
-
-				err = sm.bus.Send(event)
-				if err != nil {
-					sm.logger.Error("Error sending snapshot event", zap.Error(err))
-				}
-
-			}(cam)
-
-		}
-		wg.Wait()
 
 	}
 }
