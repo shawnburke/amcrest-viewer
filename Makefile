@@ -1,50 +1,52 @@
 
-SERVER=dist/amcrest-viewer
-FRONTEND=dist/frontend/index.html
-WEB_ROOT=web/frontend
-CONFIG=dist/config/base.yaml
 ROOT=$(pwd)
-
-
-NPM_INSTALL=$(WEB_ROOT)/node_modules/.faux-npm-install
-WEBPACK=$(WEB_ROOT)/build/index.html
+SERVER=backend/amcrest-server
+WEB_ROOT=frontend
+FRONTEND=$(WEB_ROOT)/build/index.html
 CONFIG=dist/config/base.yaml
+NPM_INSTALL=$(WEB_ROOT)/node_modules/.faux-npm-install
 
+all: $(SERVER) $(FRONTEND)
 
-$(CONFIG):
-	mkdir -p dist/config
-	cp -R config dist
-	sed -i 's/test_data/data/g' dist/config/base.yaml
-	printf "web:\n  frontend: frontend\n" >>dist/config/base.yaml
+dist_dir: dist
+	mkdir -p dist
 
-$(SERVER): $(shell find . -name '*.go') 
+server: $(SERVER)
+
+$(SERVER): dist_dir $(shell find backend -name '*.go') 
 	echo "Building server Arch:$(GOARCH) Arm:$(GOARM)"
-	go build -o $(SERVER) .
+	cd backend && go build -o amcrest-server .
 
-$(NPM_INSTALL): $(WEB_ROOT)/package-lock.json 
+$(NPM_INSTALL): $(WEB_ROOT)/package-lock.json $(WEB_ROOT)/node_modules
 	echo "Running NPM install"
 	cd $(WEB_ROOT) && npm install
 	touch $(NPM_INSTALL)
 
-$(WEBPACK): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_ROOT)/public)
+$(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_ROOT)/public)
 	echo "Building frontend"
 	cd $(WEB_ROOT) && npm run build
-	
-$(FRONTEND): $(WEBPACK)
-	echo "Copy frontend to dist"
-	mkdir -p dist/frontend
-	cp -R $(WEB_ROOT)/build/. dist/frontend
 
+frontend: $(FRONTEND)
 
-dist: $(CONFIG) $(SERVER) $(FRONTEND)
+$(CONFIG): backend/config/base.yaml
+	mkdir -p dist/config
+	cp -R backend/config dist/
+	sed -i 's/test_data/data/g' dist/config/base.yaml
+	printf "web:\n  frontend: frontend\n" >>dist/config/base.yaml
+
+dist: dist_dir $(CONFIG) $(SERVER) $(FRONTEND)
 	mkdir -p dist/data/db
 	mkdir -p dist/data/files
+	cp $(SERVER) dist/amcrest-server
+	cp -R $(WEB_ROOT)/build dist/frontend
 
+docker:
+	docker build -t amcrest-server:current .
 
 clean: 
 	rm -rf dist
-	rm amcrest-viewer
+	rm backend/amcrest-viewer
 	rm -rf $(WEB_ROOT)/build
 
 
-.PHONY=distdir dist clean npm-install
+.PHONY=distdir dist clean npm-install server frontend all docker
