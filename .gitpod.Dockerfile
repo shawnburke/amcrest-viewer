@@ -4,8 +4,6 @@ USER gitpod
 
 RUN sudo apt-get -q update && sudo apt-get -yq install ftp sqlite3 ffmpeg
 
-RUN pip install amcrest
-
 # Install custom tools, runtime, etc. using apt-get
 # For example, the command below would install "bastet" - a command line tetris clone:
 #
