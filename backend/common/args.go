@@ -10,6 +10,7 @@ type Params struct {
 	WebPort     int
 	FtpPassword string
 	DataDir     string
+	FrontendDir string
 }
 
 func (p Params) dataDir() string {

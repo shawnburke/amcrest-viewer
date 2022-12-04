@@ -57,11 +57,16 @@ func New(p HttpParams) HttpServer {
 		rtsp:     p.Rtsp,
 	}
 
-	frontendPath := ""
+	frontendPath := p.Args.FrontendDir
 
-	err := p.Config.Get("web.frontend").Populate(&frontendPath)
-	if err != nil {
-		panic(err)
+	v := p.Config.Get("web.frontend")
+
+	if v.HasValue() {
+		frontendPath = v.String()
+	}
+
+	if fe := os.Getenv("FRONTEND_DIR"); fe != "" {
+		frontendPath = fe
 	}
 
 	if frontendPath == "" {

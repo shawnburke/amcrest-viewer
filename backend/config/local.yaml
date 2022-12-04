@@ -1,0 +1,26 @@
+files:
+  root_dir: test_data/files
+
+web:
+  frontend: ../frontend/build
+
+cameras:
+  - id: 1
+    type: amcrest
+    name: kids
+    host: 192.168.86.25
+    enabled: true
+    cameracreds:
+      username: admin
+      password: f4tl1zzy
+  - id: 2
+    type: amcrest
+    name: study
+    host: 192.168.86.27
+    enabled: true
+    cameracreds:
+      username: admin
+      password: f4tl1zzy
+
+settings:
+  snapshot_frequency: 60s

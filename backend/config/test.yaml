@@ -1,0 +1,5 @@
+files:
+  root_dir: test_data/files
+
+web:
+  frontend: ../frontend/build
