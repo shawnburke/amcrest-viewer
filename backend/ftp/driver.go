@@ -165,8 +165,8 @@ const cleanupTime = time.Minute * 5
 
 // params  - a file path
 // returns - a time indicating when the requested path was last modified
-//         - an error if the file doesn't exist or the user lacks
-//           permissions
+//   - an error if the file doesn't exist or the user lacks
+//     permissions
 func (fd *proxyDriver) Stat(p string) (ftps.FileInfo, error) {
 	fd.logger.Debug("STAT", zap.String("path", p))
 	return fd.driver().Stat(p)
@@ -174,7 +174,8 @@ func (fd *proxyDriver) Stat(p string) (ftps.FileInfo, error) {
 
 // params  - path
 // returns - true if the current user is permitted to change to the
-//           requested path
+//
+//	requested path
 func (fd *proxyDriver) ChangeDir(p string) error {
 	fd.logger.Debug("CWD", zap.String("path", p))
 
@@ -183,7 +184,8 @@ func (fd *proxyDriver) ChangeDir(p string) error {
 
 // params  - path, function on file or subdir found
 // returns - error
-//           path
+//
+//	path
 func (fd *proxyDriver) ListDir(p string, r func(ftps.FileInfo) error) error {
 	fd.logger.Debug("LIST", zap.String("path", p))
 	return fd.driver().ListDir(p, r)

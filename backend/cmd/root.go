@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -130,7 +132,12 @@ func register(lifecycle fx.Lifecycle, ftps ftp.FtpServer, web web.HttpServer, lo
 
 func yamlConfig() (config.Provider, error) {
 
-	return config.NewYAMLProviderFromFiles("./config/base.yaml")
+	files := []string{"./config/base.yaml"}
+	env := os.Getenv("ENVIRONMENT")
+	if env != "" {
+		files = append(files, fmt.Sprintf("./config/%s.yaml", env))
+	}
+	return config.NewYAMLProviderFromFiles(files...)
 }
 
 // Execute executes the root command.

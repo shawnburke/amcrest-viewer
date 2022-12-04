@@ -21,7 +21,7 @@ import (
 )
 
 const amcrestIngesterType = "amcrest"
-const configKey = "cameras_types.amcrest"
+const configKey = "camera_types.amcrest"
 
 // ErrorUnknownFile is standard
 var ErrorUnknownFile = errors.New("UnknownFileType")
@@ -122,7 +122,7 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 
 	tempPath := os.TempDir()
 	tempPath = path.Join(tempPath, cam.CameraID())
-	err := os.MkdirAll(tempPath, os.ModeDir)
+	err := os.MkdirAll(tempPath, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return nil, fmt.Errorf("can't create snapshot temp dir %q: %w", tempPath, err)
 	}
@@ -134,13 +134,12 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 	// trigger via API.
 	aa := newAmcrestApi(*cam.Host, *cam.Username, *cam.Password, ac.logger)
 
-	resp, err := aa.Execute("GET", "snapshot.cgi?channel=0")
+	resp, err := aa.Execute("GET", "snapshot.cgi")
 
 	if err != nil {
 		ac.logger.Error("Error getting snapshot from API", zap.Error(err))
 		return nil, err
 	}
-
 	finish = time.Now()
 
 	bytes, err2 := ioutil.ReadAll(resp.Body)
@@ -149,10 +148,29 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 		ac.logger.Warn("Error reading from snapshot api", zap.Error(err2))
 		err = err2
 	} else {
+
 		if err2 = resp.Body.Close(); err2 != nil {
 			ac.logger.Warn("Error closing body", zap.Error(err))
 		}
+
+		if resp.StatusCode != 200 {
+			res := string(bytes)
+			if len(res) > 256 {
+				res = res[:256]
+			}
+			ac.logger.Error("Snapshot api returned non-200",
+				zap.Int("status", resp.StatusCode),
+				zap.String("status_text", resp.Status),
+				zap.String("body", res),
+			)
+			return nil, fmt.Errorf("snapshot api failed: %d", resp.StatusCode)
+		}
+
 		err = ioutil.WriteFile(tempPath, bytes, os.ModePerm)
+		if err != nil {
+			ac.logger.Error("Error writing snapshot to temp file", zap.Error(err), zap.String("path", tempPath))
+			return nil, err
+		}
 	}
 
 	ac.logger.Debug("Took snapshot",

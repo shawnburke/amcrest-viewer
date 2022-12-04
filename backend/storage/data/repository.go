@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -12,6 +13,8 @@ import (
 	cameras "github.com/shawnburke/amcrest-viewer/cameras/common"
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/entities"
+	"go.uber.org/config"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
@@ -61,13 +64,27 @@ type FileData struct {
 	Size  int `json:"size"`
 }
 
-func NewRepository(db *sqlx.DB, t common.Time, logger *zap.Logger, bus common.EventBus) (Repository, error) {
-	return &sqlRepository{
+func NewRepository(db *sqlx.DB, t common.Time, logger *zap.Logger, bus common.EventBus, cfg config.Provider, lc fx.Lifecycle) (Repository, error) {
+	sql := &sqlRepository{
 		db:     db,
 		time:   t,
 		logger: logger,
 		bus:    bus,
-	}, nil
+	}
+
+	if lc != nil {
+		lc.Append(fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				err := sql.ensureCameras(cfg)
+				if err != nil {
+					logger.Error("error ensuring cameras", zap.Error(err))
+				}
+				return err
+			},
+		})
+	}
+
+	return sql, nil
 }
 
 type sqlRepository struct {
@@ -75,6 +92,37 @@ type sqlRepository struct {
 	logger *zap.Logger
 	time   common.Time
 	bus    common.EventBus
+}
+
+func (sr *sqlRepository) ensureCameras(cfg config.Provider) error {
+	cams, err := loadCameras(cfg)
+
+	if cams == nil {
+		return err
+	}
+
+	for _, cam := range cams {
+		err = sr.upsertCamera(cam)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func loadCameras(cfg config.Provider) ([]*entities.Camera, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	cameras := make([]*entities.Camera, 0)
+
+	err := cfg.Get("cameras").Populate(&cameras)
+	if err != nil {
+		return nil, err
+	}
+
+	return cameras, nil
 }
 
 func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entities.Camera, error) {
@@ -399,6 +447,38 @@ func (sr *sqlRepository) SeenCamera(cameraID string) error {
 		return err
 	}
 	_, err = sr.db.Exec(`UPDATE cameras SET LastSeen=$1 WHERE ID=$2`, sr.time.Now(), id)
+	return err
+}
+
+func str(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func (sr *sqlRepository) upsertCamera(cam *entities.Camera) error {
+	upsert := `
+		INSERT INTO cameras (ID, Name, Host, Username, Password, Enabled, Type) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7) 
+			ON CONFLICT (ID) DO UPDATE SET Name=$2, Host=$3, Username=$4, Password=$5, Enabled=$6, Type=$7
+		`
+
+	res, err := sr.db.Exec(upsert, cam.ID, cam.Name,
+		str(cam.Host),
+		str(cam.Username),
+		str(cam.Password),
+		cam.Enabled,
+		cam.Type)
+
+	if err != nil {
+		sr.logger.Error("Error upserting camera", zap.Error(err))
+		return err
+	}
+
+	if ra, _ := res.RowsAffected(); ra == 0 {
+		sr.logger.Warn("No rows affected when upserting camera", zap.Any("camera", cam.ID))
+	}
 	return err
 }
 

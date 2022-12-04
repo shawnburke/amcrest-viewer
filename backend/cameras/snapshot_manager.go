@@ -36,6 +36,18 @@ func NewSnapshotManager(
 		types:    map[string]cc.Type{},
 	}
 
+	if cfg != nil {
+		d := time.Duration(0)
+		err := cfg.Get("settings.snapshot_frequency").Populate(&d)
+		if err != nil {
+			logger.Error("Error getting snapshot frequency", zap.Error(err))
+		}
+		if d != 0 {
+			sm.interval = d
+		}
+	}
+	logger.Info("Snapshot frequency", zap.Duration("interval", sm.interval))
+
 	if lifecycle != nil {
 		lifecycle.Append(
 			fx.Hook{

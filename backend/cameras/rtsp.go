@@ -89,7 +89,7 @@ func (r *rtspServer) start() error {
 	}
 
 	r.tempDir = path.Join(os.TempDir(), "rtsp")
-	err := os.MkdirAll(r.tempDir, os.ModeDir)
+	err := os.MkdirAll(r.tempDir, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return err
 	}

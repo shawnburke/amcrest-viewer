@@ -3,6 +3,13 @@ ftp:
   users:
     user_a: pwd
 
+settings:
+  snapshot_frequency: 60s
+
+camera_types:
+  amcrest:
+    return_snapshot: true
+
 files:
   root_dir: test_data/files
   default_ttl: 30d
@@ -13,3 +20,6 @@ database:
 
 log:
   level: debug
+
+
+

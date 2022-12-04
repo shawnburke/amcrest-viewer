@@ -248,7 +248,7 @@ func createDB(t *testing.T) (*sqlx.DB, Repository, func()) {
 	err = lc.lc.OnStart(context.Background())
 	require.NoError(t, err)
 
-	rep, err := NewRepository(db, common.NewTime(), zap.NewNop(), nil)
+	rep, err := NewRepository(db, common.NewTime(), zap.NewNop(), nil, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, rep)
 
