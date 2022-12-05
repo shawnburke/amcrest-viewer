@@ -35,4 +35,4 @@ ENV PORT=9000
 EXPOSE 9000
 EXPOSE 2121
 
-CMD ["/app/amcrest-server", "--data-dir", "/app/data"], "--frontend-dir", "/app/frontend"]
+CMD ["/app/amcrest-server", "--data-dir", "/app/data", "--frontend-dir", "/app/frontend"]
