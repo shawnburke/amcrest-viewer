@@ -35,11 +35,14 @@ type driverFactory struct {
 }
 
 func newDriverFactory(perm ftps.Perm, logger *zap.Logger, bus common.EventBus) *driverFactory {
+	// add a subdir to make sure we use a new one each time we start,
+	// as an added measure against leaks.
+	tempSubDir := "cams-" + time.Now().Format("2006-01-02")
 	return &driverFactory{
 		Perm:       perm,
 		logger:     logger,
 		bus:        bus,
-		userSpaces: newUserSpaces(path.Join(os.TempDir(), "cams"), logger),
+		userSpaces: newUserSpaces(path.Join(os.TempDir(), tempSubDir), logger),
 	}
 }
 
@@ -161,7 +164,7 @@ func (fd *proxyDriver) driver() ftps.Driver {
 	return fd.userDriver
 }
 
-const cleanupTime = time.Minute * 5
+const cleanupTime = time.Hour * 1
 
 // params  - a file path
 // returns - a time indicating when the requested path was last modified
@@ -225,14 +228,6 @@ func (fd *proxyDriver) Rename(s string, d string) error {
 		return err
 	}
 
-	destFile.Done = func() {
-		fp := path.Join(fd.userSpace.root, destFile.FullName)
-		err = os.Remove(fp)
-		if err != nil {
-			fd.logger.Error("Failed to clean up file", zap.String("path", fp), zap.Error(err))
-		}
-	}
-
 	fd.bus.Send(NewFileRenameEvent(destFile, srcFile.FullName))
 
 	return nil
@@ -290,12 +285,17 @@ func (fd *proxyDriver) toFtpFile(p string) (*File, error) {
 		return nil, err
 	}
 
-	return &File{
+	f := &File{
 		User:       fd.conn.LoginUser(),
 		FullName:   fullPath,
 		Data:       bytes,
 		Name:       path.Base(fullPath),
 		IP:         fd.conn.PublicIp(),
 		ReceivedAt: info.ModTime(),
-	}, nil
+		fullPath:   path.Join(fd.userSpace.root, fullPath),
+		logger:     fd.logger,
+	}
+
+	f.AutoClose(cleanupTime)
+	return f, nil
 }

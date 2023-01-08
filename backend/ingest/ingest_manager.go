@@ -123,7 +123,6 @@ func (im *ingestManager) ingestFtp(f *ftp.File) error {
 		}
 
 		if err == common.ErrIngestDelete {
-			f.Close()
 			return nil
 		}
 
@@ -137,11 +136,8 @@ func (im *ingestManager) ingestFtp(f *ftp.File) error {
 	//
 	err = im.bus.Send(storage.NewMediaFileAvailableEvent(mf, f.Data))
 	if err != nil {
-		im.logger.Error("Error ending new file to bus", zap.Error(err), zap.String("path", f.FullName))
+		im.logger.Error("Error sending new file to bus", zap.Error(err), zap.String("path", f.FullName))
 		return err
-	}
-	if f.Done != nil {
-		f.Done()
 	}
 	return nil
 }
