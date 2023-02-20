@@ -1,0 +1,46 @@
+---
+openapi: 3.0.2
+info:
+  title: API Title
+  version: '1.0'
+servers:
+- url: http://0.0.0.0:9000/api
+paths:
+  "/cameras":
+    get:
+      summary: Get all cameras
+      description: Get all cameras
+      operationId: getCameras
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Camera"
+components:
+  schemas:
+    Camera:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum:
+          - amcrest
+        url:
+          type: string
+        host:
+          type: string
+        status:
+          type: string
+        lastSeen:
+          type: string
+          format: date-time
+        timzezone:
+          type: string
+        username:
+          type: string

@@ -23,6 +23,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
+	openapi_server "github.com/shawnburke/amcrest-viewer/.gen/server"
 	"github.com/shawnburke/amcrest-viewer/cameras"
 	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage"
@@ -95,6 +96,8 @@ type Server struct {
 	files file.Manager
 	gc    storage.GCManager
 	rtsp  cameras.RtspServer
+
+	openapi openapi_server.ServerInterface
 }
 
 func (s *Server) Start() error {
@@ -744,6 +747,9 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 
 	s.r.Use(s.enableCors)
 
+	// just for type safety for now
+	s.openapi = &openApiServerWrapper{s}
+
 	// cameras
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
 	s.r.Methods("GET").Path("/api/cameras").HandlerFunc(s.listCameras)
@@ -792,4 +798,12 @@ func getContentType(fi *entities.File) string {
 	ct := mime.TypeByExtension(path.Ext(fi.Path))
 
 	return ct
+}
+
+type openApiServerWrapper struct {
+	s *Server
+}
+
+func (sw *openApiServerWrapper) GetCameras(w http.ResponseWriter, r *http.Request) {
+	sw.s.listCameras(w, r)
 }

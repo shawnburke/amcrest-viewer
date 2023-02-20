@@ -8,6 +8,7 @@ replace github.com/Roverr/rtsp-stream => github.com/shawnburke/rtsp-stream v2.2.
 
 require (
 	github.com/Roverr/rtsp-stream v2.1.1+incompatible
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190712054601-1149070ae46b
 	github.com/golang-migrate/migrate/v4 v4.11.0
