@@ -1,10 +1,24 @@
 import 'dart:async';
 
+import 'package:amcrest_viewer_flutter/repository/cam_viewer_repository.dart';
+import 'package:amcrest_viewer_flutter/view_model/home.viewmodel.dart';
 import 'package:flutter/material.dart';
-import 'package:openapi/api.dart';
+import 'package:provider/provider.dart';
+
+import 'locator.dart';
 
 void main() {
-  runApp(const AmcrestViewer());
+  setupLocator();
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => HomeViewModel(repo: locator<CamViewerRepo>()),
+        ),
+      ],
+      child: const AmcrestViewer(),
+    ),
+  );
 }
 
 class AmcrestViewer extends StatelessWidget {
@@ -50,48 +64,29 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-var client = ApiClient();
-
 class _HomeScreenState extends State<HomeScreen> {
-  List<Camera>? _cameras = [];
   int _refreshSeconds = 15;
+
+  late HomeViewModel _homeViewModel;
 
   _HomeScreenState({int refresh = 15}) {
     _refreshSeconds = refresh;
+  }
+
+  @override
+  void initState() {
+    _homeViewModel = Provider.of<HomeViewModel>(context, listen: false);
+
+    super.initState();
     scheduleTimeout();
-    _updateImages();
   }
 
   Timer scheduleTimeout() =>
       Timer(Duration(seconds: _refreshSeconds), handleTimeout);
 
   void handleTimeout() {
-    _updateImages();
+    _homeViewModel.refresh();
     scheduleTimeout();
-  }
-
-  void _updateImages() {
-    var api = DefaultApi(client);
-    api.getCameras(latestSnapshot: true).then((value) => {
-          setState(() {
-            _cameras = value;
-          })
-        });
-  }
-
-  List<Image> getImages() {
-    List<Image> images = <Image>[];
-
-    if (_cameras != null && _cameras!.isNotEmpty) {
-      for (var camera in _cameras!) {
-        if (camera.latestSnapshot != null) {
-          images.add(Image.network(
-              client.basePath + camera.latestSnapshot!.path,
-              width: 500));
-        }
-      }
-    }
-    return images;
   }
 
   @override
@@ -111,29 +106,34 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ...getImages(),
-          ],
+        child:
+            // Column is also a layout widget. It takes a list of children and
+            // arranges them vertically. By default, it sizes itself to fit its
+            // children horizontally, and tries to be as tall as its parent.
+            //
+            // Invoke "debug painting" (press "p" in the console, choose the
+            // "Toggle Debug Paint" action from the Flutter Inspector in Android
+            // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
+            // to see the wireframe for each widget.
+            //
+            // Column has various properties to control how it sizes itself and
+            // how it positions its children. Here we use mainAxisAlignment to
+            // center the children vertically; the main axis here is the vertical
+            // axis because Columns are vertical (the cross axis would be
+            // horizontal).
+            Consumer<HomeViewModel>(
+          builder: (context, model, child) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: _homeViewModel.snapshotUrls
+                  .map((url) => Image.network(url, width: 500))
+                  .toList(),
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _updateImages,
+        onPressed: () => _homeViewModel.refresh(),
         tooltip: 'Update',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
