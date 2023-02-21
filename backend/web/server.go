@@ -96,9 +96,9 @@ type Server struct {
 	files file.Manager
 	gc    storage.GCManager
 	rtsp  cameras.RtspServer
-
-	openapi openapi_server.ServerInterface
 }
+
+var _ openapi_server.ServerInterface = &Server{}
 
 func (s *Server) Start() error {
 	var err error
@@ -436,6 +436,17 @@ func (s *Server) updateCameraCreds(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
+	p := openapi_server.GetCamerasParams{}
+
+	ls := r.URL.Query().Get("latest_snapshot")
+
+	if strings.EqualFold(ls, "true") || ls == "1" {
+		p.LatestSnapshot = new(bool)
+		*p.LatestSnapshot = true
+	}
+	s.GetCameras(w, r, p)
+}
+func (s *Server) GetCameras(w http.ResponseWriter, r *http.Request, params openapi_server.GetCamerasParams) {
 
 	cams, err := s.data.ListCameras()
 
@@ -450,7 +461,7 @@ func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
 
 		r1 := newCameraResult(cam)
 
-		if ls := r.URL.Query().Get("latest_snapshot"); ls == "true" || ls == "1" {
+		if params.LatestSnapshot != nil && *params.LatestSnapshot {
 
 			f, err := s.data.GetLatestFile(cam.CameraID(), 0)
 
@@ -747,9 +758,6 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 
 	s.r.Use(s.enableCors)
 
-	// just for type safety for now
-	s.openapi = &openApiServerWrapper{s}
-
 	// cameras
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
 	s.r.Methods("GET").Path("/api/cameras").HandlerFunc(s.listCameras)
@@ -798,12 +806,4 @@ func getContentType(fi *entities.File) string {
 	ct := mime.TypeByExtension(path.Ext(fi.Path))
 
 	return ct
-}
-
-type openApiServerWrapper struct {
-	s *Server
-}
-
-func (sw *openApiServerWrapper) GetCameras(w http.ResponseWriter, r *http.Request) {
-	sw.s.listCameras(w, r)
 }

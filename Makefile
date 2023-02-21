@@ -21,6 +21,7 @@ $(GOPATH)/bin/oapi-codegen:
 
 SERVER_STUB_FILE=$(SERVER_STUB_PATH)/server.go
 $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yml $(GOPATH)/bin/oapi-codegen
+	echo "Generating OpenAPI: go"
 	mkdir -p $(SERVER_STUB_PATH)
 	$(GOPATH)/bin/oapi-codegen -package openapi_server -generate "types,chi-server" openapi/amcrest-viewer.openapi.yml >$(SERVER_STUB_FILE)
 
@@ -67,6 +68,7 @@ clean:
 
 CLIENT_STUB_FILE=frontend-flutter/openapi/.gen/amcrest_viewer/lib/api/default_api.dart
 $(CLIENT_STUB_FILE): openapi/amcrest-viewer.openapi.yml
+	echo "Generating OpenAPI: dart"
 	mkdir -p frontend-flutter/build/.openapi
 	cp $< frontend-flutter/build/.openapi/openapi.yaml
 	docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate \
@@ -75,7 +77,6 @@ $(CLIENT_STUB_FILE): openapi/amcrest-viewer.openapi.yml
 		-o /local/frontend-flutter/openapi/.gen/amcrest_viewer
 
 openapi-gen: $(SERVER_STUB_FILE) $(CLIENT_STUB_FILE)
-	cd backend && go mod download
 
 
-.PHONY=distdir dist clean npm-install server frontend all docker openapi
+.PHONY=distdir dist clean npm-install server frontend all docker openapi-gen

@@ -4,13 +4,19 @@ info:
   title: API Title
   version: '1.0'
 servers:
-- url: http://0.0.0.0:9000/api
+- url: http://0.0.0.0:9000
 paths:
-  "/cameras":
+  "/api/cameras":
     get:
       summary: Get all cameras
       description: Get all cameras
       operationId: getCameras
+      parameters:
+        - in: query
+          name: latest_snapshot
+          description: 'set true to return latest snapshot info'
+          schema:
+            type: boolean
       responses:
         '200':
           description: OK
@@ -27,20 +33,56 @@ components:
       properties:
         id:
           type: integer
-        type:
+        name:
           type: string
-          enum:
-          - amcrest
-        url:
+        type:
           type: string
         host:
           type: string
-        status:
-          type: string
-        lastSeen:
+        last_seen:
           type: string
           format: date-time
-        timzezone:
+        enabled:
+          type: boolean
+        timezone:
           type: string
+        max_file_age_days:
+          type: integer
+        max_file_total_mb:
+          type: integer
         username:
           type: string
+        latest_snapshot:
+          "$ref": "#/components/schemas/LatestSnapshot"
+      required:
+        - id
+        - name
+        - type
+        - host
+    LatestSnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+        camera_id:
+          type: integer
+        path:
+          type: string
+        type:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        duration_seconds:
+          type: integer
+        length:
+          type: integer
+      required:
+        - id
+        - camera_id
+        - path
+        - type
+        - timestamp
+        - duration_seconds
+        - length
+      additionalProperties: false
