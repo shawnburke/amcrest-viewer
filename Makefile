@@ -78,5 +78,21 @@ $(CLIENT_STUB_FILE): openapi/amcrest-viewer.openapi.yml
 
 openapi-gen: $(SERVER_STUB_FILE) $(CLIENT_STUB_FILE)
 
+FLUTTER_TARGET=~/flutter/bin/flutter
+FLUTTER_VERSION=3.7.5
 
-.PHONY=distdir dist clean npm-install server frontend all docker openapi-gen
+$(FLUTTER_TARGET):
+	wget -O /tmp/flutter.tar.gz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_$(FLUTTER_VERSION)-stable.tar.xz
+	# expand to an child directory to avoid accidental pollution of homedir
+	mkdir -p ~/flutter-sdk
+	tar -xf /tmp/flutter.tar.gz -C ~/flutter-sdk
+	mv ~/flutter-sdk /flutter
+	~/flutter/bin/flutter precache
+	echo "SET PATH:"
+	echo "export PATH=$$PATH:~/flutter/bin"
+
+flutter-install: $(FLUTTER_TARGET)
+flutter-webserver: flutter-install
+	cd frontend-flutter && flutter run -d web-server --web-hostname 0.0.0.0
+
+.PHONY=distdir dist clean npm-install server frontend all docker flutter-install flutter-webserver
