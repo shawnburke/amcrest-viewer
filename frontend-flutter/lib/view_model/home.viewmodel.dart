@@ -14,9 +14,6 @@ class HomeViewModel extends LoadingViewModel {
   List<Camera>? _cameras;
 
   List<Camera> get cameras {
-    if (_cameras == null) {
-      refresh();
-    }
     return _cameras ?? List<Camera>.empty();
   }
 
@@ -29,13 +26,10 @@ class HomeViewModel extends LoadingViewModel {
 
   Future<void> refresh() async {
     try {
-      isLoading = true;
-
       _cameras = await repo.getCameras(includeLastSnapshot: true);
+      notifyListeners();
     } catch (exc) {
       debugPrint('Error in _fetchData : ${exc.toString()}');
     }
-
-    isLoading = false;
   }
 }

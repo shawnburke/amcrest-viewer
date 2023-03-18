@@ -225,26 +225,12 @@ func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
 
 	strID := mux.Vars(r)["camera-id"]
 
-	cam, err := s.data.GetCamera(strID)
-
-	if s.writeError(err, w, 0) {
+	id, err := strconv.Atoi(strID)
+	if err != nil {
+		s.writeError(err, w, 400)
 		return
 	}
-
-	res := newCameraResult(cam)
-
-	if ls := r.URL.Query().Get("latest_snapshot"); ls == "true" || ls == "1" {
-		f, err := s.data.GetLatestFile(strID, 0)
-
-		if err != nil {
-			if s.writeError(err, w, 0) {
-				return
-			}
-		}
-		updated := s.updateFilePaths(strID, f)
-		res.LatestSnapshot = updated[0]
-	}
-	s.writeJson(res, w, 200)
+	s.GetCamera(w, r, id)
 }
 
 func (s *Server) getCameraStats(w http.ResponseWriter, r *http.Request) {
@@ -445,39 +431,6 @@ func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
 		*p.LatestSnapshot = true
 	}
 	s.GetCameras(w, r, p)
-}
-func (s *Server) GetCameras(w http.ResponseWriter, r *http.Request, params openapi_server.GetCamerasParams) {
-
-	cams, err := s.data.ListCameras()
-
-	if s.writeError(err, w, 0) {
-
-		return
-	}
-
-	res := make([]*getCameraResult, len(cams))
-
-	for i, cam := range cams {
-
-		r1 := newCameraResult(cam)
-
-		if params.LatestSnapshot != nil && *params.LatestSnapshot {
-
-			f, err := s.data.GetLatestFile(cam.CameraID(), 0)
-
-			if err != nil {
-				if s.writeError(err, w, 0) {
-					return
-				}
-			}
-			updated := s.updateFilePaths(cam.CameraID(), f)
-			r1.LatestSnapshot = updated[0]
-		}
-		res[i] = r1
-	}
-
-	s.writeJson(res, w, 0)
-
 }
 
 var timeFormats = []string{
@@ -751,6 +704,67 @@ func (s *Server) enableCors(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// OpenAPI wrappers
+
+func (s *Server) GetCameras(w http.ResponseWriter, r *http.Request, params openapi_server.GetCamerasParams) {
+
+	cams, err := s.data.ListCameras()
+
+	if s.writeError(err, w, 0) {
+
+		return
+	}
+
+	res := make([]*getCameraResult, len(cams))
+
+	for i, cam := range cams {
+
+		r1 := newCameraResult(cam)
+
+		if params.LatestSnapshot != nil && *params.LatestSnapshot {
+
+			f, err := s.data.GetLatestFile(cam.CameraID(), 0)
+
+			if err != nil {
+				if s.writeError(err, w, 0) {
+					return
+				}
+			}
+			updated := s.updateFilePaths(cam.CameraID(), f)
+			r1.LatestSnapshot = updated[0]
+		}
+		res[i] = r1
+	}
+
+	s.writeJson(res, w, 0)
+
+}
+
+func (s *Server) GetCamera(w http.ResponseWriter, r *http.Request, id int) {
+
+	cam, err := s.data.GetCamera(strconv.FormatInt(int64(id), 10))
+
+	if s.writeError(err, w, 0) {
+
+		return
+	}
+
+	res := newCameraResult(cam)
+
+	f, err := s.data.GetLatestFile(cam.CameraID(), 0)
+
+	if err != nil {
+		if s.writeError(err, w, 0) {
+			return
+		}
+	}
+	updated := s.updateFilePaths(cam.CameraID(), f)
+	res.LatestSnapshot = updated[0]
+
+	s.writeJson(res, w, 0)
+
 }
 
 func (s *Server) Setup(frontendPath string) http.Handler {

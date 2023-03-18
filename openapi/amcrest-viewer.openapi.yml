@@ -26,6 +26,26 @@ paths:
                 type: array
                 items:
                   "$ref": "#/components/schemas/Camera"
+
+  "/api/cameras/{id}":
+      get:
+        summary: Get all cameras
+        description: Get all cameras
+        operationId: getCamera
+        parameters:
+          - in: path
+            name: id
+            required: true
+            description: 'camera ID'
+            schema:
+              type: integer
+        responses:
+          '200':
+            description: OK
+            content:
+              application/json:
+                schema:
+                    "$ref": "#/components/schemas/Camera"
 components:
   schemas:
     Camera:

@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:amcrest_viewer_flutter/view_model/home.viewmodel.dart';
 import 'package:flutter/material.dart';
+import 'package:openapi/api.dart';
 import 'package:provider/provider.dart';
+
+import '../config.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     super.initState();
     scheduleTimeout();
+    _homeViewModel.refresh();
   }
 
   Timer scheduleTimeout() =>
@@ -55,29 +59,14 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
-        child:
-            // Column is also a layout widget. It takes a list of children and
-            // arranges them vertically. By default, it sizes itself to fit its
-            // children horizontally, and tries to be as tall as its parent.
-            //
-            // Invoke "debug painting" (press "p" in the console, choose the
-            // "Toggle Debug Paint" action from the Flutter Inspector in Android
-            // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-            // to see the wireframe for each widget.
-            //
-            // Column has various properties to control how it sizes itself and
-            // how it positions its children. Here we use mainAxisAlignment to
-            // center the children vertically; the main axis here is the vertical
-            // axis because Columns are vertical (the cross axis would be
-            // horizontal).
-            Consumer<HomeViewModel>(
+        child: Consumer<HomeViewModel>(
           builder: (context, model, child) {
             return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: _homeViewModel.snapshotUrls
-                  .map((url) => Image.network(url, width: 500))
-                  .toList(),
-            );
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: _homeViewModel.cameras
+                    .map((c) => CameraWidget(camera: c))
+                    .toList()
+                    .cast<Widget>());
           },
         ),
       ),
@@ -87,5 +76,32 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+}
+
+class CameraWidget extends StatelessWidget {
+  const CameraWidget({super.key, required this.camera});
+
+  final Camera camera;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = baseURL + (camera.latestSnapshot?.path ?? '');
+
+    return GestureDetector(
+        onTap: () =>
+            Navigator.pushNamed(context, '/camera', arguments: camera.id),
+        child: Center(
+            child: Container(
+                margin: const EdgeInsets.all(10.0),
+                color: Colors.lightBlue[600],
+                child: Column(children: [
+                  Text(
+                    camera.name,
+                    textAlign: TextAlign.center,
+                    textScaleFactor: 2,
+                  ),
+                  Image.network(url, width: 500),
+                ]))));
   }
 }

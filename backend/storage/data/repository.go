@@ -192,13 +192,20 @@ func (sr *sqlRepository) AddCamera(name string, t string, host *string) (*entiti
 var camIDRegEx = regexp.MustCompile(`([^-]+)-(\d+)`)
 
 func parseCameraID(cameraID string) (int, error) {
+
+	// try just the ID
+	id, err := strconv.Atoi(cameraID)
+	if err == nil {
+		return id, nil
+	}
+
 	match := camIDRegEx.FindStringSubmatch(cameraID)
 
 	if match == nil {
 		return -1, fmt.Errorf("invalid cameraID: %s", cameraID)
 	}
 
-	id, err := strconv.Atoi(match[2])
+	id, err = strconv.Atoi(match[2])
 	if err != nil {
 		return -1, err
 	}
