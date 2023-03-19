@@ -1,7 +1,12 @@
 {
     "version": "0.2.0",
     "configurations": [
-        
+        {
+            "name": "Flutter Web",
+            "type": "dart",
+            "request": "launch",
+            "program": "${workspaceFolder}/frontend-flutter/lib/main.dart",
+        },
         {
             "name": "Launch Server",
             "type": "go",
@@ -24,6 +29,7 @@
             "internalConsoleOptions": "neverOpen",
             "env": { "CI": "true" },
             "disableOptimisticBPs": true
-          }
+          },
+
     ]
 }
