@@ -2,13 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flutter Web",
-            "type": "dart",
-            "request": "launch",
-            "program": "${workspaceFolder}/frontend-flutter/lib/main.dart",
-        },
-        {
-            "name": "Launch Server",
+            "name": "Backend API (Go)",
             "type": "go",
             "request": "launch",
             "mode": "debug",
@@ -17,19 +11,19 @@
                 "ENVIRONMENT": "test",
             }
         },
-        {
-            "name": "Debug CRA Tests",
-            "type": "node",
-            "request": "launch",
-            "runtimeExecutable": "${workspaceRoot}/web/frontend/node_modules/.bin/react-scripts",
-            "args": ["test", "--runInBand", "--no-cache", "--watchAll=false", "--unhandled-rejections=strict"],
-            "cwd": "${workspaceRoot}/web/frontend",
-            "protocol": "inspector",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "env": { "CI": "true" },
-            "disableOptimisticBPs": true
-          },
+        // {
+        //     "name": "Debug CRA Tests",
+        //     "type": "node",
+        //     "request": "launch",
+        //     "runtimeExecutable": "${workspaceRoot}/web/frontend/node_modules/.bin/react-scripts",
+        //     "args": ["test", "--runInBand", "--no-cache", "--watchAll=false", "--unhandled-rejections=strict"],
+        //     "cwd": "${workspaceRoot}/web/frontend",
+        //     "protocol": "inspector",
+        //     "console": "integratedTerminal",
+        //     "internalConsoleOptions": "neverOpen",
+        //     "env": { "CI": "true" },
+        //     "disableOptimisticBPs": true
+        //   },
 
     ]
 }

@@ -1,6 +1,4 @@
 import 'dart:async';
-// import 'package:dart_vlc/dart_vlc.dart';
-// import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:openapi/api.dart';
 import 'package:video_player/video_player.dart';
@@ -11,51 +9,10 @@ class CameraVideoWidget extends StatefulWidget {
   final Camera camera;
   const CameraVideoWidget({super.key, required this.camera});
 
-  State<CameraVideoWidget> stateFactory() {
-    //if (kIsWeb) {
-    return _VideoPlayerScreenState(camera: camera);
-    //}
-
-    // return _VLCPlayerScreenState(camera: camera);
-  }
-
   @override
-  State<CameraVideoWidget> createState() => stateFactory();
+  State<CameraVideoWidget> createState() =>
+      _VideoPlayerScreenState(camera: camera);
 }
-
-// class _VLCPlayerScreenState extends State<CameraVideoWidget> {
-//   final Camera camera;
-//   late Player player;
-//   _VLCPlayerScreenState({required this.camera});
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     DartVLC.initialize();
-//     final url = '$baseURL/${camera.id}/live?redirect=false';
-//     player = Player(
-//       id: 69420,
-//       videoDimensions: const VideoDimensions(640, 360),
-//     );
-
-//     player.open(
-//       Media.network(url),
-//       autoStart: true,
-//     ); // default
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       body: Video(
-//         player: player,
-//         height: 640.0,
-//         width: 480.0,
-//         showControls: true, // default
-//       ),
-//     );
-//   }
-// }
 
 class _VideoPlayerScreenState extends State<CameraVideoWidget> {
   late VideoPlayerController _controller;
@@ -68,7 +25,7 @@ class _VideoPlayerScreenState extends State<CameraVideoWidget> {
   void initState() {
     super.initState();
 
-    final url = '$baseURL/${camera.id}/live?redirect=false';
+    final url = '$baseURL/api/cameras/${camera.id}/live?redirect=false';
 
     // Create and store the VideoPlayerController. The VideoPlayerController
     // offers several different constructors to play videos from assets, files,

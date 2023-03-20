@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
-	"io/ioutil"
+	"io"
 	"mime"
 	"net/http"
 	"os"
@@ -182,7 +182,7 @@ func (s *Server) createCamera(w http.ResponseWriter, r *http.Request) {
 
 	cam := &models.Camera{}
 
-	bytes, err := ioutil.ReadAll(r.Body)
+	bytes, err := io.ReadAll(r.Body)
 
 	if s.writeError(err, w, 500) {
 		return
@@ -219,18 +219,6 @@ func newCameraResult(cam *entities.Camera) *getCameraResult {
 	}
 	cr.CameraCreds.Password = nil
 	return cr
-}
-
-func (s *Server) getCamera(w http.ResponseWriter, r *http.Request) {
-
-	strID := mux.Vars(r)["camera-id"]
-
-	id, err := strconv.Atoi(strID)
-	if err != nil {
-		s.writeError(err, w, 400)
-		return
-	}
-	s.GetCamera(w, r, id)
 }
 
 func (s *Server) getCameraStats(w http.ResponseWriter, r *http.Request) {
@@ -278,7 +266,7 @@ func (s *Server) getCameraLiveStream(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("redirect") != "false" {
 		// redirect to the RTSP path
 		//
-		http.Redirect(w, r, rtspPath, 301)
+		http.Redirect(w, r, rtspPath, http.StatusMovedPermanently)
 		return
 	}
 
@@ -335,7 +323,7 @@ func (s *Server) updateCamera(w http.ResponseWriter, r *http.Request) {
 
 	cam := &updateCamera{}
 
-	bytes, err := ioutil.ReadAll(r.Body)
+	bytes, err := io.ReadAll(r.Body)
 
 	if s.writeError(err, w, 500) {
 		return
@@ -400,7 +388,7 @@ func (s *Server) updateCameraCreds(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}{}
 
-	bytes, err := ioutil.ReadAll(r.Body)
+	bytes, err := io.ReadAll(r.Body)
 
 	if s.writeError(err, w, 500) {
 		return
@@ -419,18 +407,6 @@ func (s *Server) updateCameraCreds(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 
-}
-
-func (s *Server) listCameras(w http.ResponseWriter, r *http.Request) {
-	p := openapi_server.GetCamerasParams{}
-
-	ls := r.URL.Query().Get("latest_snapshot")
-
-	if strings.EqualFold(ls, "true") || ls == "1" {
-		p.LatestSnapshot = new(bool)
-		*p.LatestSnapshot = true
-	}
-	s.GetCameras(w, r, p)
 }
 
 var timeFormats = []string{
@@ -497,40 +473,17 @@ func (s *Server) getTimeRange(r *http.Request) (*time.Time, *time.Time, error) {
 	return start, end, nil
 }
 
-func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
+// func (s *Server) listFiles(w http.ResponseWriter, r *http.Request) {
 
-	cameraID := mux.Vars(r)["camera-id"]
+// 	strID := mux.Vars(r)["camera-id"]
 
-	if cameraID == "" {
-		s.writeError(errors.New("Camera ID required"), w, 400)
-		return
-	}
+// 	id, ok := s.parseID(w, r, strID)
+// 	if !ok {
+// 		return
+// 	}
 
-	start, end, err := s.getTimeRange(r)
-
-	if s.writeError(err, w, 400) {
-		return
-	}
-
-	lff := &data.ListFilesFilter{
-		Start: start,
-		End:   end,
-	}
-
-	sort := r.URL.Query().Get("sort")
-	lff.Descending = sort == "desc"
-
-	files, err := s.data.ListFiles(cameraID, lff)
-
-	if s.writeError(err, w, 0) {
-		return
-	}
-
-	files = s.updateFilePaths(cameraID, files...)
-
-	s.writeJson(files, w, 0)
-
-}
+// 	s.GetCameraFiles(w, r, id)
+// }
 
 func (s *Server) getFileInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -570,8 +523,6 @@ func (s *Server) adminTriggerGC(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(404)
 }
 
-const mimeTextPlain = "text/plain"
-
 var resizeCounter = int32(0)
 var resizeLogThreshold = int32(25)
 
@@ -580,7 +531,7 @@ func (s *Server) resizeImage(raw []byte, maxSize int) ([]byte, error) {
 	start := time.Now()
 
 	defer func() {
-		delta := time.Now().Sub(start)
+		delta := time.Since(start)
 
 		if atomic.AddInt32(&resizeCounter, 1)%resizeLogThreshold == 0 {
 			s.Logger.Info("resize", zap.Duration("resize", delta))
@@ -646,7 +597,7 @@ func (s *Server) getFile(w http.ResponseWriter, r *http.Request) {
 
 		defer reader.Close()
 
-		contents, err := ioutil.ReadAll(reader)
+		contents, err := io.ReadAll(reader)
 
 		if s.writeError(err, w, 500) {
 			return
@@ -767,6 +718,27 @@ func (s *Server) GetCamera(w http.ResponseWriter, r *http.Request, id int) {
 
 }
 
+func (s *Server) GetCameraFiles(w http.ResponseWriter, r *http.Request, id string, params openapi_server.GetCameraFilesParams) {
+
+	lff := &data.ListFilesFilter{
+		Start: params.Start,
+		End:   params.End,
+	}
+
+	lff.Descending = *params.Sort == "desc"
+
+	files, err := s.data.ListFiles(id, lff)
+
+	if s.writeError(err, w, 0) {
+		return
+	}
+
+	files = s.updateFilePaths(id, files...)
+
+	s.writeJson(files, w, 0)
+
+}
+
 func (s *Server) Setup(frontendPath string) http.Handler {
 	s.r = mux.NewRouter()
 
@@ -774,8 +746,6 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 
 	// cameras
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.createCamera)
-	s.r.Methods("GET").Path("/api/cameras").HandlerFunc(s.listCameras)
-	s.r.Methods("GET").Path("/api/cameras/{camera-id}").HandlerFunc(s.getCamera)
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/live").HandlerFunc(s.getCameraLiveStream)
 
 	// RTSP
@@ -786,12 +756,13 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 	s.r.Methods("PUT").Path("/api/cameras/{camera-id}").HandlerFunc(s.updateCamera)
 	s.r.Methods("PUT").Path("/api/cameras/{camera-id}/creds").HandlerFunc(s.updateCameraCreds)
 	// files
-	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files").HandlerFunc(s.listFiles)
 
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files/{file-id}").HandlerFunc(s.getFile)
 	s.r.Methods("GET").Path("/api/cameras/{camera-id}/files/{file-id}/info").HandlerFunc(s.getFileInfo)
 
 	s.r.Methods("POST").Path("/api/admin/gc").HandlerFunc(s.adminTriggerGC)
+
+	s.r.PathPrefix("/api/").Handler(openapi_server.Handler(s))
 
 	s.Logger.Info("web server path", zap.String("path", frontendPath))
 	// website

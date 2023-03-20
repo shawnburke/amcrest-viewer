@@ -46,6 +46,50 @@ paths:
               application/json:
                 schema:
                     "$ref": "#/components/schemas/Camera"
+  "/api/cameras/{id}/files":
+      get:
+        summary: Get files
+        description: Get camera files
+        operationId: getCameraFiles
+        parameters:
+          - in: path
+            name: id
+            required: true
+            description: 'camera ID'
+            schema:
+              type: string
+          - in: query
+            name: start
+            description: 'range start'
+            schema:
+              type: string
+              format: date-time
+          - in: query
+            name: end
+            description: 'range end'
+            schema:
+              type: string
+              format: date-time
+          - in: query
+            name: sort
+            description: "sort order"
+            example: desc
+            schema:
+              type: string
+              enum:
+                - asc
+                - desc
+
+        responses:
+          '200':
+            description: OK
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    "$ref": "#/components/schemas/CameraFile"
+
 components:
   schemas:
     Camera:
@@ -106,3 +150,28 @@ components:
         - duration_seconds
         - length
       additionalProperties: false
+    CameraFile:
+      type: object
+      properties:
+        id:
+          type: integer
+        camera_id:
+          type: integer
+        path:
+          type: string
+        type:
+          type: integer
+        timestamp:
+          type: string
+        duration_seconds:
+          type: integer
+        length:
+          type: integer
+      required:
+        - id
+        - camera_id
+        - path
+        - type
+        - timestamp
+        - duration_seconds
+        - length
