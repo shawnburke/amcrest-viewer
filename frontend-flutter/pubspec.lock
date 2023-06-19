@@ -70,6 +70,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_deep_linking:
+    dependency: "direct main"
+    description:
+      name: flutter_deep_linking
+      sha256: fd6e78c903d8927673cdbc093bd2a3edfef95f29b199b58ec844a2566cfb4186
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -83,6 +91,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_timeline_calendar:
+    dependency: "direct main"
+    description:
+      name: flutter_timeline_calendar
+      sha256: "70f758c5f3f466ba3216428e04cbb8176dfb8efbd330bcd06859e67edf079bef"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.5"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -207,6 +223,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.5"
+  scoped_model:
+    dependency: transitive
+    description:
+      name: scoped_model
+      sha256: "8dacc77cb5de78d5e159d54cab883847491a73dfaa3d28c52f4ec8b0be32645b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   sky_engine:
     dependency: transitive
     description: flutter

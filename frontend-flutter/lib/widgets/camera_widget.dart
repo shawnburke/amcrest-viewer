@@ -1,4 +1,3 @@
-import 'package:amcrest_viewer_flutter/widgets/camera_live_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:openapi/api.dart';
 
@@ -11,11 +10,10 @@ class CameraWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = baseURL + (camera.latestSnapshot?.path ?? '');
+    final url = getImageURL(camera.latestSnapshot?.path ?? '');
 
     return GestureDetector(
-        onTap: () =>
-            Navigator.pushNamed(context, '/camera', arguments: camera.id),
+        onTap: () => Navigator.pushNamed(context, 'camera/${camera.id}'),
         child: Center(
             child: Container(
                 margin: const EdgeInsets.all(10.0),
@@ -27,7 +25,14 @@ class CameraWidget extends StatelessWidget {
                     textScaleFactor: 2,
                   ),
                   Image.network(url, width: 500),
-                  CameraVideoWidget(camera: camera),
+                  // CameraVideoWidget(camera: camera),
                 ]))));
+  }
+
+  static String getImageURL(String path) {
+    if (path.startsWith("http")) {
+      return path;
+    }
+    return Config.baseURL + path;
   }
 }

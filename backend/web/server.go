@@ -674,18 +674,16 @@ func (s *Server) GetCameras(w http.ResponseWriter, r *http.Request, params opena
 
 		r1 := newCameraResult(cam)
 
-		if params.LatestSnapshot != nil && *params.LatestSnapshot {
+		f, err := s.data.GetLatestFile(cam.CameraID(), 0)
 
-			f, err := s.data.GetLatestFile(cam.CameraID(), 0)
-
-			if err != nil {
-				if s.writeError(err, w, 0) {
-					return
-				}
+		if err != nil {
+			if s.writeError(err, w, 0) {
+				return
 			}
-			updated := s.updateFilePaths(cam.CameraID(), f)
-			r1.LatestSnapshot = updated[0]
 		}
+		updated := s.updateFilePaths(cam.CameraID(), f)
+		r1.LatestSnapshot = updated[0]
+
 		res[i] = r1
 	}
 
@@ -725,7 +723,7 @@ func (s *Server) GetCameraFiles(w http.ResponseWriter, r *http.Request, id strin
 		End:   params.End,
 	}
 
-	lff.Descending = *params.Sort == "desc"
+	lff.Descending = params.Sort != nil && *params.Sort == "desc"
 
 	files, err := s.data.ListFiles(id, lff)
 

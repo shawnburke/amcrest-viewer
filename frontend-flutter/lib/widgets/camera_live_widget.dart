@@ -10,22 +10,21 @@ class CameraVideoWidget extends StatefulWidget {
   const CameraVideoWidget({super.key, required this.camera});
 
   @override
-  State<CameraVideoWidget> createState() =>
-      _VideoPlayerScreenState(camera: camera);
+  State<CameraVideoWidget> createState() => _VideoPlayerScreenState();
 }
 
 class _VideoPlayerScreenState extends State<CameraVideoWidget> {
   late VideoPlayerController _controller;
   late Future<void> _initializeVideoPlayerFuture;
-  final Camera camera;
-
-  _VideoPlayerScreenState({required this.camera});
+  Camera? camera;
 
   @override
   void initState() {
     super.initState();
+    camera ??= widget.camera;
 
-    final url = '$baseURL/api/cameras/${camera.id}/live?redirect=false';
+    final url =
+        '${Config.baseURL}/api/cameras/${camera!.id}/live?redirect=false';
 
     // Create and store the VideoPlayerController. The VideoPlayerController
     // offers several different constructors to play videos from assets, files,

@@ -31,6 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
   video_player: ^2.6.0
+  flutter_timeline_calendar: ^1.0.1
+  flutter_deep_linking: ^0.2.1
   openapi:
     path: openapi/.gen/amcrest_viewer
 

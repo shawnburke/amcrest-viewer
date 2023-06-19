@@ -4,7 +4,7 @@ WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ .
-RUN go build -o /app/amcrest-server
+RUN SERVER=app/amcrest-server make server
 
 FROM node:16-alpine as nodebuild
 

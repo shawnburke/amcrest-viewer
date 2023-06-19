@@ -5,5 +5,6 @@ import 'config.dart';
 
 final GetIt locator = GetIt.instance;
 void setupLocator() {
-  locator.registerFactory<CamViewerRepo>(() => CamViewerRepoImpl(url: baseURL));
+  locator
+      .registerSingleton<CamViewerRepo>(CamViewerRepoImpl(url: Config.baseURL));
 }

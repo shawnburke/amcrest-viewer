@@ -1,5 +1,6 @@
 import 'package:amcrest_viewer_flutter/repository/cam_viewer_repository.dart';
 import 'package:amcrest_viewer_flutter/view_model/loading.viewmodel.dart';
+import 'package:amcrest_viewer_flutter/widgets/camera_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openapi/api.dart';
 
@@ -19,7 +20,7 @@ class HomeViewModel extends LoadingViewModel {
 
   List<String> get snapshotUrls {
     return cameras
-        .map((e) => baseURL + (e.latestSnapshot?.path ?? ''))
+        .map((e) => CameraWidget.getImageURL(e.latestSnapshot?.path ?? ''))
         .toList()
         .cast<String>();
   }

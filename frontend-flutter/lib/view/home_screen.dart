@@ -2,10 +2,8 @@ import 'dart:async';
 
 import 'package:amcrest_viewer_flutter/view_model/home.viewmodel.dart';
 import 'package:flutter/material.dart';
-import 'package:openapi/api.dart';
 import 'package:provider/provider.dart';
 
-import '../config.dart';
 import '../widgets/camera_widget.dart';
 
 class HomeScreen extends StatefulWidget {

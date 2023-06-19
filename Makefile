@@ -1,6 +1,6 @@
 
 ROOT=$(pwd)
-SERVER=backend/amcrest-server
+SERVER ?= backend/amcrest-server
 WEB_ROOT=frontend
 FRONTEND=$(WEB_ROOT)/build/index.html
 CONFIG=dist/config/base.yaml
@@ -8,8 +8,7 @@ NPM_INSTALL=$(WEB_ROOT)/node_modules/.faux-npm-install
 
 all: $(SERVER) flutter
 
-dist_dir: dist
-	mkdir -p dist
+
 
 server: $(SERVER)
 
@@ -20,15 +19,17 @@ $(GOPATH)/bin/oapi-codegen:
 	go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.10.1
 
 SERVER_STUB_FILE=$(SERVER_STUB_PATH)/server.go
-$(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yml $(GOPATH)/bin/oapi-codegen
+$(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-codegen
 	echo "Generating OpenAPI: go"
 	mkdir -p $(SERVER_STUB_PATH)
-	$(GOPATH)/bin/oapi-codegen -package openapi_server -generate "types,chi-server" openapi/amcrest-viewer.openapi.yml >$(SERVER_STUB_FILE)
+	$(GOPATH)/bin/oapi-codegen -package openapi_server -generate "types,chi-server" openapi/amcrest-viewer.openapi.yaml >$(SERVER_STUB_FILE)
 
 
-$(SERVER): dist_dir $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
+$(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
 	echo "Building server Arch:$(GOARCH) Arm:$(GOARM)"
-	cd backend && go build -o amcrest-server .
+	cd backend && go build -o /tmp/amcrest-server-build .
+	rm -rf $(SERVER)
+	mv /tmp/amcrest-server-build $(SERVER)
 
 $(NPM_INSTALL): $(WEB_ROOT)/package-lock.json $(WEB_ROOT)/node_modules
 	echo "Running NPM install"
@@ -51,7 +52,7 @@ $(CONFIG): backend/config/base.yaml
 	sed -i 's/test_data/data/g' dist/config/base.yaml
 	printf "web:\n  frontend: frontend\n" >>dist/config/base.yaml
 
-dist: dist_dir $(CONFIG) $(SERVER) $(FRONTEND)
+dist: $(CONFIG) $(SERVER) $(FRONTEND)
 	mkdir -p dist/data/db
 	mkdir -p dist/data/files
 	cp $(SERVER) dist/amcrest-server
@@ -67,7 +68,7 @@ clean:
 
 
 CLIENT_STUB_FILE=frontend-flutter/openapi/.gen/amcrest_viewer/lib/api/default_api.dart
-$(CLIENT_STUB_FILE): openapi/amcrest-viewer.openapi.yml
+$(CLIENT_STUB_FILE): openapi/amcrest-viewer.openapi.yaml
 	echo "Generating OpenAPI: dart"
 	mkdir -p frontend-flutter/build/.openapi
 	cp $< frontend-flutter/build/.openapi/openapi.yaml

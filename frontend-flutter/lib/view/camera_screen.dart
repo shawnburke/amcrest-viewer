@@ -1,23 +1,65 @@
 import 'package:amcrest_viewer_flutter/locator.dart';
+import 'package:amcrest_viewer_flutter/widgets/camera_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_timeline_calendar/timeline/flutter_timeline_calendar.dart';
+import 'package:openapi/api.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 
 import '../repository/cam_viewer_repository.dart';
 import '../view_model/camera.viewmodel.dart';
 
-class CameraScreen extends StatelessWidget {
-  late final CamViewerRepo repo;
-  late final CameraViewModel vm;
+class CameraScreen extends StatefulWidget {
+  final int cameraID;
+  const CameraScreen({super.key, required this.cameraID});
 
-  CameraScreen({super.key, required int cameraID}) {
-    repo = locator<CamViewerRepo>();
-    vm = CameraViewModel(repo: repo, cameraID: cameraID);
+  @override
+  State<CameraScreen> createState() => _CameraScreenState();
+}
+
+class _CameraScreenState extends State<CameraScreen> {
+  VideoPlayerController? _controller;
+  late final CameraViewModel vm;
+  late final Widget _loadingWidget;
+
+  _CameraScreenState();
+
+  @override
+  void initState() {
+    super.initState();
+    vm = CameraViewModel(
+        repo: locator<CamViewerRepo>(), cameraID: widget.cameraID);
     vm.refresh();
+    _loadingWidget = const Center(child: CircularProgressIndicator());
+  }
+
+  void _setActiveVideo(CameraFile vid) {
+    _controller =
+        VideoPlayerController.network(CameraWidget.getImageURL(vid.path))
+          ..initialize().then((_) {
+            _controller!.play();
+            // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
+            setState(() {});
+          });
+  }
+
+  Widget _buildVideoPlayer(CameraFile file) {
+    final controller = VideoPlayerController.network(
+      CameraWidget.getImageURL(file.path),
+    );
+
+    final widget = VideoPlayer(controller);
+
+    return widget;
+  }
+
+  Widget get _videoWidget {
+    return _controller == null ? _loadingWidget : VideoPlayer(_controller!);
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+    return ChangeNotifierProvider<CameraViewModel>(
         create: (context) => vm,
         child: Center(
             // Center is a layout widget. It takes a single child and positions it
@@ -39,9 +81,46 @@ class CameraScreen extends StatelessWidget {
                           textAlign: TextAlign.center,
                           textScaleFactor: 2,
                         ),
-                        vm.url != ''
-                            ? Image.network(vm.url, width: 500)
-                            : const Text('No image available'),
+                        Expanded(child: _videoWidget),
+                        TimelineCalendar(
+                            calendarType: CalendarType.GREGORIAN,
+                            calendarLanguage: "en",
+                            calendarOptions: CalendarOptions(
+                              viewType: ViewType.DAILY,
+                              toggleViewType: true,
+                              headerMonthElevation: 10,
+                              headerMonthShadowColor: Colors.black26,
+                              headerMonthBackColor: Colors.transparent,
+                            ),
+                            dayOptions: DayOptions(
+                                compactMode: true,
+                                weekDaySelectedColor: const Color(0xff3AC3E2)),
+                            headerOptions: HeaderOptions(
+                                weekDayStringType: WeekDayStringTypes.SHORT,
+                                monthStringType: MonthStringTypes.FULL,
+                                backgroundColor: const Color(0xff3AC3E2),
+                                headerTextColor: Colors.black),
+                            onChangeDateTime: (datetime) {
+                              vm.setRange(datetime.toDateTime());
+                            }),
+                        Expanded(
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.all(8),
+                            itemCount: vm.videos.length,
+                            scrollDirection: Axis.vertical,
+                            itemBuilder: (BuildContext context, int index) {
+                              return SizedBox(
+                                height: 200,
+                                width: 310,
+                                child: GestureDetector(
+                                    onTap: () =>
+                                        _setActiveVideo(vm.videos[index]),
+                                    child: _buildVideoPlayer(vm.videos[index])),
+                              );
+                            },
+                          ),
+                        ),
                       ]))));
         })));
   }
