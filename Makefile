@@ -27,9 +27,10 @@ $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-code
 
 $(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
 	echo "Building server Arch:$(GOARCH) Arm:$(GOARM)"
-	cd backend && go build -o /tmp/amcrest-server-build .
+	cd backend && go build -o .amcrest-server-build .
 	rm -rf $(SERVER)
-	mv /tmp/amcrest-server-build $(SERVER)
+	mkdir -p dirname $(SERVER)
+	mv backend/.amcrest-server-build $(SERVER)
 
 $(NPM_INSTALL): $(WEB_ROOT)/package-lock.json $(WEB_ROOT)/node_modules
 	echo "Running NPM install"
@@ -96,4 +97,4 @@ flutter-install: $(FLUTTER_TARGET)
 flutter-webserver: flutter-install
 	cd frontend-flutter && flutter run -d web-server --web-hostname 0.0.0.0
 
-.PHONY=distdir dist clean npm-install server frontend all docker flutter-install flutter-webserver
+.PHONY=distdir dist clean npm-install server frontend all docker flutter-install flutter-webserver openapi-gen
