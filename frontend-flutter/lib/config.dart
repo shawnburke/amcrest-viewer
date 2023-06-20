@@ -8,7 +8,7 @@ class Config {
       return _urlOverride!;
     }
     _baseURL ??= const String.fromEnvironment('BASE_URL',
-        defaultValue: 'http://0000:9000');
+        defaultValue: 'http://0.0.0.0:9000');
 
     if (_baseURL!.endsWith('/')) {
       _baseURL = _baseURL!.substring(0, _baseURL!.length - 1);

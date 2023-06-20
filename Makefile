@@ -27,9 +27,9 @@ $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-code
 
 $(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
 	echo "Building server Arch:$(GOARCH) Arm:$(GOARM)"
+	mkdir -p $$(dirname $(SERVER))
 	cd backend && go build -o .amcrest-server-build .
 	rm -rf $(SERVER)
-	mkdir -p dirname $(SERVER)
 	mv backend/.amcrest-server-build $(SERVER)
 
 $(NPM_INSTALL): $(WEB_ROOT)/package-lock.json $(WEB_ROOT)/node_modules

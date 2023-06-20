@@ -6,7 +6,7 @@ RUN cd backend && go mod download
 COPY backend/ backend/
 COPY openapi openapi
 COPY Makefile .
-RUN SERVER=app/amcrest-server make server
+RUN SERVER=/app/amcrest-server make server
 
 FROM node:16-alpine as nodebuild
 
