@@ -5,14 +5,19 @@ import 'package:openapi/api.dart';
 import '../config.dart';
 import '../widgets/camera_widget.dart';
 
+const maxFiles = -1;
+const typeVideo = 1;
+const typeImage = 0;
+
 class CameraViewModel extends LoadingViewModel {
   final int cameraID;
   final CamViewerRepo repo;
   Camera? camera;
   List<CameraFile> files = List<CameraFile>.empty();
+  List<CameraVideo>? _videoFiles;
 
-  List<CameraFile> get videos {
-    return files.where((element) => element.type == 1).toList();
+  List<CameraVideo> get videos {
+    return ensureVideos();
   }
 
   CameraViewModel({
@@ -20,9 +25,23 @@ class CameraViewModel extends LoadingViewModel {
     required this.repo,
   });
 
-  // factory CameraViewModel.withParameters(int cameraID, CamViewerRepo repo) {
-  //   return CameraViewModel(cameraID: cameraID, repo: repo);
-  // }
+  List<CameraVideo> ensureVideos() {
+    if (_videoFiles == null) {
+      final vids = <CameraVideo>[];
+
+      for (var i = 0; i < files.length; i++) {
+        final file = files[i];
+        if (file.type == typeVideo) {
+          final thumbnail = files
+              .sublist(i + 1)
+              .firstWhere((element) => element.type == typeImage);
+          vids.add(CameraVideo(file, thumbnail));
+        }
+      }
+      _videoFiles = vids;
+    }
+    return _videoFiles!;
+  }
 
   get title {
     return camera?.name ?? '';
@@ -41,10 +60,14 @@ class CameraViewModel extends LoadingViewModel {
 
     try {
       super.isLoading = true;
+      _videoFiles = null;
+      final s = DateTime.now();
       files = await repo.getFiles(cameraID, start, end);
-      if (files.length > 500) {
-        files = files.sublist(0, 500);
+      if (files.length > maxFiles && maxFiles != -1) {
+        files = files.sublist(0, maxFiles);
       }
+      print(
+          'Loaded ${files.length} files in ${DateTime.now().difference(s).inMilliseconds}ms.');
     } finally {
       super.isLoading = false;
     }
@@ -54,8 +77,19 @@ class CameraViewModel extends LoadingViewModel {
     try {
       super.isLoading = true;
       camera = await repo.getCamera(cameraID);
+
+      if (files.isEmpty) {
+        setRange(DateTime.now().subtract(const Duration(days: 1)));
+      }
     } finally {
       super.isLoading = false;
     }
   }
+}
+
+class CameraVideo {
+  final CameraFile video;
+  final CameraFile? thumbnail;
+
+  CameraVideo(this.video, this.thumbnail);
 }

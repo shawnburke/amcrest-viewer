@@ -22,9 +22,20 @@ FROM alpine:3.14
 RUN apk update
 RUN apk add  sqlite tzdata ffmpeg
 
+FROM ghcr.io/cirruslabs/flutter:3.10.5 as flutterbuild
+WORKDIR /appx
+COPY frontend-flutter/pubspec.yaml frontend-flutter/pubspec.lock frontend-flutter/
+COPY openapi openapi
+COPY frontend-flutter/ frontend-flutter/
+COPY Makefile .
+# RUN  chown -R $USER:root /appx
+RUN make flutter
+
+
 WORKDIR /app
 COPY --from=gobuild /app/amcrest-server /app/amcrest-server
 COPY --from=nodebuild /app/build /app/frontend
+COPY --from=flutterbuild /appx/frontend-flutter/build/web /app/frontend/flutter
 COPY backend/config /app/config
 
 

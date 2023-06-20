@@ -44,7 +44,9 @@ $(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_RO
 frontend: $(FRONTEND)
 
 flutter: $(CLIENT_STUB_FILE)
+	@echo "Fetching deps"
 	cd frontend-flutter && flutter pub get
+	@echo "Building flutter web"
 	cd frontend-flutter && flutter build web
 
 $(CONFIG): backend/config/base.yaml

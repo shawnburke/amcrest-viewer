@@ -163,6 +163,7 @@ components:
           type: integer
         timestamp:
           type: string
+          format: date-time
         duration_seconds:
           type: integer
         length:
