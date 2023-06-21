@@ -21,5 +21,9 @@ jobs:
       with:
         go-version: 1.19
 
-    - name: Build
+    - name: Build x64
       run: cd backend && go build -v ./...
+      
+    
+    - name: Build ARM
+      run: cd backend && GOOS=linux GOARCH=arm64 go build -v -o amcrest-viewer-arm64 ./...
