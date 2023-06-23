@@ -43,11 +43,24 @@ $(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_RO
 
 frontend: $(FRONTEND)
 
-flutter: $(CLIENT_STUB_FILE)
+FLUTTER_WEB=frontend-flutter/build/web/main.dart.js
+flutter-linux:$(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
+	@echo "Building flutter"
+	cd frontend-flutter && flutter build linux
+
+$(FLUTER_WEB): $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
 	@echo "Fetching deps"
 	cd frontend-flutter && flutter pub get
 	@echo "Building flutter web"
 	cd frontend-flutter && flutter build web
+
+flutter: flutter-linux flutter-web
+flutter-web: $(FLUTTER_WEB)
+
+flutter-tar: flutter-web.tar.gz
+
+flutter-web.tar.gz: flutter-web
+	tar -czf flutter-web.tar.gz frontend-flutter/build/web
 
 $(CONFIG): backend/config/base.yaml
 	mkdir -p dist/config
