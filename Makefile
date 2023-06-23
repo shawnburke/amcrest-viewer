@@ -1,6 +1,6 @@
 
 ROOT=$(pwd)
-SERVER ?= build/av-server
+SERVER ?= build/server/av-server
 WEB_ROOT=frontend
 FRONTEND=$(WEB_ROOT)/build/index.html
 CONFIG=dist/config/base.yaml
@@ -9,7 +9,7 @@ NPM_INSTALL=$(WEB_ROOT)/node_modules/.faux-npm-install
 all: $(SERVER) flutter
 
 server: $(SERVER)
-SERVER_ARM64=build/av-server-arm64
+SERVER_ARM64=build/server/av-server-arm64
 
 
 $(SERVER_ARM64): 
@@ -33,8 +33,10 @@ $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-code
 $(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
 	echo "Building server Arch:$(GOARCH) OS:$(GOOS)"
 	mkdir -p build
+	# export CGO_ENABLED=0
 	cd backend && go build -o .amcrest-server-build .
 	rm -rf $(SERVER)
+	mkdir -p $$(dirname $(SERVER))
 	mv backend/.amcrest-server-build $(SERVER)
 
 $(NPM_INSTALL): $(WEB_ROOT)/package-lock.json $(WEB_ROOT)/node_modules
@@ -67,13 +69,8 @@ dist: $(CONFIG) $(SERVER) $(FRONTEND)
 	cp $(SERVER) dist/amcrest-server
 	cp -R $(WEB_ROOT)/build dist/frontend
 
-docker:
-	docker build -t amcrest-server:current .
-
 clean: 
-	rm -rf dist
-	rm backend/amcrest-viewer
-	rm -rf $(WEB_ROOT)/build
+	rm -rf build
 
 
 CLIENT_STUB_FILE=frontend-flutter/openapi/.gen/amcrest_viewer/lib/api/default_api.dart
@@ -122,5 +119,8 @@ $(FLUTTER_WEB): $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
 
 flutter: flutter-linux flutter-web
 flutter-web: $(FLUTTER_WEB)
+
+docker: server server-arm64 flutter-web
+	docker build -t amcrest-server:current -f Dockerfile_build .
 
 .PHONY=distdir dist clean npm-install server frontend all docker flutter-install flutter-webserver openapi-gen

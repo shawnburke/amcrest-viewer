@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"path"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -44,7 +44,7 @@ func buildGraph(cfg config.Provider) fx.Option {
 	configFunc := yamlConfig
 
 	if cfg != nil {
-		configFunc = func() (config.Provider, error) {
+		configFunc = func(_ *common.Params) (config.Provider, error) {
 			return cfg, nil
 		}
 	}
@@ -130,12 +130,14 @@ func register(lifecycle fx.Lifecycle, ftps ftp.FtpServer, web web.HttpServer, lo
 	)
 }
 
-func yamlConfig() (config.Provider, error) {
+func yamlConfig(p *common.Params) (config.Provider, error) {
 
-	files := []string{"./config/base.yaml"}
+	configDir := p.GetConfigDir()
+
+	files := []string{path.Join(configDir, "base.yaml")}
 	env := os.Getenv("ENVIRONMENT")
 	if env != "" {
-		files = append(files, fmt.Sprintf("./config/%s.yaml", env))
+		files = append(files, path.Join(configDir, env+".yaml"))
 	}
 	return config.NewYAMLProviderFromFiles(files...)
 }
@@ -144,6 +146,7 @@ func yamlConfig() (config.Provider, error) {
 func Execute() error {
 	rootCmd.PersistentFlags().IntVar(&p.WebPort, "web-port", 9000, "Web server port")
 	rootCmd.PersistentFlags().IntVar(&p.FtpPort, "ftp-port", 2121, "FTP server port")
+	rootCmd.PersistentFlags().StringVar(&p.ConfigDir, "config-dir", "", "Config dir")
 	rootCmd.PersistentFlags().StringVar(&p.DataDir, "data-dir", "", "Data directory root (for files and DB)")
 	rootCmd.PersistentFlags().StringVar(&p.FrontendDir, "frontend-dir", "", "Frontend directory root (for web)")
 

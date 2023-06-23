@@ -24,6 +24,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: binaries
-        path: build/av-server-*
+        path: build/server
         retention-days: 5
 
