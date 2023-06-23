@@ -12,7 +12,7 @@ server: $(SERVER)
 SERVER_ARM64=build/av-server-arm64
 
 
-$(SERVER_ARM64): server-deps
+$(SERVER_ARM64): 
 	GOOS=linux GOARCH=arm64 SERVER=$(SERVER_ARM64) $(MAKE) server
 
 server-arm64: $(SERVER_ARM64)
@@ -48,21 +48,7 @@ $(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_RO
 
 frontend: $(FRONTEND)
 
-FLUTTER_WEB=build/flutter/web/main.dart.js
-flutter-deps: $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
-flutter-linux: flutter-deps
-	@echo "Building flutter"
-	cd frontend-flutter && flutter build linux
 
-$(FLUTTER_WEB): $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
-	@echo "Fetching deps"
-	cd frontend-flutter && flutter pub get
-	@echo "Building flutter web"
-	cd frontend-flutter && flutter build web
-	cp -R frontend-flutter/build/web/ build/flutter/
-
-flutter: flutter-linux flutter-web
-flutter-web: $(FLUTTER_WEB)
 
 flutter-tar: flutter-web.tar.gz
 
@@ -118,5 +104,22 @@ $(FLUTTER_TARGET):
 flutter-install: $(FLUTTER_TARGET)
 flutter-webserver: flutter-install
 	cd frontend-flutter && flutter run -d web-server --web-hostname 0.0.0.0
+
+
+FLUTTER_WEB=build/flutter/web/main.dart.js
+flutter-deps: $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
+flutter-linux: flutter-deps
+	@echo "Building flutter"
+	cd frontend-flutter && flutter build linux
+
+$(FLUTTER_WEB): $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
+	@echo "Fetching deps"
+	cd frontend-flutter && flutter pub get
+	@echo "Building flutter web"
+	cd frontend-flutter && flutter build web
+	cp -R frontend-flutter/build/web/ build/flutter/
+
+flutter: flutter-linux flutter-web
+flutter-web: $(FLUTTER_WEB)
 
 .PHONY=distdir dist clean npm-install server frontend all docker flutter-install flutter-webserver openapi-gen
