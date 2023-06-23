@@ -9,7 +9,12 @@
 
 name: Create and publish a Docker image
 
-on: [push]
+on: 
+    push:
+    workflow_run: 
+      workflows: ["Build Flutter", "Build Backend"]
+      types:
+        - completed
 
 env:
   REGISTRY: ghcr.io
@@ -17,6 +22,7 @@ env:
 
 jobs:
   build-and-push-image:
+    
     runs-on: ubuntu-latest
     permissions:
       contents: read
