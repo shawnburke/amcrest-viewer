@@ -33,7 +33,6 @@ jobs:
         - run: make server-arm64
         - uses: actions/upload-artifact@master
           with:
-            name: server-binaries
             path: build/server
             
         
@@ -44,7 +43,7 @@ jobs:
         steps:
         - uses: actions/checkout@v3
     
-        - name: Build Flutter
+        - name: Setup Flutter
           uses: subosito/flutter-action@v2
           with:
             flutter-version: '3.7.0'
@@ -56,7 +55,6 @@ jobs:
         - name: Upload Client
           uses: actions/upload-artifact@v3
           with:
-            name: flutter-web
             path: build/flutter/
 
     build-and-push-image:
