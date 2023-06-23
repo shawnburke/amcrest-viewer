@@ -117,6 +117,7 @@ $(FLUTTER_WEB): $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
 	cd frontend-flutter && flutter pub get
 	@echo "Building flutter web"
 	cd frontend-flutter && flutter build web
+	mkdir -p build/flutter
 	cp -R frontend-flutter/build/web/ build/flutter/
 
 flutter: flutter-linux flutter-web
