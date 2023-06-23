@@ -94,12 +94,18 @@ jobs:
           with:
             name: flutter-web
             path: build/flutter
+
+        - name: Set up QEMU
+          uses: docker/setup-qemu-action@v2
+        - name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v2
               
         - name: Build and push Docker image
-          uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+          uses: docker/build-push-action@v4
           with:
             context: .
             file: ./Dockerfile_build
+            platforms: linux/amd64,linux/arm64
             push: false
             tags: ${{ steps.meta.outputs.tags }}
             labels: ${{ steps.meta.outputs.labels }}

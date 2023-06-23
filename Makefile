@@ -9,7 +9,7 @@ NPM_INSTALL=$(WEB_ROOT)/node_modules/.faux-npm-install
 all: $(SERVER) flutter
 
 server: $(SERVER)
-SERVER_ARM64=build/server/av-server-arm64
+SERVER_ARM64=build/server/av-server-aarch64
 
 
 $(SERVER_ARM64): 

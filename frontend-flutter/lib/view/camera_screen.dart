@@ -20,7 +20,6 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   VideoPlayerController? _controller;
   late final CameraViewModel vm;
-  late final Widget _loadingWidget;
   CalendarDateTime? _selectedDate;
 
   _CameraScreenState();
@@ -30,7 +29,6 @@ class _CameraScreenState extends State<CameraScreen> {
     super.initState();
     vm = CameraViewModel(
         repo: locator<CamViewerRepo>(), cameraID: widget.cameraID);
-    _loadingWidget = const Center(child: CircularProgressIndicator());
   }
 
   void _setActiveVideo(CameraVideo vid) {
@@ -38,6 +36,7 @@ class _CameraScreenState extends State<CameraScreen> {
         VideoPlayerController.network(CameraWidget.getImageURL(vid.video.path))
           ..initialize().then((_) {
             _controller!.play();
+            _controller!.setVolume(0);
             // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
             setState(() {});
           });

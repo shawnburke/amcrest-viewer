@@ -6,10 +6,9 @@ RUN apt-get install -y -q sqlite3 tzdata ffmpeg
 WORKDIR /app
 COPY build/ /app/
 COPY backend/config /app/config
+COPY entrypoint.sh /app/entrypoint.sh
 
-CMD [\
-    "/app/server/av-server", \
-    "--data-dir", "/app/data", \ 
-    "--frontend-dir", "/app/flutter/", \
-    "--config-dir", "/app/config" \
-]
+EXPOSE 9000
+EXPOSE 2121
+
+ENTRYPOINT [ "/app/entrypoint.sh" ]
