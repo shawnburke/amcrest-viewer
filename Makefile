@@ -11,7 +11,6 @@ all: $(SERVER) flutter
 server: $(SERVER)
 SERVER_ARM64=build/av-server-arm64
 
-server-deps: $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
 
 $(SERVER_ARM64): server-deps
 	GOOS=linux GOARCH=arm64 SERVER=$(SERVER_ARM64) $(MAKE) server
@@ -31,7 +30,7 @@ $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-code
 	$(GOPATH)/bin/oapi-codegen -package openapi_server -generate "types,chi-server" openapi/amcrest-viewer.openapi.yaml >$(SERVER_STUB_FILE)
 
 
-$(SERVER): server-deps
+$(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
 	echo "Building server Arch:$(GOARCH) OS:$(GOOS)"
 	mkdir -p build
 	cd backend && go build -o .amcrest-server-build .
@@ -55,7 +54,7 @@ flutter-linux: flutter-deps
 	@echo "Building flutter"
 	cd frontend-flutter && flutter build linux
 
-$(FLUTTER_WEB): flutter-deps
+$(FLUTTER_WEB): $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
 	@echo "Fetching deps"
 	cd frontend-flutter && flutter pub get
 	@echo "Building flutter web"
