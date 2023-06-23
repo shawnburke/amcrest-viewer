@@ -1,6 +1,6 @@
 
 ROOT=$(pwd)
-SERVER ?= backend/amcrest-server
+SERVER ?= build/av-server
 WEB_ROOT=frontend
 FRONTEND=$(WEB_ROOT)/build/index.html
 CONFIG=dist/config/base.yaml
@@ -8,9 +8,15 @@ NPM_INSTALL=$(WEB_ROOT)/node_modules/.faux-npm-install
 
 all: $(SERVER) flutter
 
-
-
 server: $(SERVER)
+SERVER_ARM64=build/av-server-arm64
+
+server-deps: $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
+
+$(SERVER_ARM64): server-deps
+	GOOS=linux GOARCH=arm64 SERVER=$(SERVER_ARM64) $(MAKE) server
+
+server-arm64: $(SERVER_ARM64)
 
 SERVER_STUB_PATH=backend/.gen/server
 
@@ -25,9 +31,9 @@ $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-code
 	$(GOPATH)/bin/oapi-codegen -package openapi_server -generate "types,chi-server" openapi/amcrest-viewer.openapi.yaml >$(SERVER_STUB_FILE)
 
 
-$(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
-	echo "Building server Arch:$(GOARCH) Arm:$(GOARM)"
-	mkdir -p $$(dirname $(SERVER))
+$(SERVER): server-deps
+	echo "Building server Arch:$(GOARCH) OS:$(GOOS)"
+	mkdir -p build
 	cd backend && go build -o .amcrest-server-build .
 	rm -rf $(SERVER)
 	mv backend/.amcrest-server-build $(SERVER)
@@ -43,16 +49,18 @@ $(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_RO
 
 frontend: $(FRONTEND)
 
-FLUTTER_WEB=frontend-flutter/build/web/main.dart.js
-flutter-linux:$(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
+FLUTTER_WEB=build/flutter/web/main.dart.js
+flutter-deps: $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
+flutter-linux: flutter-deps
 	@echo "Building flutter"
 	cd frontend-flutter && flutter build linux
 
-$(FLUTER_WEB): $(find frontend-flutter/lib -name "*.dart") $(CLIENT_STUB_FILE)
+$(FLUTTER_WEB): flutter-deps
 	@echo "Fetching deps"
 	cd frontend-flutter && flutter pub get
 	@echo "Building flutter web"
 	cd frontend-flutter && flutter build web
+	cp -R frontend-flutter/build/web/ build/flutter/
 
 flutter: flutter-linux flutter-web
 flutter-web: $(FLUTTER_WEB)
