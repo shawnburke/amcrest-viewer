@@ -78,15 +78,7 @@ class _CameraScreenState extends State<CameraScreen> {
         initialized
             ? AspectRatio(
                 aspectRatio: _controller!.value.aspectRatio,
-                child: GestureDetector(
-                    onDoubleTap: () {
-                      setState(() {
-                        _controller!.value.isPlaying
-                            ? _controller!.pause()
-                            : _controller!.play();
-                      });
-                    },
-                    child: VideoPlayer(_controller!)))
+                child: VideoPlayer(_controller!))
             : Container(),
         Positioned(
             bottom: 25,
@@ -230,11 +222,9 @@ class _CameraScreenState extends State<CameraScreen> {
                     itemCount: vm.videos.length,
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (BuildContext context, int index) {
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () => _setActiveVideo(vm.videos[index]),
-                          child: _buildListCell(vm.videos[index]),
-                        ),
+                      return GestureDetector(
+                        onTap: () => _setActiveVideo(vm.videos[index]),
+                        child: _buildListCell(vm.videos[index]),
                       );
                     },
                   )),
