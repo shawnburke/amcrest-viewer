@@ -33,7 +33,7 @@ $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-code
 $(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
 	echo "Building server Arch:$(GOARCH) OS:$(GOOS)"
 	mkdir -p build
-	cd backend && CGO_ENABLED=1 go build -o .amcrest-server-build .
+	cd backend && go build -o .amcrest-server-build .
 	rm -rf $(SERVER)
 	mkdir -p $$(dirname $(SERVER))
 	mv backend/.amcrest-server-build $(SERVER)
