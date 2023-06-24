@@ -1,8 +1,12 @@
 #! /bin/sh
 
 export APP=/app/server/av-server
+export ARCH="$(arch)"
 
-[[ $(uname -p) != "x86_64" ]] && export APP=/app/server/av-server-$(uname -p)
 
+if [ "$ARCH" != "x86_64" ]; then
+    export APP=/app/server/av-server-$ARCH
+fi
 
+echo "Arch: $ARCH [$(uname -a)]"
 $APP --data-dir /app/data --frontend-dir /app/flutter/ --config-dir /app/config
