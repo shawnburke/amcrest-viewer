@@ -11,6 +11,8 @@ class LoadingViewModel with ChangeNotifier {
     } else {
       _loading--;
     }
-    notifyListeners();
+    if (_loading == 0) {
+      notifyListeners();
+    }
   }
 }

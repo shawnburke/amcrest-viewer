@@ -79,7 +79,8 @@ class CameraViewModel extends LoadingViewModel {
       camera = await repo.getCamera(cameraID);
 
       if (files.isEmpty) {
-        setRange(DateTime.now().subtract(const Duration(days: 1)));
+        final now = DateTime.now();
+        setRange(DateTime(now.year, now.month, now.day));
       }
     } finally {
       super.isLoading = false;
