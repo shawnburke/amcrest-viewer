@@ -63,7 +63,25 @@ class _CameraScreenState extends State<CameraScreen> {
         initialized
             ? AspectRatio(
                 aspectRatio: _controller!.value.aspectRatio,
-                child: VideoPlayer(_controller!))
+                child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _controller!.value.isPlaying
+                            ? _controller!.pause()
+                            : _controller!.play();
+                      });
+                    },
+                    onDoubleTap: () {
+                      setState(() {
+                        final volume = _controller!.value.volume;
+                        if (volume == 0) {
+                          _controller!.setVolume(1);
+                        } else {
+                          _controller!.setVolume(0);
+                        }
+                      });
+                    },
+                    child: VideoPlayer(_controller!)))
             : Container(),
         Positioned(
             bottom: 0,
@@ -84,7 +102,8 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Widget _buildListRow(CameraVideo file) {
-    final formatted = DateFormat('E hh:mm a').format(file.video.timestamp);
+    final formatted =
+        DateFormat('E hh:mm a').format(file.video.timestamp.toLocal());
     return Container(
         padding: const EdgeInsets.all(10.0),
         child: Row(
@@ -121,7 +140,6 @@ class _CameraScreenState extends State<CameraScreen> {
                       textAlign: TextAlign.center,
                       textScaleFactor: 2,
                     ),
-                    SizedBox(height: 300, child: _videoWidget),
                     TimelineCalendar(
                         dateTime: _selectedDate,
                         calendarType: CalendarType.GREGORIAN,
@@ -146,72 +164,31 @@ class _CameraScreenState extends State<CameraScreen> {
                           vm.setRange(datetime.toDateTime());
                         }),
                     Expanded(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        padding: const EdgeInsets.all(8),
-                        itemCount: vm.videos.length,
-                        scrollDirection: Axis.vertical,
-                        itemBuilder: (BuildContext context, int index) {
-                          return SizedBox(
-                            height: 200,
-                            width: 310,
-                            child: GestureDetector(
-                              onTap: () => _setActiveVideo(vm.videos[index]),
-                              child: _buildListRow(vm.videos[index]),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                      child: Row(children: [
+                        Expanded(
+                            child: ListView.builder(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.all(8),
+                          itemCount: vm.videos.length,
+                          scrollDirection: Axis.vertical,
+                          itemBuilder: (BuildContext context, int index) {
+                            return SizedBox(
+                              height: 300,
+                              child: GestureDetector(
+                                onTap: () => _setActiveVideo(vm.videos[index]),
+                                child: _buildListRow(vm.videos[index]),
+                              ),
+                            );
+                          },
+                        )),
+                        Expanded(
+                            child: Container(
+                                alignment: Alignment.topCenter,
+                                padding: const EdgeInsets.all(5.0),
+                                child: _videoWidget))
+                      ]),
+                    )
                   ]))));
     })));
   }
 }
-
-// class _CameraScreenState extends State<CameraScreen> {
-//   late CameraViewModel _camViewModel;
-//   final String _cameraID;
-
-//   _CameraScreenState(String cameraID) {
-//     _cameraID = cameraID;
-//   }
-
-//   @override
-//   void initState() {
-//     _camViewModel = Provider.of<CameraViewModel>(context, listen: false);
-//     _camViewModel.cameraID = _cameraID;
-//     super.initState();
-//     _camViewModel.refresh();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         // Here we take the value from the CameraScreen object that was created by
-//         // the App.build method, and use it to set our appbar title.
-//         title: Text(widget.title),
-//       ),
-//       body: Center(
-//         // Center is a layout widget. It takes a single child and positions it
-//         // in the middle of the parent.
-//         child: Consumer<CameraViewModel>(
-//           builder: (context, model, child) {
-//             return Center(
-//                 child: Container(
-//                     margin: const EdgeInsets.all(10.0),
-//                     color: Colors.lightBlue[600],
-//                     child: Column(children: [
-//                       Text(
-//                         camera.name,
-//                         textAlign: TextAlign.center,
-//                         textScaleFactor: 2,
-//                       ),
-//                       Image.network(url, width: 500),
-//                     ])));
-//           },
-//         ),
-//       ),
-//     );
-//   }
-// }
