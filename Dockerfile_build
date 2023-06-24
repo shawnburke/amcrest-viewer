@@ -8,6 +8,9 @@ COPY build/ /app/
 COPY backend/config /app/config
 COPY entrypoint.sh /app/entrypoint.sh
 
+# the zip/unzip process doesn't restore +x
+RUN chmod +x /app/server/av-server* 
+
 EXPOSE 9000
 EXPOSE 2121
 
