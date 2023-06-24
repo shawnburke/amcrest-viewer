@@ -1,28 +1,29 @@
 {
     "version": "0.2.0",
     "configurations": [
+       
         {
-            "name": "Launch Server",
+            "name": "Backend API (Go)",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/backend/main.go",
             "env": {
-                "ENVIRONMENT": "test",
+                "ENVIRONMENT": "test"
             }
         },
         {
-            "name": "Debug CRA Tests",
-            "type": "node",
+            "name": "Flutter (Chrome)",
+            "program": "lib/main.dart",
+            "cwd": "frontend-flutter",
+            "deviceId": "chrome",
             "request": "launch",
-            "runtimeExecutable": "${workspaceRoot}/web/frontend/node_modules/.bin/react-scripts",
-            "args": ["test", "--runInBand", "--no-cache", "--watchAll=false", "--unhandled-rejections=strict"],
-            "cwd": "${workspaceRoot}/web/frontend",
-            "protocol": "inspector",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "env": { "CI": "true" },
-            "disableOptimisticBPs": true
-          }
+            "type": "dart",
+            
+            "toolArgs": [
+                "--dart-define",
+                "BASE_URL=http://192.168.86.10:9000/",
+            ]
+        }
     ]
 }

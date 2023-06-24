@@ -1,6 +1,9 @@
 package common
 
-import "path"
+import (
+	"os"
+	"path"
+)
 
 const defaultDatadir = "data"
 
@@ -10,6 +13,7 @@ type Params struct {
 	WebPort     int
 	FtpPassword string
 	DataDir     string
+	ConfigDir   string
 	FrontendDir string
 }
 
@@ -19,6 +23,18 @@ func (p Params) dataDir() string {
 	}
 	return p.DataDir
 }
+
+func (p Params) GetConfigDir() string {
+	if p.ConfigDir == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		return cwd
+	}
+	return p.ConfigDir
+}
+
 func (p Params) FileDir() string {
 
 	return path.Join(p.dataDir(), "/files")

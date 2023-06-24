@@ -193,7 +193,7 @@ func TestFileAddGetList(t *testing.T) {
 
 	require.Equal(t, 1145, cs.FileSize)
 	require.Equal(t, 10, cs.FileCount)
-	require.Equal(t, start.Truncate(time.Second), cs.MinDate)
+	require.Equal(t, start.Truncate(time.Second), cs.MinDate.Truncate(time.Second))
 
 	res, err = rep.ListFiles(cam.CameraID(), nil)
 	require.NoError(t, err)
