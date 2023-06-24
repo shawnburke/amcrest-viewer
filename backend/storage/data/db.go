@@ -12,8 +12,10 @@ import (
 	"go.uber.org/config"
 	"go.uber.org/fx"
 
+	// _ "github.com/glebarez/go-sqlite"
+
 	migrate "github.com/golang-migrate/migrate/v4"
-	migratesql "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	migratesql "github.com/golang-migrate/migrate/v4/database/sqlite"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
@@ -26,7 +28,7 @@ const memoryDSN = ":memory:"
 
 func NewConfig(cfg config.Provider) (*DBConfig, error) {
 	dbCfg := &DBConfig{
-		Database: "sqlite3",
+		Database: "sqlite",
 	}
 
 	err := cfg.Get("database").Populate(dbCfg)
@@ -39,7 +41,7 @@ func NewConfig(cfg config.Provider) (*DBConfig, error) {
 func New(dbCfg *DBConfig, lifecycle fx.Lifecycle) (*sqlx.DB, error) {
 
 	if dbCfg.Database == "" {
-		dbCfg.Database = "sqlite3"
+		dbCfg.Database = "sqlite"
 	}
 
 	if dbCfg.DSN == "" {

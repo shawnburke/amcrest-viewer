@@ -18,22 +18,22 @@ env:
 
 jobs:
 
-    
     build-server:
-        runs-on: ubuntu-latest
-        needs: []
-        container: golang:1.19-alpine
-        steps:
-        - uses: actions/checkout@v3
-        - run:  apk update && apk add --no-cache build-base
-        - run: make server
-        - run: make server-arm64
-        - uses: actions/upload-artifact@master
-          with:
-            name: server
-            path: build/server
-            
-        
+      runs-on: ubuntu-latest
+      needs: []
+      steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - run: make server
+      - run: make server-arm64
+      - uses: actions/upload-artifact@master
+        with:
+          name: server
+          path: build/server
 
     build-flutter:
         runs-on: ubuntu-latest

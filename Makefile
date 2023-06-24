@@ -13,7 +13,7 @@ SERVER_ARM64=build/server/av-server-aarch64
 
 
 $(SERVER_ARM64): 
-	GOOS=linux GOARCH=arm64 SERVER=$(SERVER_ARM64) $(MAKE) server
+	SERVER=$(SERVER_ARM64) GOOS=linux GOARCH=arm64 $(MAKE) server
 
 server-arm64: $(SERVER_ARM64)
 

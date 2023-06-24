@@ -261,7 +261,7 @@ func (sr *sqlRepository) GetCameraStats(cameraID string, start *time.Time, end *
 	}
 
 	var query = `
-			SELECT [Type], COUNT(Id) as TotalCount, SUM(Length) as TotalSize, datetime(MIN(Timestamp)) as Min, datetime(MAX(Timestamp)) as Max  
+			SELECT [Type], COUNT(Id) as TotalCount, SUM(Length) as TotalSize, MIN(Timestamp) as Min, MAX(Timestamp) as Max  
 			FROM files WHERE 
 			CameraId=$1 AND (Timestamp >= $2 AND Timestamp < $3) GROUP BY [Type]`
 
@@ -295,13 +295,11 @@ func (sr *sqlRepository) GetCameraStats(cameraID string, start *time.Time, end *
 		cs.FileCount += r.TotalCount
 		cs.FileSize += r.TotalSize
 
-		dateTimeFormat := "2006-01-02 15:04:05"
-
-		min, err := time.Parse(dateTimeFormat, r.Min)
+		min, err := parseDate(r.Min)
 		if err != nil {
 			return nil, err
 		}
-		max, err := time.Parse(dateTimeFormat, r.Max)
+		max, err := parseDate(r.Max)
 		if err != nil {
 			return nil, err
 		}
@@ -321,6 +319,23 @@ func (sr *sqlRepository) GetCameraStats(cameraID string, start *time.Time, end *
 	}
 	return cs, nil
 
+}
+
+var dateTimeFormats = []string{
+	"2006-01-02 15:04:05.999999 -0700 MST",
+	"2006-01-02 15:04:05",
+}
+
+func parseDate(t string) (time.Time, error) {
+	var lastErr error
+	for _, f := range dateTimeFormats {
+		dt, err := time.Parse(f, t)
+		if err == nil {
+			return dt, nil
+		}
+		lastErr = err
+	}
+	return time.Time{}, lastErr
 }
 
 func (sr *sqlRepository) ListCameras() ([]*entities.Camera, error) {

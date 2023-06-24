@@ -30,7 +30,7 @@ RUN make flutter
 
 FROM alpine:3.14
 RUN apk update
-RUN apk add  sqlite tzdata ffmpeg
+RUN apk add  tzdata ffmpeg
 
 
 WORKDIR /app
