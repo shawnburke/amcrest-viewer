@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19
-      - run: make test
+      - run: make test-backend
       - run: make server
       - run: make server-arm64
       - uses: actions/upload-artifact@master

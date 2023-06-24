@@ -49,7 +49,7 @@ $(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_RO
 
 frontend: $(FRONTEND)
 
-test:
+test-backend: $(SERVER)
 	cd backend && go test ./...
 
 flutter-tar: flutter-web.tar.gz
@@ -123,4 +123,4 @@ flutter-web: $(FLUTTER_WEB)
 docker: server server-arm64 flutter-web
 	docker build -t amcrest-server:current -f Dockerfile_build .
 
-.PHONY=distdir dist clean npm-install server frontend all docker flutter-install flutter-webserver openapi-gen test
+.PHONY=distdir dist clean npm-install server frontend all docker flutter-install flutter-webserver openapi-gen test-backend
