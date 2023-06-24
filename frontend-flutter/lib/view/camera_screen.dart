@@ -21,6 +21,7 @@ class _CameraScreenState extends State<CameraScreen> {
   VideoPlayerController? _controller;
   late final CameraViewModel vm;
   CalendarDateTime? _selectedDate;
+  CameraVideo? _selectedVideo;
 
   _CameraScreenState();
 
@@ -38,6 +39,7 @@ class _CameraScreenState extends State<CameraScreen> {
       _controller?.dispose();
       _controller = null;
     }
+    _selectedVideo = vid;
     _controller =
         VideoPlayerController.network(CameraWidget.getImageURL(vid.video.path))
           ..initialize().then((_) {
@@ -150,16 +152,20 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget _buildListCell(CameraVideo file) {
     final formatted =
         DateFormat('E hh:mm a').format(file.video.timestamp.toLocal());
+
+    final isSelected = _selectedVideo?.video.id == file.video.id;
     return Container(
+        color:
+            isSelected ? Colors.blueGrey.withOpacity(.5) : Colors.transparent,
         padding: const EdgeInsets.all(10.0),
         child: Column(
           children: [
+            Text(
+              '$formatted (${Duration(seconds: file.video.durationSeconds).inSeconds}s)',
+              textScaleFactor: 1.0,
+            ),
             SizedBox(
                 width: 250, child: _buildVideoPlayer(file, thumbnail: true)),
-            Text(
-              '$formatted\n${Duration(seconds: file.video.durationSeconds).inSeconds} seconds',
-              textScaleFactor: 1.5,
-            ),
           ],
         ));
   }
