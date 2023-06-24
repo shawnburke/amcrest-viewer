@@ -60,12 +60,12 @@ class CameraViewModel extends LoadingViewModel {
 
     try {
       super.isLoading = true;
-      _videoFiles = null;
       final ds = DateTime.now();
       files = await repo.getFiles(cameraID, start, end);
       if (files.length > maxFiles && maxFiles != -1) {
         files = files.sublist(0, maxFiles);
       }
+      _videoFiles = null;
       print(
           'Loaded ${files.length} files in ${DateTime.now().difference(ds).inMilliseconds}ms.');
     } finally {

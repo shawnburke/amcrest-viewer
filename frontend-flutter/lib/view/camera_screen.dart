@@ -74,6 +74,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget get _videoWidget {
     final initialized = _controller != null && _controller!.value.isInitialized;
     return Stack(
+      fit: StackFit.expand,
       children: [
         initialized
             ? AspectRatio(
@@ -85,7 +86,7 @@ class _CameraScreenState extends State<CameraScreen> {
             height: 50,
             width: MediaQuery.of(context).size.width,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
                   onPressed: () {
@@ -152,7 +153,6 @@ class _CameraScreenState extends State<CameraScreen> {
     return Container(
         padding: const EdgeInsets.all(10.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             SizedBox(
                 width: 250, child: _buildVideoPlayer(file, thumbnail: true)),
@@ -183,13 +183,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 margin: const EdgeInsets.all(5.0),
                 color: Colors.lightBlue[600],
                 child: Column(children: [
-                  Text(
-                    vm.title,
-                    textAlign: TextAlign.center,
-                    textScaleFactor: 2,
-                  ),
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * .5,
+                  Expanded(
                     child: _videoWidget,
                   ),
                   TimelineCalendar(
