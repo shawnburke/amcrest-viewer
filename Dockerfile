@@ -20,9 +20,9 @@ RUN yarn build
 
 FROM ghcr.io/cirruslabs/flutter:3.10.5 as flutterbuild
 WORKDIR /app
-COPY frontend-flutter/pubspec.yaml frontend-flutter/pubspec.lock frontend-flutter/
+COPY frontend/flutter/pubspec.yaml frontend/flutter/pubspec.lock frontend/flutter/
 COPY openapi openapi
-COPY frontend-flutter/ frontend-flutter/
+COPY frontend/flutter/ frontend/flutter/
 COPY Makefile .
 RUN make flutter
 
@@ -36,7 +36,7 @@ RUN apk add  tzdata ffmpeg
 WORKDIR /app
 COPY --from=gobuild /app/amcrest-server /app/amcrest-server
 COPY --from=nodebuild /app/build /app/frontend
-COPY --from=flutterbuild /app/frontend-flutter/build/web /app/frontend/flutter
+COPY --from=flutterbuild /app/frontend/flutter/build/web /app/frontend/flutter
 COPY backend/config /app/config
 
 

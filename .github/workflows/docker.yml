@@ -36,6 +36,20 @@ jobs:
           name: server
           path: build/server
 
+    build-web:
+          runs-on: ubuntu-latest
+          needs: []
+          steps:
+          - uses: actions/checkout@v3
+          - uses: actions/setup-node@v2
+            with:
+              node-version: 16.x
+          - uses: actions/upload-artifact@master
+            with:
+              name: js
+              path: build/js
+    
+
     build-flutter:
         runs-on: ubuntu-latest
         needs: []
@@ -92,6 +106,12 @@ jobs:
           with:
             name: flutter-web
             path: build/flutter
+
+        - name: Download Flutter
+          uses: actions/download-artifact@v3
+          with:
+            name: js
+            path: build/js
 
         - name: Set up QEMU
           uses: docker/setup-qemu-action@v2
