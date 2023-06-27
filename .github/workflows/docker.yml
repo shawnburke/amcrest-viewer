@@ -74,7 +74,7 @@ jobs:
     build-and-push-image:
     
         runs-on: ubuntu-latest
-        needs: [build-server, build-flutter]
+        needs: [build-server, build-flutter, build-web]
         permissions:
           contents: read
           packages: write

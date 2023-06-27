@@ -754,8 +754,8 @@ func (s *Server) GetCameraFiles(w http.ResponseWriter, r *http.Request, id strin
 
 func (s *Server) Setup(frontendPath string) http.Handler {
 
-	frontendFlutter := fmt.Sprintf("%s/flutter")
-	frontendJS := fmt.Sprintf("%s/js")
+	frontendFlutter := fmt.Sprintf("%s/flutter", frontendPath)
+	frontendJS := fmt.Sprintf("%s/js", frontendPath)
 
 	s.r = mux.NewRouter()
 
