@@ -14,7 +14,7 @@ class FilesService {
 
         console.log(`Fetching ${startDate.iso()} => ${endDate.iso()} (${sort})`);
 
-        var url = `${this.url}?start=${startDate.unix}&end=${endDate.unix}&sort=${sort}`
+        var url = `${this.url}?start=${startDate.iso}&end=${endDate.iso}&sort=${sort}`
         return fetch(url)
 
             .then(response => {
