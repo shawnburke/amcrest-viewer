@@ -6,15 +6,19 @@ FRONTEND=$(WEB_ROOT)/build/index.html
 CONFIG=dist/config/base.yaml
 NPM_INSTALL=$(WEB_ROOT)/node_modules/.faux-npm-install
 
-all: $(SERVER) flutter
+all: $(SERVER) flutter-web 
+
+GOPATH ?= ~/go
 
 
 
 ##
 ## OPEN API STUFF
 ##
+$(GOPATH)/bin/oapi-codegen:
+	go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.10.1
 
-
+SERVER_STUB_PATH=backend/.gen/server
 SERVER_STUB_FILE=$(SERVER_STUB_PATH)/server.go
 $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-codegen
 	echo "Generating OpenAPI: go"
@@ -59,11 +63,7 @@ $(SERVER_ARM64):
 
 server-arm64: $(SERVER_ARM64)
 
-SERVER_STUB_PATH=backend/.gen/server
 
-GOPATH ?= ~/go
-$(GOPATH)/bin/oapi-codegen:
-	go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.10.1
 
 
 $(SERVER): $(shell find backend -name '*.go') $(SERVER_STUB_FILE)
