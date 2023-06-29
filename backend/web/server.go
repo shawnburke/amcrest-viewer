@@ -33,8 +33,6 @@ import (
 	"github.com/shawnburke/amcrest-viewer/storage/models"
 )
 
-const defaultFrontendPath = "../frontend/build"
-
 type HttpParams struct {
 	fx.In
 	Args   *common.Params
@@ -58,22 +56,9 @@ func New(p HttpParams) HttpServer {
 		rtsp:     p.Rtsp,
 	}
 
-	frontendPath := p.Args.FrontendDir
-
-	v := p.Config.Get("web.frontend")
-
-	if v.HasValue() {
-		frontendPath = v.String()
-	}
-
-	if fe := os.Getenv("FRONTEND_DIR"); fe != "" {
-		frontendPath = fe
-	}
-
-	if frontendPath == "" {
-		frontendPath = defaultFrontendPath
-	}
-	r := server.Setup(frontendPath)
+	r := server.Setup(
+		p.Config.Get("web.frontend.flutter").String(),
+		p.Config.Get("web.frontend.js").String())
 
 	http.Handle("/", r)
 
@@ -752,10 +737,7 @@ func (s *Server) GetCameraFiles(w http.ResponseWriter, r *http.Request, id strin
 
 }
 
-func (s *Server) Setup(frontendPath string) http.Handler {
-
-	frontendFlutter := fmt.Sprintf("%s/flutter", frontendPath)
-	frontendJS := fmt.Sprintf("%s/js", frontendPath)
+func (s *Server) Setup(frontendFlutter, frontendJS string) http.Handler {
 
 	s.r = mux.NewRouter()
 

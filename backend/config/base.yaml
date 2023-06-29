@@ -1,3 +1,8 @@
+web:
+  frontend: 
+    js: ../frontend/js/build
+    flutter: ../frontend/flutter/build/web
+
 ftp:
   password: pwd
   users:

@@ -5,7 +5,7 @@ CONFIG=dist/config/base.yaml
 WEB_ROOT=frontend/js
 FLUTTER_ROOT=frontend/flutter
 
-all: $(SERVER) flutter-web flutter-js
+all: $(SERVER) frontend-flutter frontend-js
 
 GOPATH ?= ~/go
 
@@ -129,8 +129,8 @@ $(FLUTTER_WEB): $(find $(FLUTTER_ROOT)/lib -name "*.dart") $(CLIENT_STUB_FILE_FL
 	cd $(FLUTTER_ROOT) && flutter pub get
 	@echo "Building flutter web"
 	cd $(FLUTTER_ROOT) && flutter build web
-	mkdir -p build/flutter
-	cp -R $(FLUTTER_ROOT)/build/web/ build/flutter/
+	mkdir -p build
+	cp -R $(FLUTTER_ROOT)/build/web/ build/flutter
 
 flutter: flutter-linux frontend-flutter
 frontend-flutter: $(FLUTTER_WEB)
