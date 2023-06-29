@@ -246,37 +246,20 @@ const streamMarker = "/live/"
 
 func (s *Server) getCameraLiveStream(w http.ResponseWriter, r *http.Request) {
 
-	// get the RTSP support for this camera
+	id, err := strconv.Atoi(mux.Vars(r)["camera-id"])
 
-	strID := mux.Vars(r)["camera-id"]
-
-	rtspPath, err := s.rtsp.StreamPath(strID)
-
-	if s.writeError(err, w, 500) {
+	if err != nil {
+		s.writeError(err, w, 400)
 		return
+
+	}
+	redirect := r.URL.Query().Get("redirect") == "false"
+
+	params := openapi_server.GetCameraLiveStreamParams{
+		Redirect: &redirect,
 	}
 
-	rtspPath = fmt.Sprintf("/api/cameras/%s%s%s", strID, streamMarker, rtspPath)
-
-	// make sure we didn't get any double slashes
-	rtspPath = strings.Replace(rtspPath, "//", "/", -1)
-
-	w.Header().Add("Cache-Control", "no-store")
-
-	if r.URL.Query().Get("redirect") != "false" {
-		// redirect to the RTSP path
-		//
-		http.Redirect(w, r, rtspPath, http.StatusMovedPermanently)
-		return
-	}
-
-	res := struct {
-		URI string `json:"uri"`
-	}{
-		URI: rtspPath,
-	}
-
-	s.writeJson(res, w, 200)
+	s.GetCameraLiveStream(w, r, id, params)
 
 }
 
@@ -716,6 +699,38 @@ func (s *Server) GetCamera(w http.ResponseWriter, r *http.Request, id int) {
 
 }
 
+func (s *Server) GetCameraLiveStream(w http.ResponseWriter, r *http.Request, id int, params openapi_server.GetCameraLiveStreamParams) {
+	// get the RTSP support for this camera
+	strID := strconv.Itoa(id)
+	rtspPath, err := s.rtsp.StreamPath(strID)
+
+	if s.writeError(err, w, 500) {
+		return
+	}
+
+	rtspPath = fmt.Sprintf("/api/cameras/%s%s%s", strID, streamMarker, rtspPath)
+
+	// make sure we didn't get any double slashes
+	rtspPath = strings.Replace(rtspPath, "//", "/", -1)
+
+	w.Header().Add("Cache-Control", "no-store")
+
+	if params.Redirect != nil && *params.Redirect {
+		// redirect to the RTSP path
+		//
+		http.Redirect(w, r, rtspPath, http.StatusMovedPermanently)
+		return
+	}
+
+	res := struct {
+		URI string `json:"uri"`
+	}{
+		URI: rtspPath,
+	}
+
+	s.writeJson(res, w, 200)
+}
+
 func (s *Server) GetCameraFiles(w http.ResponseWriter, r *http.Request, id string, params openapi_server.GetCameraFilesParams) {
 
 	lff := &data.ListFilesFilter{
@@ -738,6 +753,10 @@ func (s *Server) GetCameraFiles(w http.ResponseWriter, r *http.Request, id strin
 }
 
 func (s *Server) Setup(frontendPath string) http.Handler {
+
+	frontendFlutter := fmt.Sprintf("%s/flutter", frontendPath)
+	frontendJS := fmt.Sprintf("%s/js", frontendPath)
+
 	s.r = mux.NewRouter()
 
 	s.r.Use(s.enableCors)
@@ -762,10 +781,15 @@ func (s *Server) Setup(frontendPath string) http.Handler {
 
 	s.r.PathPrefix("/api/").Handler(openapi_server.Handler(s))
 
-	s.Logger.Info("web server path", zap.String("path", frontendPath))
+	s.Logger.Info("Web server path", zap.String("flutter-path", frontendFlutter), zap.String("js-path", frontendJS))
+
+	// website
+	s.r.Methods("GET").PathPrefix("/js").Handler(
+		http.FileServer(http.Dir(frontendJS)),
+	)
 	// website
 	s.r.Methods("GET").PathPrefix("/").Handler(
-		http.FileServer(http.Dir(frontendPath)),
+		http.FileServer(http.Dir(frontendFlutter)),
 	)
 
 	return s.r

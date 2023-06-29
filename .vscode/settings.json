@@ -1,4 +1,13 @@
 {
     "go.formatTool": "goimports",
-    "go.inferGopath": false
+    "go.inferGopath": false,
+    "dart.flutterSdkPath": "frontend/flutter/.fvm/flutter_sdk",
+    // Remove .fvm files from search
+    "search.exclude": {
+        "**/.fvm": true
+    },
+    // Remove from file watching
+    "files.watcherExclude": {
+        "**/.fvm": true
+    }
 }
