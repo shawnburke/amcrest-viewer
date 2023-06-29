@@ -64,7 +64,7 @@ jobs:
             channel: 'stable'
 
         - name: Build Flutter Web
-          run: make flutter-web
+          run: make frontend-flutter
     
         - name: Upload Client
           uses: actions/upload-artifact@v3
