@@ -188,13 +188,13 @@ func (s *Server) Setup(frontendFlutter, frontendJS string) http.Handler {
 
 	s.Logger.Info("Web server path", zap.String("flutter-path", frontendFlutter), zap.String("js-path", frontendJS))
 
+	// // website
+	// s.r.Methods("GET").PathPrefix("/js").Handler(
+	// 	http.StripPrefix("/js", http.FileServer(http.Dir(frontendJS))),
+	// )
 	// website
-	s.r.Methods("GET").PathPrefix("/js").Handler(
-		http.StripPrefix("/js", http.FileServer(http.Dir(frontendJS))),
-	)
-	// website
-	s.r.Methods("GET").PathPrefix("/flutter").Handler(
-		http.StripPrefix("/flutter", http.FileServer(http.Dir(frontendFlutter))),
+	s.r.PathPrefix("/").Handler(
+		http.FileServer(http.Dir(frontendFlutter)),
 	)
 
 	return s.r
