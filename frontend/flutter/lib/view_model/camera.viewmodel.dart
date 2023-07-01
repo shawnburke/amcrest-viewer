@@ -4,6 +4,7 @@ import 'package:openapi/api.dart';
 
 import '../config.dart';
 import '../widgets/camera_widget.dart';
+import '../widgets/timeline_view.dart';
 
 const maxFiles = -1;
 const typeVideo = 1;
@@ -15,6 +16,7 @@ class CameraViewModel extends LoadingViewModel {
   Camera? camera;
   List<CameraFile> files = List<CameraFile>.empty();
   List<CameraVideo>? _videoFiles;
+  List<TimelineItem>? _timelineItems = List<TimelineItem>.empty();
 
   List<CameraVideo> get videos {
     return ensureVideos();
@@ -43,6 +45,10 @@ class CameraViewModel extends LoadingViewModel {
     return _videoFiles!;
   }
 
+  CameraVideo _findVideo(CameraFile file) {
+    return ensureVideos().firstWhere((element) => element.video.id == file.id);
+  }
+
   get title {
     return camera?.name ?? '';
   }
@@ -53,6 +59,20 @@ class CameraViewModel extends LoadingViewModel {
       imagePath = CameraWidget.getImageURL(camera?.latestSnapshot?.path ?? '');
     }
     return imagePath;
+  }
+
+  dynamic _getTimelineItem(CameraFile e) {
+    return (e.type == typeVideo ? _findVideo(e) as dynamic : e as dynamic);
+  }
+
+  get timelineItems {
+    _timelineItems ??= files.map((e) {
+      return TimelineItem(
+        time: e.timestamp,
+        item: _getTimelineItem(e),
+      );
+    }).toList();
+    return _timelineItems!;
   }
 
   void setRange(DateTime start, [DateTime? end]) async {
@@ -66,6 +86,7 @@ class CameraViewModel extends LoadingViewModel {
         files = files.sublist(0, maxFiles);
       }
       _videoFiles = null;
+      _timelineItems = null;
       print(
           'Loaded ${files.length} files in ${DateTime.now().difference(ds).inMilliseconds}ms.');
     } finally {

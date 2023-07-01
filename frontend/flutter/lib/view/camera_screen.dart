@@ -3,11 +3,13 @@ import 'package:amcrest_viewer_flutter/widgets/camera_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_timeline_calendar/timeline/flutter_timeline_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:openapi/api.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../repository/cam_viewer_repository.dart';
 import '../view_model/camera.viewmodel.dart';
+import '../widgets/timeline_view.dart';
 
 class CameraScreen extends StatefulWidget {
   final int cameraID;
@@ -22,6 +24,7 @@ class _CameraScreenState extends State<CameraScreen> {
   late final CameraViewModel vm;
   CalendarDateTime? _selectedDate;
   CameraVideo? _selectedVideo;
+  CameraFile? _selectedFile;
 
   _CameraScreenState();
 
@@ -33,21 +36,25 @@ class _CameraScreenState extends State<CameraScreen> {
     vm.refresh();
   }
 
-  void _setActiveVideo(CameraVideo vid) {
+  void _setActiveVideo(CameraVideo? vid) {
     if (_controller != null) {
       _controller!.pause();
       _controller?.dispose();
       _controller = null;
     }
     _selectedVideo = vid;
-    _controller =
-        VideoPlayerController.network(CameraWidget.getImageURL(vid.video.path))
-          ..initialize().then((_) {
-            _controller!.play();
-            _controller!.setVolume(0);
-            // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
-            setState(() {});
-          });
+    _selectedFile = null;
+
+    if (vid != null) {
+      _controller = VideoPlayerController.network(
+          CameraWidget.getImageURL(vid.video.path))
+        ..initialize().then((_) {
+          _controller!.play();
+          _controller!.setVolume(0);
+          // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
+          setState(() {});
+        });
+    }
   }
 
   @override
@@ -74,6 +81,9 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Widget get _videoWidget {
+    if (_selectedFile != null) {
+      return Image.network(CameraWidget.getImageURL(_selectedFile!.path));
+    }
     final initialized = _controller != null && _controller!.value.isInitialized;
     return Stack(
       fit: StackFit.expand,
@@ -215,6 +225,21 @@ class _CameraScreenState extends State<CameraScreen> {
                         _selectedDate = datetime;
                         vm.setRange(datetime.toDateTime());
                       }),
+                  SizedBox(
+                      height: 50,
+                      child: TimelineView(vm.timelineItems, onTapped: (items) {
+                        final vid = items
+                            .where((element) => element.item is CameraVideo);
+
+                        if (vid.isNotEmpty) {
+                          _setActiveVideo(vid.first.item as CameraVideo);
+                        } else if (items.isNotEmpty) {
+                          setState(() {
+                            _setActiveVideo(null);
+                            _selectedFile = items.first.item as CameraFile?;
+                          });
+                        }
+                      })),
                   Expanded(
                       child: ListView.builder(
                     shrinkWrap: true,
