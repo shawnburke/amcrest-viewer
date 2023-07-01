@@ -25,14 +25,20 @@ func (p Params) dataDir() string {
 }
 
 func (p Params) GetConfigDir() string {
-	if p.ConfigDir == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-		return cwd
+	cd := os.Getenv("CONFIG_DIR")
+	if cd != "" {
+		return cd
 	}
-	return p.ConfigDir
+
+	if p.ConfigDir != "" {
+		return p.ConfigDir
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	return cwd
+
 }
 
 func (p Params) FileDir() string {

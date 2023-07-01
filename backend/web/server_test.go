@@ -20,7 +20,7 @@ func TestContentType(t *testing.T) {
 
 func TestDateParse(t *testing.T) {
 
-	s := &Server{}
+	s := &handlers{}
 	d, err := s.parseTime("1590908400000")
 	require.NoError(t, err)
 	utc, err := time.LoadLocation("UTC")

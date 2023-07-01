@@ -8,8 +8,10 @@
             "mode": "debug",
             "program": "${workspaceFolder}/backend/main.go",
             "env": {
-                "ENVIRONMENT": "test"
-            }
+                "ENVIRONMENT": "test",
+                "CONFIG_DIR" : "${workspaceFolder}/backend/config",
+
+            },
         },
         {
             "name": "Flutter (Chrome)",
