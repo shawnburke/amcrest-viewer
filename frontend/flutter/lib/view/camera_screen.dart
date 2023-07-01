@@ -82,17 +82,21 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Widget get _videoWidget {
     if (_selectedFile != null) {
-      return Image.network(CameraWidget.getImageURL(_selectedFile!.path));
+      return Expanded(
+          child: Image.network(CameraWidget.getImageURL(_selectedFile!.path)));
     }
+
     final initialized = _controller != null && _controller!.value.isInitialized;
-    return Stack(
-      fit: StackFit.expand,
+
+    if (!initialized) {
+      return Container(height: MediaQuery.of(context).size.height * 0.2);
+    }
+
+    return Expanded(
+        child: Stack(
+      fit: StackFit.loose,
       children: [
-        initialized
-            ? AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
-                child: VideoPlayer(_controller!))
-            : Container(),
+        VideoPlayer(_controller!),
         Positioned(
             bottom: 25,
             height: 50,
@@ -145,18 +149,16 @@ class _CameraScreenState extends State<CameraScreen> {
             bottom: 0,
             height: 20,
             width: MediaQuery.of(context).size.width,
-            child: initialized
-                ? VideoProgressIndicator(
-                    _controller!,
-                    allowScrubbing: true,
-                    colors: const VideoProgressColors(
-                        backgroundColor: Colors.blueGrey,
-                        bufferedColor: Colors.blueGrey,
-                        playedColor: Colors.blueAccent),
-                  )
-                : Container()),
+            child: VideoProgressIndicator(
+              _controller!,
+              allowScrubbing: true,
+              colors: const VideoProgressColors(
+                  backgroundColor: Colors.blueGrey,
+                  bufferedColor: Colors.blueGrey,
+                  playedColor: Colors.blueAccent),
+            )),
       ],
-    );
+    ));
   }
 
   Widget _buildListCell(CameraVideo file) {
@@ -199,9 +201,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 margin: const EdgeInsets.all(5.0),
                 color: Colors.lightBlue[600],
                 child: Column(children: [
-                  Expanded(
-                    child: _videoWidget,
-                  ),
+                  _videoWidget,
                   TimelineCalendar(
                       dateTime: _selectedDate,
                       calendarType: CalendarType.GREGORIAN,
@@ -225,7 +225,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         _selectedDate = datetime;
                         vm.setRange(datetime.toDateTime());
                       }),
-                  SizedBox(
+                  Container(
                       height: 50,
                       child: TimelineView(vm.timelineItems, onTapped: (items) {
                         final vid = items
