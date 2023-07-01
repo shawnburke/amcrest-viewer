@@ -5,7 +5,7 @@ RUN apk add  tzdata ffmpeg
 
 WORKDIR /app
 COPY build/ /app/
-COPY backend/config /app/config
+COPY backend/config/docker.yaml /app/config/base.yaml
 COPY entrypoint.sh /app/entrypoint.sh
 
 # the zip/unzip process doesn't restore +x

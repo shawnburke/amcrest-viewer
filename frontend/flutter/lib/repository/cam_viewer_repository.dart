@@ -4,6 +4,8 @@ abstract class CamViewerRepo {
   Future<List<Camera>> getCameras({bool? includeLastSnapshot});
   Future<Camera?> getCamera(int id);
   Future<List<CameraFile>> getFiles(int id, DateTime start, DateTime end);
+
+  Future<String?> getLiveStreamURL(int id);
 }
 
 class CamViewerRepoImpl extends CamViewerRepo {
@@ -49,5 +51,14 @@ class CamViewerRepoImpl extends CamViewerRepo {
       }
     }
     return result;
+  }
+
+  @override
+  Future<String?> getLiveStreamURL(int id) async {
+    var result = await api.getCameraLiveStream(id, redirect: false);
+    if (result == null) {
+      return null;
+    }
+    return result.uri;
   }
 }

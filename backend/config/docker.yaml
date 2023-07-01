@@ -1,8 +1,7 @@
 web:
-  frontend: 
-    js: ../frontend/js/build
-    flutter: ../frontend/flutter/build/web
-
+  frontend:
+     js: /app/js
+     flutter: /app/flutter
 
 ftp:
   password: pwd
@@ -18,12 +17,6 @@ camera_types:
 
 files:
   default_ttl: 30d
-
-database:
-  dsn: test_data/db/cam.db
-
-log:
-  level: debug
 
 
 

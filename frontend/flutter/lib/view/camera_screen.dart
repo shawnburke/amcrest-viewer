@@ -1,5 +1,6 @@
 import 'package:amcrest_viewer_flutter/locator.dart';
 import 'package:amcrest_viewer_flutter/widgets/camera_widget.dart';
+import 'package:flick_video_player/flick_video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_timeline_calendar/timeline/flutter_timeline_calendar.dart';
 import 'package:intl/intl.dart';
@@ -20,7 +21,6 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  VideoPlayerController? _controller;
   late final CameraViewModel vm;
   CalendarDateTime? _selectedDate;
   CameraVideo? _selectedVideo;
@@ -37,47 +37,43 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   void _setActiveVideo(CameraVideo? vid) {
-    if (_controller != null) {
-      _controller!.pause();
-      _controller?.dispose();
-      _controller = null;
+    if (_flickManager != null) {
+      _flickManager!.dispose();
+      _flickManager = null;
     }
-    _selectedVideo = vid;
-    _selectedFile = null;
 
-    if (vid != null) {
-      _controller = VideoPlayerController.network(
-          CameraWidget.getImageURL(vid.video.path))
-        ..initialize().then((_) {
-          _controller!.play();
-          _controller!.setVolume(0);
-          // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
-          setState(() {});
-        });
-    }
+    setState(() {
+      _selectedVideo = vid;
+      _selectedFile = null;
+    });
   }
 
   @override
   void dispose() {
     super.dispose();
-    if (_controller != null) {
-      _controller!.pause();
-      _controller?.dispose();
-    }
+    _setActiveVideo(null);
   }
 
-  Widget _buildVideoPlayer(CameraVideo file, {bool thumbnail = false}) {
-    if (thumbnail && file.thumbnail != null) {
-      return Image.network(CameraWidget.getImageURL(file.thumbnail!.path));
+  FlickManager? _flickManager;
+
+  FlickManager? getFlickManager() {
+    if (_selectedVideo == null) {
+      return null;
     }
 
-    final controller = VideoPlayerController.network(
-      CameraWidget.getImageURL(file.video.path),
+    if (_flickManager != null) {
+      return _flickManager;
+    }
+
+    VideoPlayerController? controller;
+    controller = VideoPlayerController.network(
+        CameraWidget.getImageURL(_selectedVideo!.video.path));
+
+    _flickManager = FlickManager(
+      videoPlayerController: controller,
     );
 
-    controller.initialize();
-
-    return VideoPlayer(controller);
+    return _flickManager;
   }
 
   Widget get _videoWidget {
@@ -86,9 +82,9 @@ class _CameraScreenState extends State<CameraScreen> {
           child: Image.network(CameraWidget.getImageURL(_selectedFile!.path)));
     }
 
-    final initialized = _controller != null && _controller!.value.isInitialized;
+    final mgr = getFlickManager();
 
-    if (!initialized) {
+    if (mgr == null) {
       return Container(height: MediaQuery.of(context).size.height * 0.2);
     }
 
@@ -96,67 +92,7 @@ class _CameraScreenState extends State<CameraScreen> {
         child: Stack(
       fit: StackFit.loose,
       children: [
-        VideoPlayer(_controller!),
-        Positioned(
-            bottom: 25,
-            height: 50,
-            width: MediaQuery.of(context).size.width,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      if (_controller == null) {
-                        return;
-                      }
-                      _controller!.value.isPlaying
-                          ? _controller!.pause()
-                          : _controller!.play();
-                    });
-                  },
-                  child: Icon(
-                    _controller != null && _controller!.value.isPlaying
-                        ? Icons.pause
-                        : Icons.play_arrow,
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      if (_controller == null) {
-                        return;
-                      }
-                      var vol = _controller!.value.volume;
-                      if (vol == 0) {
-                        vol = 1.0;
-                      } else {
-                        vol = 0;
-                      }
-
-                      _controller!.setVolume(vol);
-                    });
-                  },
-                  child: Icon(
-                    _controller != null && _controller!.value.volume > 0
-                        ? Icons.volume_up
-                        : Icons.volume_mute,
-                  ),
-                )
-              ],
-            )),
-        Positioned(
-            bottom: 0,
-            height: 20,
-            width: MediaQuery.of(context).size.width,
-            child: VideoProgressIndicator(
-              _controller!,
-              allowScrubbing: true,
-              colors: const VideoProgressColors(
-                  backgroundColor: Colors.blueGrey,
-                  bufferedColor: Colors.blueGrey,
-                  playedColor: Colors.blueAccent),
-            )),
+        FlickVideoPlayer(flickManager: mgr),
       ],
     ));
   }
@@ -177,7 +113,9 @@ class _CameraScreenState extends State<CameraScreen> {
               textScaleFactor: 1.0,
             ),
             SizedBox(
-                width: 250, child: _buildVideoPlayer(file, thumbnail: true)),
+                width: 250,
+                child: Image.network(
+                    CameraWidget.getImageURL(file.thumbnail!.path))),
           ],
         ));
   }
@@ -233,7 +171,10 @@ class _CameraScreenState extends State<CameraScreen> {
 
                         if (vid.isNotEmpty) {
                           _setActiveVideo(vid.first.item as CameraVideo);
-                        } else if (items.isNotEmpty) {
+                          return;
+                        }
+
+                        if (items.isNotEmpty) {
                           setState(() {
                             _setActiveVideo(null);
                             _selectedFile = items.first.item as CameraFile?;
