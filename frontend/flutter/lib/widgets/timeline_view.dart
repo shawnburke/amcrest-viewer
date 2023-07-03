@@ -1,6 +1,5 @@
-import 'package:amcrest_viewer_flutter/view/camera_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
 import 'package:openapi/api.dart';
 
 import '../view_model/camera.viewmodel.dart';
@@ -150,79 +149,87 @@ class _TimelineViewState extends State<TimelineView> {
     final totalMinutes = _collection.minutes;
     var printed = false;
 
-    // print(
-    //     'total minutes: $totalMinutes, start: ${_collection.start}, end: ${_collection.end}, items: ${_collection.items.length}');
+    return Container(
+        color: Colors.black,
+        child: ListView.builder(
+            itemCount: totalMinutes,
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (context, index) {
+              final time = _collection.start
+                  .add(Duration(minutes: index))
+                  .truncate(durationMinute);
 
-    print(_collection.info(_collection.start.add(Duration(minutes: 75))));
+              Widget? timeMarker;
 
-    return ListView.builder(
-        itemCount: totalMinutes,
-        scrollDirection: Axis.horizontal,
-        itemBuilder: (context, index) {
-          final time = _collection.start
-              .add(Duration(minutes: index))
-              .truncate(durationMinute);
+              final isHour = time.minute == 0;
+              if (isHour) {
+                timeMarker = Container(
+                    width: 15,
+                    color: Colors.black,
+                    child: Text(
+                      DateFormat("ha").format(time).replaceAll("M", ""),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                    ));
+              }
 
-          Widget? timeMarker;
+              final items = _collection.getItems(time);
+              //print('time: $time, items: ${items.length}');
 
-          final isHour = time.minute == 0;
-          if (isHour) {
-            timeMarker = Container(
-                width: 10,
-                color: Colors.black,
-                child: Text(
-                  time.hour.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                  ),
-                ));
-          }
+              final ti = _TimelineItem(items, time, key: GlobalKey());
+              Widget widget = ti;
 
-          final items = _collection.getItems(time);
-          //print('time: $time, items: ${items.length}');
+              if (items.isNotEmpty) {
+                widget =
+                    GestureDetector(onTap: () => _fireTapped(items), child: ti);
+              }
 
-          final images = items
-              .where((element) => element.item is CameraFile)
-              .map((e) => e.item as CameraFile)
-              .toList();
+              if (timeMarker != null) {
+                return Column(
+                  children: [timeMarker, widget],
+                );
+              }
+              return widget;
+            }));
+  }
+}
 
-          final videos = items
-              .where((element) => element.item is CameraVideo)
-              .map((e) => e.item as CameraVideo)
-              .toList();
+class _TimelineItem extends StatelessWidget {
+  final DateTime time;
+  final List<TimelineItem> items;
 
-          var width = 2.0;
-          var color = Colors.grey;
-          if (videos.isNotEmpty) {
-            color = Colors.yellow;
-            width = 5;
-          } else if (images.isNotEmpty) {
-            color = Colors.lightGreen;
-          } else {
-            color = Colors.red;
+  const _TimelineItem(this.items, this.time, {super.key});
 
-            if (!printed) {
-              printed = true;
-              print('no items for $time, info: ${_collection.info(time)}');
-            }
-          }
-          Widget widget = Container(
-            color: color,
-            width: width,
-          );
+  @override
+  Widget build(BuildContext context) {
+    final images = items
+        .where((element) => element.item is CameraFile)
+        .map((e) => e.item as CameraFile)
+        .toList();
 
-          if (items.isNotEmpty) {
-            widget =
-                GestureDetector(onTap: () => _fireTapped(items), child: widget);
-          }
+    final videos = items
+        .where((element) => element.item is CameraVideo)
+        .map((e) => e.item as CameraVideo)
+        .toList();
 
-          if (timeMarker != null) {
-            return Column(
-              children: [timeMarker, widget],
-            );
-          }
-          return widget;
-        });
+    var width = 2.0;
+    var color = Colors.transparent;
+    if (videos.isNotEmpty) {
+      color = Colors.yellow;
+      width = 5;
+    } else if (images.isEmpty) {
+      color = Colors.grey;
+
+      // if (!printed) {
+      //   printed = true;
+      //   print('no items for $time, info: ${_collection.info(time)}');
+      // }
+    }
+    return Container(
+      color: color,
+      width: width,
+    );
   }
 }

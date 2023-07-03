@@ -96,7 +96,7 @@ func (aa *amcrestApi) ensureAuth() error {
 			}
 
 			if resp.StatusCode == 200 {
-				aa.logger.Info("Found auth", zap.String("type", authType))
+				aa.logger.Debug("Found auth", zap.String("type", authType))
 				return nil
 			}
 			aa.logger.Warn("Failed auth",

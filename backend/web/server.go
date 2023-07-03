@@ -165,6 +165,19 @@ func (s *Server) Setup(frontendFlutter, frontendJS string) http.Handler {
 	s.r = mux.NewRouter()
 
 	s.r.Use(s.enableCors)
+	s.r.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rwp := &responseWriterProxy{ResponseWriter: w}
+			h.ServeHTTP(rwp, r)
+			s.Logger.Info(
+				"Request",
+				zap.String("path", r.URL.Path),
+				zap.Any("query", r.URL.Query()),
+				zap.Int("status", rwp.statusCode),
+				zap.Int("content-length", rwp.contentLength),
+			)
+		})
+	})
 
 	// cameras
 	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.handlers.createCamera)
@@ -218,4 +231,20 @@ func getContentType(fi *entities.File) string {
 	ct := mime.TypeByExtension(path.Ext(fi.Path))
 
 	return ct
+}
+
+type responseWriterProxy struct {
+	http.ResponseWriter
+	statusCode    int
+	contentLength int
+}
+
+func (w *responseWriterProxy) Write(b []byte) (int, error) {
+	w.contentLength += len(b)
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *responseWriterProxy) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
 }

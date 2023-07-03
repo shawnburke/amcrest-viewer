@@ -75,7 +75,7 @@ func (eb *eventBus) Send(e Event) error {
 
 func (eb *eventBus) consume() {
 	for e := range eb.ch {
-		eb.logger.Info("Received bus event", zap.String("type", e.Name()))
+		eb.logger.Debug("Received bus event", zap.String("type", e.Name()))
 		for _, sub := range eb.subs {
 			err := sub.OnEvent(e)
 			if err != nil {

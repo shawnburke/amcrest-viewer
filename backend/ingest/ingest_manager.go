@@ -108,7 +108,7 @@ func (im *ingestManager) ingestFtp(f *ftp.File) error {
 		return nil
 	}
 
-	im.logger.Info("Ingesting FTP file",
+	im.logger.Debug("Ingesting FTP file",
 		zap.String("name", f.FullName),
 		zap.String("User", f.User),
 		zap.String("ingester", camType.Name()),

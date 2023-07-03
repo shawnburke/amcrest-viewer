@@ -265,7 +265,7 @@ func (fd *proxyDriver) PutFile(destPath string, data io.Reader, appendData bool)
 		return 0, err
 	}
 
-	fd.logger.Info("FTP Received file", zap.String("user", fd.conn.LoginUser()), zap.String("path", f.FullName))
+	fd.logger.Debug("FTP Received file", zap.String("user", fd.conn.LoginUser()), zap.String("path", f.FullName))
 
 	fd.bus.Send(NewFileCreateEvent(f))
 

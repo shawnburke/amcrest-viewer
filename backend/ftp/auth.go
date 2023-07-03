@@ -26,11 +26,10 @@ func createAuth(auth common.Auth, bus common.EventBus, logger *zap.Logger) ftps.
 func (fa *ftpAuth) CheckPasswd(user string, pass string) (bool, error) {
 	ok := fa.auth.IsAllowed(user, pass)
 
-	msg := "Login fail"
-	if ok {
-		msg = "Login success"
+	if !ok {
+		msg := "Login fail"
+		fa.logger.Info(msg, zap.String("user", user))
 	}
-	fa.logger.Info(msg, zap.String("user", user))
 
 	if !ok {
 		fa.bus.Send(common.NewAuthFailEvent(user))
