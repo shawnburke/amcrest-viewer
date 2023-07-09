@@ -55,7 +55,7 @@ class CamViewerRepoImpl extends CamViewerRepo {
 
   @override
   Future<String?> getLiveStreamURL(int id) async {
-    var result = await api.getCameraLiveStream(id, redirect: false);
+    var result = await api.getCameraLiveStream(id, redirect: true);
     if (result == null) {
       return null;
     }

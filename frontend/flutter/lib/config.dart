@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class Config {
   static String? _baseURL;
   static String get baseURL {

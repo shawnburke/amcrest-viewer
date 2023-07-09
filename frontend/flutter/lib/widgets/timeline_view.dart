@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:openapi/api.dart';
+import 'dart:developer' as developer;
 
 import '../view_model/camera.viewmodel.dart';
 
@@ -8,18 +9,14 @@ class TimelineView extends StatefulWidget {
   final List<TimelineItem> items;
   final Function(Iterable<TimelineItem> items)? onTapped;
 
-  TimelineView(this.items, {this.onTapped, super.key});
+  const TimelineView(this.items, {this.onTapped, super.key});
 
   @override
-  _TimelineViewState createState() => _TimelineViewState();
+  TimelineViewState createState() => TimelineViewState();
 }
 
 class TimelineViewModel extends ChangeNotifier {
   TimelineViewModel();
-
-  void dispose() {
-    super.dispose();
-  }
 }
 
 class TimelineItem<T> {
@@ -73,7 +70,7 @@ class TimelineItemCollection {
 
       final b = _buckets[bucket];
       if (b == null) {
-        print('no bucket for $bucket');
+        developer.log('no bucket for $bucket');
         return [];
       }
 
@@ -84,7 +81,7 @@ class TimelineItemCollection {
     } finally {
       final ms = DateTime.now().difference(s).inMilliseconds;
       if (ms > 5) {
-        print('getItems took $ms ms');
+        developer.log('getItems took $ms ms');
       }
     }
   }
@@ -117,12 +114,12 @@ extension DateTimeExtensions on DateTime {
   }
 }
 
-class _TimelineViewState extends State<TimelineView> {
+class TimelineViewState extends State<TimelineView> {
   final colors = [Colors.red, Colors.white, Colors.blue];
   TimelineItemCollection? _c;
   Function(Iterable<TimelineItem>)? _onTapped;
 
-  _TimelineViewState();
+  TimelineViewState();
 
   @override
   void didUpdateWidget(covariant TimelineView oldWidget) {

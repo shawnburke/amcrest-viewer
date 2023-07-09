@@ -1,12 +1,11 @@
 import 'package:amcrest_viewer_flutter/locator.dart';
+import 'package:amcrest_viewer_flutter/widgets/camera_image_widget.dart';
 import 'package:amcrest_viewer_flutter/widgets/camera_widget.dart';
-import 'package:flick_video_player/flick_video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_timeline_calendar/timeline/flutter_timeline_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:openapi/api.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 
 import '../repository/cam_viewer_repository.dart';
 import '../view_model/camera.viewmodel.dart';
@@ -25,6 +24,7 @@ class _CameraScreenState extends State<CameraScreen> {
   CalendarDateTime? _selectedDate;
   CameraVideo? _selectedVideo;
   CameraFile? _selectedFile;
+  String? _media;
 
   _CameraScreenState();
 
@@ -37,15 +37,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   void _setActiveVideo(CameraVideo? vid) {
-    if (_flickManager != null) {
-      _flickManager!.dispose();
-      _flickManager = null;
-    }
-
-    setState(() {
-      _selectedVideo = vid;
-      _selectedFile = null;
-    });
+    _setMedia(video: vid);
   }
 
   @override
@@ -54,47 +46,26 @@ class _CameraScreenState extends State<CameraScreen> {
     _setActiveVideo(null);
   }
 
-  FlickManager? _flickManager;
+  void _setMedia({
+    CameraVideo? video,
+    CameraFile? file,
+    String? uri,
+  }) {
+    String? mediaURL;
 
-  FlickManager? getFlickManager() {
-    if (_selectedVideo == null) {
-      return null;
+    if (uri != null) {
+      mediaURL = CameraWidget.getImageURL(uri);
+    } else if (video != null) {
+      mediaURL = CameraWidget.getImageURL(video.video.path);
+    } else if (file != null) {
+      mediaURL = CameraWidget.getImageURL(file.path);
     }
 
-    if (_flickManager != null) {
-      return _flickManager;
-    }
-
-    VideoPlayerController? controller;
-    controller = VideoPlayerController.network(
-        CameraWidget.getImageURL(_selectedVideo!.video.path));
-
-    _flickManager = FlickManager(
-      videoPlayerController: controller,
-    );
-
-    return _flickManager;
-  }
-
-  Widget get _videoWidget {
-    if (_selectedFile != null) {
-      return Expanded(
-          child: Image.network(CameraWidget.getImageURL(_selectedFile!.path)));
-    }
-
-    final mgr = getFlickManager();
-
-    if (mgr == null) {
-      return Container(height: MediaQuery.of(context).size.height * 0.2);
-    }
-
-    return Expanded(
-        child: Stack(
-      fit: StackFit.loose,
-      children: [
-        FlickVideoPlayer(flickManager: mgr),
-      ],
-    ));
+    setState(() {
+      _selectedFile = file;
+      _selectedVideo = video;
+      _media = mediaURL;
+    });
   }
 
   Widget _buildListCell(CameraVideo file) {
@@ -139,7 +110,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 margin: const EdgeInsets.all(5.0),
                 color: Colors.lightBlue[600],
                 child: Column(children: [
-                  _videoWidget,
+                  CameraImageWidget(_media),
                   TimelineCalendar(
                       dateTime: _selectedDate,
                       calendarType: CalendarType.GREGORIAN,
@@ -170,14 +141,13 @@ class _CameraScreenState extends State<CameraScreen> {
                             .where((element) => element.item is CameraVideo);
 
                         if (vid.isNotEmpty) {
-                          _setActiveVideo(vid.first.item as CameraVideo);
+                          _setMedia(video: vid.first.item as CameraVideo);
                           return;
                         }
 
                         if (items.isNotEmpty) {
                           setState(() {
-                            _setActiveVideo(null);
-                            _selectedFile = items.first.item as CameraFile?;
+                            _setMedia(file: items.first.item as CameraFile?);
                           });
                         }
                       })),
@@ -194,6 +164,15 @@ class _CameraScreenState extends State<CameraScreen> {
                       );
                     },
                   )),
+                  ElevatedButton(
+                      onPressed: () async {
+                        final liveURL = await vm.liveURL;
+                        if (liveURL == null) {
+                          return;
+                        }
+                        _setMedia(uri: liveURL);
+                      },
+                      child: const Text("Live")),
                 ])),
           ));
     })));

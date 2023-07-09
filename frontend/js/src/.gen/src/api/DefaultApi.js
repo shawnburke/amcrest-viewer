@@ -92,9 +92,9 @@ export default class DefaultApi {
      * Get camera files
      * @param {String} id camera ID
      * @param {Object} opts Optional parameters
-     * @param {Date} [start] range start
-     * @param {Date} [end] range end
-     * @param {module:model/String} [sort] sort order
+     * @param {Date} opts.start range start
+     * @param {Date} opts.end range end
+     * @param {module:model/String} opts.sort sort order
      * @param {module:api/DefaultApi~getCameraFilesCallback} callback The callback function, accepting three arguments: error, data, response
      * data is of type: {@link Array.<module:model/CameraFile>}
      */
@@ -143,7 +143,7 @@ export default class DefaultApi {
      * Get camera live stream
      * @param {Number} id camera ID
      * @param {Object} opts Optional parameters
-     * @param {Boolean} [redirect = true)] redirect request
+     * @param {Boolean} opts.redirect redirect request (default to true)
      * @param {module:api/DefaultApi~getCameraLiveStreamCallback} callback The callback function, accepting three arguments: error, data, response
      * data is of type: {@link module:model/GetCameraLiveStream200Response}
      */
@@ -189,7 +189,7 @@ export default class DefaultApi {
      * Get all cameras
      * Get all cameras
      * @param {Object} opts Optional parameters
-     * @param {Boolean} [latestSnapshot] set true to return latest snapshot info
+     * @param {Boolean} opts.latestSnapshot set true to return latest snapshot info
      * @param {module:api/DefaultApi~getCamerasCallback} callback The callback function, accepting three arguments: error, data, response
      * data is of type: {@link Array.<module:model/Camera>}
      */

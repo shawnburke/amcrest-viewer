@@ -4,8 +4,6 @@ import 'package:amcrest_viewer_flutter/widgets/camera_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openapi/api.dart';
 
-import '../config.dart';
-
 class HomeViewModel extends LoadingViewModel {
   HomeViewModel({
     required this.repo,

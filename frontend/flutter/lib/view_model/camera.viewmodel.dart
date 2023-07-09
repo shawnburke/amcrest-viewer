@@ -2,9 +2,9 @@ import 'package:amcrest_viewer_flutter/repository/cam_viewer_repository.dart';
 import 'package:amcrest_viewer_flutter/view_model/loading.viewmodel.dart';
 import 'package:openapi/api.dart';
 
-import '../config.dart';
 import '../widgets/camera_widget.dart';
 import '../widgets/timeline_view.dart';
+import 'dart:developer' as developer;
 
 const maxFiles = -1;
 const typeVideo = 1;
@@ -61,6 +61,11 @@ class CameraViewModel extends LoadingViewModel {
     return imagePath;
   }
 
+  Future<String?> get liveURL async {
+    final result = await repo.getLiveStreamURL(camera!.id);
+    return result;
+  }
+
   dynamic _getTimelineItem(CameraFile e) {
     return (e.type == typeVideo ? _findVideo(e) as dynamic : e as dynamic);
   }
@@ -87,7 +92,7 @@ class CameraViewModel extends LoadingViewModel {
       }
       _videoFiles = null;
       _timelineItems = null;
-      print(
+      developer.log(
           'Loaded ${files.length} files in ${DateTime.now().difference(ds).inMilliseconds}ms.');
     } finally {
       super.isLoading = false;
