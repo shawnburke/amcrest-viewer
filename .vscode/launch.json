@@ -2,6 +2,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch via NPM",
+            "request": "launch",
+            "runtimeArgs": [
+                "run-script",
+                "start"
+            ],
+            "runtimeExecutable": "npm",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "cwd": "${workspaceFolder}/frontend/js",
+            "type": "node"
+        },
+        {
             "name": "Backend API (Go)",
             "type": "go",
             "request": "launch",
@@ -24,6 +38,7 @@
                 "--dart-define",
                 "BASE_URL=http://192.168.86.10:9000/",
             ]
-        }
+        },
+
     ]
 }

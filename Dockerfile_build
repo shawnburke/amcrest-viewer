@@ -1,10 +1,11 @@
 
-FROM alpine:3.14
+FROM alpine:3.18.2
 RUN apk update
-RUN apk add  tzdata ffmpeg
+RUN apk add  tzdata ffmpeg libc6-compat
 
 WORKDIR /app
 COPY build/ /app/
+RUN ln -s /app/js /app/flutter/js
 COPY backend/config/docker.yaml /app/config/base.yaml
 COPY entrypoint.sh /app/entrypoint.sh
 
