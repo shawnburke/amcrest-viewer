@@ -75,7 +75,7 @@ class FilesService {
 }
 
 export function updateFile(f, root) {
-    if (typeof f.timestamp === "string") {
+    if (! (f.timestamp instanceof Time)) {
         f.timestamp = new Time(f.timestamp);
     }
 

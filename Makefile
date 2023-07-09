@@ -24,7 +24,7 @@ $(SERVER_STUB_FILE): openapi/amcrest-viewer.openapi.yaml $(GOPATH)/bin/oapi-code
 
 
 CLIENT_STUB_FILE_FLUTTER=$(FLUTTER_ROOT)/openapi/.gen/amcrest_viewer/lib/api/default_api.dart
-CLIENT_STUB_FILE_JS=$(WEB_ROOT)/src/.gen/src/index.js
+CLIENT_STUB_FILE_JS=$(WEB_ROOT)/.gen/src/index.js
 
 
 $(CLIENT_STUB_FILE_FLUTTER): openapi/amcrest-viewer.openapi.yaml
@@ -38,13 +38,12 @@ $(CLIENT_STUB_FILE_FLUTTER): openapi/amcrest-viewer.openapi.yaml
 	
 $(CLIENT_STUB_FILE_JS): openapi/amcrest-viewer.openapi.yaml
 	echo "Generating OpenAPI: JS"
-	mkdir -p $(WEB_ROOT)/src/.gen
 	mkdir -p $(WEB_ROOT)/build
 	cp $< $(WEB_ROOT)/build/openapi.yaml
 	docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate \
 		-i /local/$(WEB_ROOT)/build/openapi.yaml \
 		-g javascript \
-		-o /local/$(WEB_ROOT)/src/.gen/
+		-o /local/$(WEB_ROOT)/.gen/
 	
 openapi-client-js: $(CLIENT_STUB_FILE_JS)
 openapi-client-flutter: $(CLIENT_STUB_FILE_FLUTTER)

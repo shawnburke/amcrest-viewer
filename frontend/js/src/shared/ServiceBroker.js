@@ -8,6 +8,8 @@ import FilesServiceMock from "./mock/FilesService";
 
 import FilesService from "./FilesService";
 
+
+
 class ServiceBroker {
 
     constructor(camsService, filesService) {
@@ -22,14 +24,20 @@ class ServiceBroker {
         this.filesServiceCtor = this.useMock() ? FilesServiceMock : FilesService;
     }
 
+    apiHost() {
+        return process.env.REACT_APP_API_HOST || "";
+    }
 
     useMock() {
+        if (this.apiHost()) {
+            return false;
+        }
         return this.mock || (process.env.NODE_ENV !== "production" && this.root() === "");
     }
 
     root() {
         var r = process.env.REACT_APP_ROOT;
-        return r || "";
+        return r || this.apiHost() || "";
     }
 
     newCamsService() {

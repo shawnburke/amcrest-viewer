@@ -2,7 +2,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch via NPM",
+            "name": "Launch Edge",
+            "request": "launch",
+            "type": "msedge",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/frontend/js",
+        },
+        {
+            "name": "npm-start",
             "request": "launch",
             "runtimeArgs": [
                 "run-script",
@@ -15,6 +22,7 @@
             "cwd": "${workspaceFolder}/frontend/js",
             "type": "node"
         },
+
         {
             "name": "Backend API (Go)",
             "type": "go",
