@@ -44,6 +44,9 @@ $(CLIENT_STUB_FILE_JS): openapi/amcrest-viewer.openapi.yaml
 		-i /local/$(WEB_ROOT)/build/openapi.yaml \
 		-g javascript \
 		-o /local/$(WEB_ROOT)/.gen/
+	# make sure we have permissions to run npm install
+	docker run  --rm -v ${PWD}:/local --entrypoint sh  openapitools/openapi-generator-cli  -c "chmod -R a+w /local/frontend/js/.gen"
+	
 	
 openapi-client-js: $(CLIENT_STUB_FILE_JS)
 openapi-client-flutter: $(CLIENT_STUB_FILE_FLUTTER)
