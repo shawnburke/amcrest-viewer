@@ -86,6 +86,8 @@ $(NPM_INSTALL): $(WEB_ROOT)/package-lock.json
 
 $(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_ROOT)/public) openapi-client-js
 	echo "Building frontend"
+	cd $(WEB_ROOT)/.gen && npm install && npm link
+	cd $(WEB_ROOT) && npm link .gen
 	cd $(WEB_ROOT) && PUBLIC_URL=js npm run build
 	mkdir -p build
 	cp -R $(WEB_ROOT)/build/ build/js

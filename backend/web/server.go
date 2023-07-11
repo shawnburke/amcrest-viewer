@@ -180,13 +180,9 @@ func (s *Server) Setup(frontendFlutter, frontendJS string) http.Handler {
 	})
 
 	// cameras
-	s.r.Methods("POST").Path("/api/cameras").HandlerFunc(s.handlers.createCamera)
-	s.r.Methods("GET").Path("/api/cameras/{camera-id}/live").HandlerFunc(s.handlers.getCameraLiveStream)
 
 	// RTSP
 	s.r.Methods("GET").PathPrefix("/api/cameras/{camera-id}/live/stream").HandlerFunc(s.handlers.handleCameraLiveStream)
-
-	s.r.Methods("GET").Path("/api/cameras/{camera-id}/stats").HandlerFunc(s.handlers.getCameraStats)
 
 	s.r.Methods("PUT").Path("/api/cameras/{camera-id}").HandlerFunc(s.handlers.updateCamera)
 	s.r.Methods("PUT").Path("/api/cameras/{camera-id}/creds").HandlerFunc(s.handlers.updateCameraCreds)

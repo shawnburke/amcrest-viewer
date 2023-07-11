@@ -240,7 +240,7 @@ func (sr *sqlRepository) GetCamera(cameraID string) (*entities.Camera, error) {
 }
 
 func (sr *sqlRepository) getTimeRange(start *time.Time, end *time.Time) (time.Time, time.Time) {
-	s := time.Time{}
+	s := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
 	e := sr.time.Now().AddDate(100, 0, 0)
 
 	if start != nil {
@@ -322,6 +322,7 @@ func (sr *sqlRepository) GetCameraStats(cameraID string, start *time.Time, end *
 }
 
 var dateTimeFormats = []string{
+	"2006-01-02 15:04:05.999999999-07:00",
 	"2006-01-02 15:04:05.999999 -0700 MST",
 	"2006-01-02 15:04:05",
 }

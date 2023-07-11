@@ -1,7 +1,7 @@
 ---
 openapi: 3.0.2
 info:
-  title: API Title
+  title: Amcrest Viewer API
   version: '1.0'
 servers:
 - url: http://0.0.0.0:9000
@@ -76,7 +76,7 @@ paths:
                         type: string
                     required:
                       - uri
-
+  
       
   "/api/cameras/{id}/files":
       get:
@@ -121,6 +121,39 @@ paths:
                   type: array
                   items:
                     "$ref": "#/components/schemas/CameraFile"
+  "/api/cameras/{id}/stats":
+    get:
+      description: 'Gets camera stats for time range'
+      operationId: getCameraStats
+      parameters: 
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: start
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: end
+        in: query
+        schema:
+          type: string
+          format: date-time
+      - name: breakdown
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+              application/json:
+                schema:
+                    "$ref": "#/components/schemas/CameraStats"
+
+
 
 components:
   schemas:
@@ -208,3 +241,39 @@ components:
         - timestamp
         - duration_seconds
         - length
+    CameraStats:
+      type: object
+      properties:
+        file_count:
+          type: integer
+        file_size:
+          type: integer
+        min_date:
+          type: string
+          format: date-time
+        max_date:
+          type: string
+          format: date-time
+        file_counts:
+          type: object
+          additionalProperties:         
+            "$ref": "#/components/schemas/FileData"
+        breakdown:
+          type: array
+          items:
+           "$ref": "#/components/schemas/FileData"
+      required:
+        - file_count
+        - file_size
+        - min_date
+        - max_date
+    FileData:
+      type: object
+      properties:
+        count:
+          type: integer
+        size:
+          type: integer
+      required:
+        - count
+        - size

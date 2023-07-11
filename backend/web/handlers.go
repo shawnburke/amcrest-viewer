@@ -80,27 +80,6 @@ func newCameraResult(cam *entities.Camera) *getCameraResult {
 	return cr
 }
 
-func (h *handlers) getCameraStats(w http.ResponseWriter, r *http.Request) {
-
-	strID := mux.Vars(r)["camera-id"]
-
-	start, end, err := h.getTimeRange(r)
-
-	if h.s.writeError(err, w, 400) {
-		return
-	}
-
-	cam, err := h.data.GetCameraStats(strID, start, end, "")
-
-	if h.s.writeError(err, w, 0) {
-
-		return
-	}
-
-	h.s.writeJson(cam, w, 200)
-
-}
-
 const streamMarker = "/live/"
 
 func (h *handlers) getCameraLiveStream(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +91,7 @@ func (h *handlers) getCameraLiveStream(w http.ResponseWriter, r *http.Request) {
 		return
 
 	}
-	redirect := r.URL.Query().Get("redirect") == "false"
+	redirect := r.URL.Query().Get("redirect") == "true"
 
 	params := openapi_server.GetCameraLiveStreamParams{
 		Redirect: &redirect,
@@ -289,43 +268,6 @@ func (h *handlers) updateFilePaths(cam string, files ...*entities.File) []*entit
 	}
 	return newFiles
 }
-
-func (h *handlers) getTimeRange(r *http.Request) (*time.Time, *time.Time, error) {
-	var start, end *time.Time
-
-	if st := r.URL.Query().Get("start"); st != "" {
-		t, err := h.parseTime(st)
-		if err != nil {
-			return nil, nil, fmt.Errorf("bad start time format: %w", err)
-		}
-		start = &t
-	}
-
-	if et := r.URL.Query().Get("end"); et != "" {
-		t, err := h.parseTime(et)
-		if err != nil {
-			return nil, nil, fmt.Errorf("bad end time format: %w", err)
-		}
-		end = &t
-	} else {
-		t := time.Now()
-		end = &t
-	}
-
-	return start, end, nil
-}
-
-// func (h *handlers) listFiles(w http.ResponseWriter, r *http.Request) {
-
-// 	strID := mux.Vars(r)["camera-id"]
-
-// 	id, ok := h.s.parseID(w, r, strID)
-// 	if !ok {
-// 		return
-// 	}
-
-// 	h.s.GetCameraFiles(w, r, id)
-// }
 
 func (h *handlers) getFileInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -601,4 +543,21 @@ func (h *handlers) GetCameraFiles(w http.ResponseWriter, r *http.Request, id str
 
 	h.s.writeJson(files, w, 0)
 
+}
+
+func (h *handlers) GetCameraStats(w http.ResponseWriter, r *http.Request, id int, params openapi_server.GetCameraStatsParams) {
+
+	if params.End == nil {
+		now := time.Now()
+		params.End = &now
+	}
+
+	cam, err := h.data.GetCameraStats(strconv.Itoa(id), params.Start, params.End, "")
+
+	if h.s.writeError(err, w, 0) {
+
+		return
+	}
+
+	h.s.writeJson(cam, w, 200)
 }

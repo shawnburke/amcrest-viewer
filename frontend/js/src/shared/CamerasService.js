@@ -1,7 +1,8 @@
 
 import {updateFile} from "./FilesService"
 import { Time } from "../time";
-import {DefaultApi,ApiClient} from "camera-api";
+import {ApiClient, DefaultApi} from "amcrest_viewer_api";
+
 
 class CamerasService {
 
@@ -24,6 +25,10 @@ class CamerasService {
 
         return new Promise((resolve, reject) => {
             this.api.getCameras({}, (error, data, response) => {
+                if (error) {
+                    console.error("Error retrieving cameras", error);
+                    return this.handleResponseError(response);
+                }
                 var mapped = data.map(item => {
                     var cam = this.updateId(item);
                     if (cam.latest_snapshot) {
@@ -35,49 +40,7 @@ class CamerasService {
             });
         });
 
-        // var handler =  (err, items) => {
-
-        //     return items.map(item => {
-        //         var cam = this.updateId(item);
-        //         if (cam.latest_snapshot) {
-        //             updateFile(cam.latest_snapshot, this.root)
-        //         }
-        //         return cam;
-        //     });
-        // };
-
-        // return .then(handler);
-
-        // return fetch(`${this.url}?latest_snapshot=1`)
-
-        //     .then(response => {
-
-        //         if (!response.ok) {
-
-        //             this.handleResponseError(response);
-
-        //         }
-
-        //         return response.json();
-
-        //     })
-
-        //     .then(items => {
-
-        //         return items.map(item => {
-        //             var cam = this.updateId(item);
-        //             if (cam.latest_snapshot) {
-        //                 updateFile(cam.latest_snapshot, this.root)
-        //             }
-        //             return cam;
-        //         });
-        //     })
-
-        //     .catch(error => {
-
-        //         this.handleError(error);
-
-        //     });
+      
 
     }
 
@@ -153,41 +116,59 @@ class CamerasService {
 
     async getStats(id) {
 
-
-
-        return fetch(`${this.url}/${id}/stats`)
-
-            .then(response => {
-
-                if (!response.ok) {
-
-                    this.handleResponseError(response);
-
+        return new Promise((resolve, reject) => {
+            this.api.getCameraStats(id, {
+                start: new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 30),
+                end: new Date(),
+            }, 
+            (error, item, response) => {
+                if (error) {
+                    return this.handleResponseError(response);
                 }
-
-                return response.json();
-
-            })
-
-            .then(item => {
-
                 if (item.min_date) {
                     item.min_date = new Time(item.min_date);
                 }
                 if (item.max_date) {
                     item.max_date = new Time(item.max_date);
                 }
-                return item;
-
-            }
-
-            )
-
-            .catch(error => {
-
-                this.handleError(error);
-
+                resolve(item);
             });
+        });
+
+
+        // return fetch(`${this.url}/${id}/stats`)
+
+        //     .then(response => {
+
+        //         if (!response.ok) {
+
+        //             this.handleResponseError(response);
+
+        //         }
+
+        //         return response.json();
+
+        //     })
+
+        //     .then(item => {
+
+        //         if (item.min_date) {
+        //             item.min_date = new Time(item.min_date);
+        //         }
+        //         if (item.max_date) {
+        //             item.max_date = new Time(item.max_date);
+        //         }
+        //         return item;
+
+        //     }
+
+        //     )
+
+        //     .catch(error => {
+
+        //         this.handleError(error);
+
+        //     });
 
     }
 

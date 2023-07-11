@@ -256,7 +256,7 @@ func (r *rtspServer) StreamPath(cameraID string) (string, error) {
 
 	raw, err := json.Marshal(body)
 	if err != nil {
-		return "", fmt.Errorf("failed to encode json: %w", err)
+		return "", fmt.Errorf("failed to encode json: %v", err)
 	}
 
 	response, err := client.Post(
@@ -266,11 +266,16 @@ func (r *rtspServer) StreamPath(cameraID string) (string, error) {
 	)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to call /start: %w", err)
+		return "", fmt.Errorf("failed to call /start: %v", err)
 	}
 
-	if response.StatusCode != 200 {
-		return "", fmt.Errorf("failed to call /start %d: %w", response.StatusCode, err)
+	switch response.StatusCode {
+	case 200:
+		break
+	case 408:
+		return "", fmt.Errorf("failed to call /start: 408 timeout")
+	default:
+		return "", fmt.Errorf("failed to call /start. Response=%d: %w", response.StatusCode, err)
 	}
 
 	stream := struct {
@@ -286,7 +291,7 @@ func (r *rtspServer) StreamPath(cameraID string) (string, error) {
 	err = json.Unmarshal(raw, &stream)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to decode json: %w", err)
+		return "", fmt.Errorf("failed to decode json: %v", err)
 	}
 
 	if !stream.Running {
