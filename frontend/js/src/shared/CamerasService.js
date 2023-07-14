@@ -1,8 +1,20 @@
 
 import {updateFile} from "./FilesService"
 import { Time } from "../time";
-import {ApiClient, DefaultApi} from "amcrest_viewer_api";
+import {ApiClient, Camera, DefaultApi} from "amcrest_viewer_api";
 
+
+function normalizeCameraId(id) {
+    if (id instanceof Camera) {
+        return id.id;
+    }
+
+    if (id.toString().indexOf("-") === -1) {
+        return Number(id);
+    }
+    var num = id.toString().match(/\d+/)[0];
+    return Number(num);
+}
 
 class CamerasService {
 
@@ -17,6 +29,10 @@ class CamerasService {
     }
 
     updateId(cam) {
+        if (!cam.intId) {
+            cam.intId = normalizeCameraId(cam);
+        }
+        cam.intId = cam.id;
         cam.id = cam.id.toString().includes(cam.type) ? cam.id : `${cam.type}-${cam.id}`
         return cam;
     }
@@ -117,7 +133,8 @@ class CamerasService {
     async getStats(id) {
 
         return new Promise((resolve, reject) => {
-            this.api.getCameraStats(id, {
+            var iid = normalizeCameraId(id);
+            this.api.getCameraStats(iid, {
                 start: new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 30),
                 end: new Date(),
             }, 
@@ -290,7 +307,7 @@ class CamerasService {
 
     handleResponseError(response) {
 
-        throw new Error("HTTP error, status = " + response.status);
+        throw new Error("HTTP error, status = " + response.status + "body:" + (response && response.json && response.json()));
 
     }
 

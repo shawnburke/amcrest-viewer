@@ -97,6 +97,10 @@ $(FRONTEND): $(NPM_INSTALL) $(shell find $(WEB_ROOT)/src)  $(shell find $(WEB_RO
 
 frontend-js: $(FRONTEND)
 
+serve-frontend-js:
+	echo "Running server with frontend, export REACT_APP_API_HOST to specify host (currently $(REACT_APP_API_HOST)))"
+	cd $(WEB_ROOT) && BROWSER=none npm start
+
 test-backend: $(SERVER)
 	cd backend && go test ./...
 
