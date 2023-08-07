@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:amcrest_viewer_flutter/repository/cam_viewer_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:openapi/api.dart';
+import 'package:openapi/openapi.dart';
 import 'package:video_player/video_player.dart';
 
 import '../locator.dart';

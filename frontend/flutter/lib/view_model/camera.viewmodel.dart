@@ -1,6 +1,6 @@
 import 'package:amcrest_viewer_flutter/repository/cam_viewer_repository.dart';
 import 'package:amcrest_viewer_flutter/view_model/loading.viewmodel.dart';
-import 'package:openapi/api.dart';
+import 'package:openapi/openapi.dart';
 
 import '../widgets/camera_widget.dart';
 import '../widgets/timeline_view.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:openapi/api.dart';
+import 'package:openapi/openapi.dart';
 import 'dart:developer' as developer;
 
 import '../view_model/camera.viewmodel.dart';

@@ -33,7 +33,7 @@ $(CLIENT_STUB_FILE_FLUTTER): openapi/amcrest-viewer.openapi.yaml
 	cp $< $(FLUTTER_ROOT)/build/.openapi/openapi.yaml
 	docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate \
 		-i /local/$< \
-		-g dart \
+		-g dart-dio \
 		-o /local/$(FLUTTER_ROOT)/openapi/.gen/amcrest_viewer
 	
 $(CLIENT_STUB_FILE_JS): openapi/amcrest-viewer.openapi.yaml

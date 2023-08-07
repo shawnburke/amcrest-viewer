@@ -9,4 +9,6 @@ class Config {
     }
     return _baseURL!;
   }
+
+  Uri? baseUri = Config.baseURL.isEmpty ? null : Uri.parse(Config.baseURL);
 }

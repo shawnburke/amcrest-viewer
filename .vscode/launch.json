@@ -44,7 +44,7 @@
             "type": "dart",
             "toolArgs": [
                 "--dart-define",
-                "BASE_URL=http://0.0.0.0:9000/",
+                "BASE_URL=http://192.168.86.10:9000/",
             ]
         },
 

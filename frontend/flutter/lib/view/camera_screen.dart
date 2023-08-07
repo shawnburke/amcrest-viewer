@@ -4,7 +4,7 @@ import 'package:amcrest_viewer_flutter/widgets/camera_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_timeline_calendar/timeline/flutter_timeline_calendar.dart';
 import 'package:intl/intl.dart';
-import 'package:openapi/api.dart';
+import 'package:openapi/openapi.dart';
 import 'package:provider/provider.dart';
 
 import '../repository/cam_viewer_repository.dart';

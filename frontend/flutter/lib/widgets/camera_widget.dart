@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:openapi/api.dart';
+import 'package:openapi/openapi.dart';
 
 import '../config.dart';
 import 'camera_live_widget.dart';
