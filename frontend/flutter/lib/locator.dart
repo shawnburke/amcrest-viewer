@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:openapi/openapi.dart';
 
 import 'config.dart';
+import 'interceptor.dart';
 
 final GetIt locator = GetIt.instance;
 final Config globalConfig = Config();
@@ -28,5 +29,6 @@ CameraApi createCameraApi(Config config) {
 class CameraApi extends Openapi {
   final String basePath;
 
-  CameraApi({required this.basePath}) : super(basePathOverride: basePath);
+  CameraApi({required this.basePath})
+      : super(basePathOverride: basePath, interceptors: [TrafficInterceptor()]);
 }
