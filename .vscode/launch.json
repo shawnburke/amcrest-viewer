@@ -32,7 +32,7 @@
             "env": {
                 "ENVIRONMENT": "test",
                 "CONFIG_DIR" : "${workspaceFolder}/backend/config",
-
+                
             },
         },
         {
@@ -47,6 +47,13 @@
                 "BASE_URL=http://192.168.86.10:9000/",
             ]
         },
-
+        {
+            "name": "Mockoon Proxy",
+            "type": "dart",
+            "request": "launch",
+            "program": "frontend/flutter/mockoon-proxy/bin/server.dart"
+        },
+        
+        
     ]
 }

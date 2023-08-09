@@ -45,3 +45,4 @@ app.*.map.json
 
 openapi
 .fvm/flutter_sdk
+mockoon-proxy/scenarios
