@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:mockoon_proxy/request_info.dart';
 import 'package:mockoon_proxy/response_info.dart';
@@ -64,15 +62,6 @@ class MemoryCache implements RequestCache {
 
   @override
   Future<Response?> fetch(RequestOptions options) async {
-    // final info = <String, dynamic>{
-    //   'uri':
-    //       '${options.method} ${options.baseUrl}${options.path}?${options.queryParameters}',
-    //   'method': options.method,
-    //   'path': options.path,
-    //   'query': options.queryParameters,
-    //   'headers': options.headers,
-    //   'data': options.data,
-    // };
     final key = getRequestKey(options);
     if (cache.containsKey(key)) {
       print('Cache hit: $key');

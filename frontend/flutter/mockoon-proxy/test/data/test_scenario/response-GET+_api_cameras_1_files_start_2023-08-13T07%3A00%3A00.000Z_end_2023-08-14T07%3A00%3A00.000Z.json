@@ -1,0 +1,1 @@
+{"request":{"method":"GET","headers":{},"path":"/api/cameras/1/files","uri":"GET+/api/cameras/1/files?start=2023-08-13T07%3A00%3A00.000Z&end=2023-08-14T07%3A00%3A00.000Z","queryParameters":{"start":"2023-08-13T07:00:00.000Z","end":"2023-08-14T07:00:00.000Z"},"body":null},"statusCode":200,"headers":{"content-length":"2","content-type":"application/json"},"body":"[]"}

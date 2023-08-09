@@ -1,9 +1,9 @@
 import 'package:amcrest_viewer_flutter/repository/cam_viewer_repository.dart';
 import 'package:get_it/get_it.dart';
+import 'package:mockoon_proxy/interceptor.dart';
 import 'package:openapi/openapi.dart';
 
 import 'config.dart';
-import 'interceptor.dart';
 
 final GetIt locator = GetIt.instance;
 final Config globalConfig = Config();

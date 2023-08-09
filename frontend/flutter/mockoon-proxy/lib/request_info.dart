@@ -8,22 +8,23 @@ class RequestInfo {
   final String method;
   final Map<String, String> headers;
   final String path;
-  String? uri;
-  final Map<String, dynamic> queryParameters;
+
+  final Map<String, dynamic>? queryParameters;
   final String? body;
 
   RequestInfo(
-      this.method, this.path, this.headers, this.body, this.queryParameters) {
-    if (uri == null) {
-      final u = Uri(
-          path: path,
-          query: queryParameters.entries
-              .map((e) =>
-                  '${e.key}=${Uri.encodeQueryComponent(e.value.toString())}')
-              .join('&'));
-      uri = '$method+${u.toString()}';
-    }
+      this.method, this.path, this.headers, this.body, this.queryParameters) {}
+
+  Uri get uri {
+    return Uri(
+        path: path,
+        query: queryParameters?.entries
+            .map((e) =>
+                '${e.key}=${Uri.encodeQueryComponent(e.value.toString())}')
+            .join('&'));
   }
+
+  String get key => '${method}+${uri}';
 
   RequestInfo.fromDio(RequestOptions req)
       : this(req.method, req.path, toStringStringMap(req.headers), req.data,

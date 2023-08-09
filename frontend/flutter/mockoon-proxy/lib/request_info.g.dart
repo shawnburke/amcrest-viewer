@@ -11,15 +11,14 @@ RequestInfo _$RequestInfoFromJson(Map<String, dynamic> json) => RequestInfo(
       json['path'] as String,
       Map<String, String>.from(json['headers'] as Map),
       json['body'] as String?,
-      json['queryParameters'] as Map<String, dynamic>,
-    )..uri = json['uri'] as String;
+      json['queryParameters'] as Map<String, dynamic>?,
+    );
 
 Map<String, dynamic> _$RequestInfoToJson(RequestInfo instance) =>
     <String, dynamic>{
       'method': instance.method,
       'headers': instance.headers,
       'path': instance.path,
-      'uri': instance.uri,
       'queryParameters': instance.queryParameters,
       'body': instance.body,
     };
