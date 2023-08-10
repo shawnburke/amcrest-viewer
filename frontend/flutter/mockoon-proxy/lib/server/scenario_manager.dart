@@ -3,15 +3,19 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:mockoon_proxy/mockoon/mockoon_environment.dart';
+import 'package:mockoon_proxy/mockoon/mockoon_manager.dart';
 import 'package:mockoon_proxy/request_info.dart';
 import 'package:mockoon_proxy/response_info.dart';
 import 'package:mockoon_proxy/server/server.dart';
 
+const mockoonFile = 'mockoon.json';
+
 class ScenarioManager {
   late final Directory targetDirectory;
   int mockoonPort = 3333;
+  final MockoonManager manager = MockoonManager();
 
-  ScenarioManager(String directoryPath, {this.mockoonPort = 3333}) {
+  ScenarioManager(String directoryPath, {this.mockoonPort = 3000}) {
     targetDirectory = Directory(directoryPath);
   }
 
@@ -100,12 +104,22 @@ class ScenarioManager {
     // return _loadFile(scenarioName, req);
   }
 
+  Future<void> _ensureServer(String scenarioName) async {
+    final scenarioDir = await _getScenarioDirectory(scenarioName);
+
+    final scenarioFile = File('${scenarioDir.path}/$mockoonFile');
+
+    return manager.addScenario(scenarioFile);
+  }
+
   Future<ResponseInfo> _loadMockoon(
       String scenarioName, RequestInfo req) async {
     final dio = Dio(BaseOptions(
       baseUrl: 'http://localhost:$mockoonPort/' + scenarioName,
       headers: req.headers,
     ));
+
+    await _ensureServer(scenarioName);
 
     final resp = await dio.request(req.uri.path,
         data: req.body,
@@ -141,46 +155,6 @@ class ScenarioManager {
     final f = File('${dir.path}/mockoon.json');
     f.writeAsStringSync(toJson(mockoon.toJson()));
     print('Wrote mockoon to ${f.path}');
-  }
-
-  Process? mockoonProcess;
-
-  Future<void> reload() async {
-    if (mockoonProcess != null) {
-      await mockoonProcess!.kill();
-    }
-
-    final scenarios = await getManager().listScenarios(filter: 'mockoon.json');
-    mockoonProcess =
-        await runMockoon(scenarios.map((e) => e + '/mockoon.json').toList());
-  }
-
-  Future<Process> launchServer(List<String> dataFiles) async {
-    // Run the command and get the process result
-    var args = ['start'];
-
-    for (final f in dataFiles) {
-      args.add('-d');
-      args.add(f);
-    }
-
-    return Process.start('mockoon-cli', args);
-  }
-
-  Future<Process> runMockoon(List<String> files) async {
-    final processResult = await launchServer(files);
-
-    final stdout = processResult.stdout.transform(utf8.decoder);
-    final stderr = processResult.stderr.transform(utf8.decoder);
-
-    stdout.listen((data) {
-      print('Mockoon stdout: $data');
-    });
-
-    stderr.listen((data) {
-      print('Mockoon stderr: $data');
-    });
-    return processResult;
   }
 
   static String toJson(dynamic json) {
