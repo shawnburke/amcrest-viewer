@@ -12,7 +12,8 @@ class MockoonEnvironment {
         .generateFromString("mockoon://" + name);
   }
 
-  static MockoonModel fromDirectory(String name, {int port = 3000}) {
+  static MockoonModel fromDirectory(String name,
+      {int port = 3000, String pathPrefix = ''}) {
     final dir = Directory(name);
 
     final files = dir.listSync();
@@ -24,11 +25,11 @@ class MockoonEnvironment {
       return ri;
     });
 
-    return build(name, responses.toList(), port: port);
+    return build(name, responses.toList(), port: port, pathPrefix: pathPrefix);
   }
 
   static MockoonModel build(String name, List<ResponseInfo> responses,
-      {int port = 3000}) {
+      {int port = 3000, String pathPrefix = ''}) {
     final uuid = getForName(name);
 
     final routes = <Routes>[];
@@ -69,11 +70,20 @@ class MockoonEnvironment {
 
     for (final g in responseMap.entries) {
       final uri = g.value.first.request.uri;
+
+      var path = uri.path;
+
+      if (pathPrefix.isNotEmpty) {
+        path = pathPrefix + path;
+      } else {
+        path = path.substring(1);
+      }
+
       final route = Routes(
         uuid: getForName(g.key).toString(),
         type: 'http',
         method: g.value.first.request.method,
-        endpoint: uri.path.substring(1),
+        endpoint: path,
         responses: [],
       );
       routes.add(route);
@@ -110,6 +120,7 @@ class MockoonEnvironment {
           isDefault: false,
         );
         route.responses ??= [];
+        response.headers!.add(Headers(key: 'x-mockoon-served', value: 'true'));
         route.responses!.add(response);
       }
     }

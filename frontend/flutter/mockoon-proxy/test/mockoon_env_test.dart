@@ -18,6 +18,19 @@ void main() {
     print('Wrote to ${f.path}');
   });
 
+  test('loads files with path prefix', () {
+    print(Directory.current.path);
+
+    final mockoon = MockoonEnvironment.fromDirectory('test/data/test_scenario',
+        pathPrefix: 'test_scenario');
+
+    final json = JsonEncoder.withIndent(" ").convert(mockoon.toJson());
+
+    final f = File('test_scenario_output_prefix.json');
+    f.writeAsStringSync(json);
+    print('Wrote to ${f.path}');
+  });
+
   test('list scenarios', () async {
     final manager = ScenarioManager('test/data');
     final scenarios = await manager.listScenarios();
