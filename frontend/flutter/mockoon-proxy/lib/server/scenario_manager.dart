@@ -114,21 +114,8 @@ class ScenarioManager {
 
   Future<ResponseInfo> _loadMockoon(
       String scenarioName, RequestInfo req) async {
-    final dio = Dio(BaseOptions(
-      baseUrl: 'http://localhost:$mockoonPort/' + scenarioName,
-      headers: req.headers,
-    ));
-
     await _ensureServer(scenarioName);
-
-    final resp = await dio.request(req.uri.path,
-        data: req.body,
-        options: Options(
-          method: req.method,
-          receiveDataWhenStatusError: true,
-        ));
-
-    return ResponseInfo.fromDio(resp);
+    return await manager.makeRequest(scenarioName, req);
   }
 
   Future<ResponseInfo?> _loadFile(String scenarioName, RequestInfo req) async {
