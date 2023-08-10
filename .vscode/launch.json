@@ -51,7 +51,7 @@
             "name": "Mockoon Proxy",
             "type": "dart",
             "request": "launch",
-            "program": "frontend/flutter/mockoon-proxy/bin/server.dart"
+            "program": "frontend/flutter/mockoon-proxy/lib/server/server.dart"
         },
         
         

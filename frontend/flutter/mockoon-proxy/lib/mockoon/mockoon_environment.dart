@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:mockoon_proxy/mockoon/mockoon_model.dart';
 import 'package:uuid_type/uuid_type.dart';
 
@@ -7,6 +10,21 @@ class MockoonEnvironment {
   static Uuid getForName(String name) {
     return NameUuidGenerator(NameUuidGenerator.urlNamespace)
         .generateFromString("mockoon://" + name);
+  }
+
+  static MockoonModel fromDirectory(String name, {int port = 3000}) {
+    final dir = Directory(name);
+
+    final files = dir.listSync();
+
+    final responses = files.map((e) {
+      final contents = File(e.path).readAsStringSync();
+
+      final ri = ResponseInfo.fromJson(jsonDecode(contents));
+      return ri;
+    });
+
+    return build(name, responses.toList(), port: port);
   }
 
   static MockoonModel build(String name, List<ResponseInfo> responses,
