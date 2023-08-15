@@ -62,13 +62,19 @@ class ScenarioManager {
     return scenarioDirectory;
   }
 
-  Future<void> startScenario(String scenarioName, {bool clear = false}) async {
+  Future<bool> startScenario(String scenarioName, {bool clear = false}) async {
+    var reset = false;
     if (clear) {
       // delete the directory if it exists
       final scenarioDirectory = await _getScenarioDirectory(scenarioName);
-      await scenarioDirectory.delete(recursive: true);
+
+      if (scenarioDirectory.existsSync()) {
+        reset = true;
+        await scenarioDirectory.delete(recursive: true);
+      }
     }
     await _getScenarioDirectory(scenarioName);
+    return reset;
   }
 
   String _getFileForRequest(RequestInfo ri) {

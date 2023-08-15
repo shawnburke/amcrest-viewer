@@ -61,8 +61,17 @@ class MockoonManager {
     if (scenarioFile == null) {
       throw Exception('Scenario not running: $scenarioName');
     }
-
-    await _runServer();
+    try {
+      await _runServer();
+    } on ArgumentError {
+      return ResponseInfo(
+          req,
+          503,
+          {},
+          jsonEncode({
+            'message': 'Scenario not found: $scenarioName',
+          }));
+    }
 
     final running = await scenarioFile.isRunning;
 
@@ -109,6 +118,9 @@ class MockoonManager {
       return false;
     }
     for (final f in _files) {
+      if (!f.file.existsSync()) {
+        continue;
+      }
       if (f.file.lastModifiedSync().isAfter(_startTime!)) {
         return true;
       }
@@ -203,13 +215,17 @@ class _ScenarioFile {
       tempFile.parent.createSync(recursive: true);
     }
     final portRe = RegExp(r'"port":\s*(\d+)');
-    final content = file.readAsStringSync();
-    final updated = content.replaceAllMapped(portRe, (match) {
-      return '"port": ${p}';
-    });
+    try {
+      final content = file.readAsStringSync();
+      final updated = content.replaceAllMapped(portRe, (match) {
+        return '"port": ${p}';
+      });
 
-    tempFile.writeAsStringSync(updated);
-    return tempFile;
+      tempFile.writeAsStringSync(updated);
+      return tempFile;
+    } on PathNotFoundException {
+      throw ArgumentError('Scenario file not found: ${file.path}');
+    }
   }
 
   @override

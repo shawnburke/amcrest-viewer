@@ -12,6 +12,7 @@ dependencies:
   shelf_cors_headers: ^0.1.5
   dio: any
   uuid_type: any
+  interact: ^2.2.0
 
 
 dev_dependencies:
