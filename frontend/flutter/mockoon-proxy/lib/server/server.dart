@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mockoon_proxy/mockoon/mockoon_manager.dart';
 import 'package:mockoon_proxy/request_info.dart';
 import 'package:mockoon_proxy/response_info.dart';
 import 'package:shelf/shelf.dart';
@@ -33,9 +34,21 @@ void main() async {
       .addMiddleware(corsHeaders())
       .addHandler(_router);
 
-  getManager();
+  final mgr = getManager();
+
+  final host = Platform.environment['HOST'] ?? 'localhost';
+  final port = Platform.environment['PORT'] ?? '8080';
+
+  final ctrlC = ProcessSignal.sigint;
+
+  ctrlC.watch().listen((signal) {
+    print('Cleaning up...');
+    mgr.dispose();
+    exit(0);
+  });
+
   // Create a server and bind it to a specific address and port.
-  var server = await io.serve(handler, 'localhost', 8080);
+  var server = await io.serve(handler, host, int.parse(port));
 
   print('Serving at http://${server.address.host}:${server.port}');
 }
@@ -96,8 +109,8 @@ Future<Response> _replayHandler(Request request, String scenario) async {
 
   final ri = RequestInfo.fromJson(json);
 
-  final response = await getManager().getResponse(scenario, ri);
-  if (response == null) {
+  final res = await getManager().getResponse(scenario, ri);
+  if (res == null) {
     return Response(501,
         headers: {
           'x-cache-replay': 'true',
@@ -109,7 +122,7 @@ Future<Response> _replayHandler(Request request, String scenario) async {
         }));
   }
 
-  final headers = response.headers;
+  final headers = res.headers;
   headers['x-cache-replay'] = 'true';
-  return Response(response.statusCode, headers: headers, body: response.body);
+  return Response(res.statusCode, headers: headers, body: res.body);
 }

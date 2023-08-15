@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:mockoon_proxy/mockoon/mockoon_environment.dart';
 import 'package:mockoon_proxy/mockoon/mockoon_manager.dart';
 import 'package:mockoon_proxy/request_info.dart';
 import 'package:mockoon_proxy/response_info.dart';
-import 'package:mockoon_proxy/server/server.dart';
 
 const mockoonFile = 'mockoon.json';
 
@@ -17,6 +15,10 @@ class ScenarioManager {
 
   ScenarioManager(String directoryPath, {this.mockoonPort = 3000}) {
     targetDirectory = Directory(directoryPath);
+  }
+
+  void dispose() {
+    manager.dispose();
   }
 
   Future<void> _ensureDirectory() async {
@@ -118,21 +120,21 @@ class ScenarioManager {
     return await manager.makeRequest(scenarioName, req);
   }
 
-  Future<ResponseInfo?> _loadFile(String scenarioName, RequestInfo req) async {
-    final scenarioDirectory = await _getScenarioDirectory(scenarioName);
-    final path = _getFileForRequest(req);
-    final responseFile = File('${scenarioDirectory.path}/${path}');
+  // Future<ResponseInfo?> _loadFile(String scenarioName, RequestInfo req) async {
+  //   final scenarioDirectory = await _getScenarioDirectory(scenarioName);
+  //   final path = _getFileForRequest(req);
+  //   final responseFile = File('${scenarioDirectory.path}/${path}');
 
-    if (!await responseFile.exists()) {
-      return null;
-    }
+  //   if (!await responseFile.exists()) {
+  //     return null;
+  //   }
 
-    final json = await responseFile.readAsString();
+  //   final json = await responseFile.readAsString();
 
-    final responseInfo = ResponseInfo.fromJson(jsonDecode(json));
+  //   final responseInfo = ResponseInfo.fromJson(jsonDecode(json));
 
-    return responseInfo;
-  }
+  //   return responseInfo;
+  // }
 
   Future<void> closeScenario(String scenarioName) async {
     final dir = await _getScenarioDirectory(scenarioName);
