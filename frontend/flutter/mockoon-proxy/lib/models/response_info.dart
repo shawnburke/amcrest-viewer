@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:mockoon_proxy/request_info.dart';
+import 'request_info.dart';
 import 'dart:convert';
 
 part 'response_info.g.dart';

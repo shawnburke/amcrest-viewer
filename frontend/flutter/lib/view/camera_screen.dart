@@ -134,7 +134,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         _selectedDate = datetime;
                         vm.setRange(datetime.toDateTime());
                       }),
-                  Container(
+                  SizedBox(
                       height: 50,
                       child: TimelineView(vm.timelineItems, onTapped: (items) {
                         final vid = items

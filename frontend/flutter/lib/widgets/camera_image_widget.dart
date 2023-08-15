@@ -3,7 +3,6 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
-import 'dart:developer' as developer;
 
 class CameraImageWidget extends StatefulWidget {
   final String? imageURL;
@@ -116,7 +115,7 @@ class CameraImageWidgetState extends State<CameraImageWidget> {
     _setImageURL(this.widget.imageURL);
     Widget? widget = _buildWidget(context);
 
-    return Container(
+    return SizedBox(
       height: MediaQuery.of(context).size.height * 0.33,
       child: AspectRatio(aspectRatio: 16 / 9, child: widget),
     );

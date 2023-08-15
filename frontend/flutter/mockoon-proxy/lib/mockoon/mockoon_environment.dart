@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:mockoon_proxy/mockoon/mockoon_model.dart';
 import 'package:uuid_type/uuid_type.dart';
 
-import '../response_info.dart';
+import '../models/response_info.dart';
 
 class MockoonEnvironment {
   static Uuid getForName(String name) {

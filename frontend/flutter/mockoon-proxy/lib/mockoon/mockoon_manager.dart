@@ -4,8 +4,8 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
-import '../request_info.dart';
-import '../response_info.dart';
+import '../models/request_info.dart';
+import '../models/response_info.dart';
 
 const Duration maxStartDelay = Duration(seconds: 3);
 

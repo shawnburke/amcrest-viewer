@@ -1,0 +1,18 @@
+{
+    "client": "Thunder Client",
+    "environmentName": "(Local Env)",
+    "dateExported": "2023-08-15T17:51:13.363Z",
+    "version": "1.0",
+    "global": true,
+    "local": true,
+    "variables": [
+        {
+            "name": "mockoon_scenario",
+            "value": "foobaz"
+        },
+        {
+            "name": "MOCKOON_PORT",
+            "value": "8080"
+        }
+    ]
+}

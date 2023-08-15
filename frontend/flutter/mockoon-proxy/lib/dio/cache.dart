@@ -1,8 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:mockoon_proxy/request_info.dart';
-import 'package:mockoon_proxy/response_info.dart';
 
 abstract class RequestCache {
+  bool get enabled => true;
   Future<Response?> fetch(RequestOptions req);
   Future<void> save(Response res);
 }
@@ -52,4 +51,7 @@ class MemoryCache implements RequestCache {
     final key = getRequestKey(response.requestOptions);
     cache[key] = response;
   }
+  
+  @override
+  bool get enabled => true;
 }

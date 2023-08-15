@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:args/args.dart';
 
-import 'package:mockoon_proxy/request_info.dart';
-import 'package:mockoon_proxy/response_info.dart';
+import 'package:mockoon_proxy/models/request_info.dart';
+import 'package:mockoon_proxy/models/response_info.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf/shelf_io.dart' as io;
@@ -30,7 +31,10 @@ ScenarioManager getManager({String? scenarioDir}) {
   return manager!;
 }
 
-void main() async {
+
+const argPort = 'port';
+
+void main(List<String> arguments) async {
   // Create a pipeline that handles requests.
   var handler = Pipeline()
       .addMiddleware(logRequests())
@@ -39,8 +43,10 @@ void main() async {
 
   final mgr = getManager();
 
+  final parser = ArgParser()..addOption(argPort, abbr: 'p', defaultsTo: Platform.environment['PORT'] ?? '9099' );
+  ArgResults argResults = parser.parse(arguments);
   final host = Platform.environment['HOST'] ?? 'localhost';
-  final port = Platform.environment['PORT'] ?? '8080';
+  final port = argResults[argPort];
 
   final ctrlC = ProcessSignal.sigint;
 

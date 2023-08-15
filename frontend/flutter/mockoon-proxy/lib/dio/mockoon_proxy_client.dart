@@ -1,34 +1,51 @@
 import 'package:dio/dio.dart';
-import 'package:mockoon_proxy/request_info.dart';
-import 'package:mockoon_proxy/response_info.dart';
+import 'package:mockoon_proxy/models/request_info.dart';
+import 'package:mockoon_proxy/models/response_info.dart';
 
 import 'cache.dart';
 
-class MockoonCache implements RequestCache {
-  late final Dio dio;
+class MockoonProxyClient implements RequestCache {
 
-  MockoonCache(String baseUrl) {
-    if (!baseUrl.endsWith('/')) {
-      baseUrl += '/';
+  static const String serverEnvVar = 'MOCKOON_PROXY_HOSTPORT';
+
+  late final Dio _dio;
+
+  @override
+  late final bool enabled;
+  
+  MockoonProxyClient({String? mockoonProxyHostPort}) {
+
+    // if no hostport is passed in we look for an environment variable
+    if (mockoonProxyHostPort == null) {
+        final envVar = String.fromEnvironment(serverEnvVar);
+        if (envVar.isNotEmpty) {
+          mockoonProxyHostPort = envVar;
+        }
     }
-    dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    ));
+
+    // if we have one, we set it up and enable the cache.
+    if (mockoonProxyHostPort != null) {
+      _dio = Dio(BaseOptions(
+        baseUrl: "http://$mockoonProxyHostPort",
+        headers: {
+          'Content-Type': 'application/json',
+          
+        },
+        validateStatus: (status) => true,
+        receiveDataWhenStatusError: true,
+      ));
+      enabled = true;
+    } else {
+      _dio = Dio();
+    }
   }
 
   @override
   Future<Response?> fetch(RequestOptions req) async {
     final start = DateTime.now();
-    final fetchResponse = await dio.post(
+    final fetchResponse = await _dio.post(
       'scenarios/current/fetch',
       data: RequestInfo.fromDio(req).toJson(),
-      options: Options(
-        validateStatus: (status) => true,
-        receiveDataWhenStatusError: true,
-      ),
     );
 
     switch (fetchResponse.statusCode) {
@@ -61,7 +78,7 @@ class MockoonCache implements RequestCache {
   Future<void> save(Response res) async {
     final resInfo = ResponseInfo.fromDio(res);
     final serverResponse =
-        await dio.post('scenarios/current/save', data: resInfo.toJson());
+        await _dio.post('scenarios/current/save', data: resInfo.toJson());
 
     if (serverResponse.statusCode == 418) {
       // server disabled

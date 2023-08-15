@@ -1,19 +1,21 @@
-import 'dart:indexed_db';
-
 import 'package:dio/dio.dart';
 
 import 'cache.dart';
-import 'mockoon_cache.dart';
 
 class TrafficInterceptor extends Interceptor {
   late final RequestCache cache;
 
-  TrafficInterceptor({RequestCache? cache, String? baseUrl}) {
-    this.cache = cache ?? MockoonCache(baseUrl ?? 'http://localhost:8080');
-  }
+  TrafficInterceptor(this.cache);
+
+  bool get enabled => cache.enabled;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (!enabled) {
+      super.onRequest(options, handler);
+      return;
+    }
+
     cache.fetch(options).then((response) {
       if (response != null) {
         handler.resolve(response);
@@ -28,6 +30,12 @@ class TrafficInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
+
+    if (!enabled) {
+      super.onResponse(response, handler);
+      return;
+    }
+
     if (response.headers.value('x-cache-replay') == null) {
       cache.save(response);
     }
@@ -36,6 +44,12 @@ class TrafficInterceptor extends Interceptor {
 
   @override
   void onError(DioError err, ErrorInterceptorHandler handler) {
+
+    if (!enabled) {
+      super.onError(err, handler);
+      return;
+    }
+
     print('Error: $err');
     super.onError(err, handler);
   }

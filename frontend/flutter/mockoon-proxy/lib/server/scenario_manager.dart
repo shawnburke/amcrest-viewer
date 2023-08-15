@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:mockoon_proxy/mockoon/mockoon_environment.dart';
 import 'package:mockoon_proxy/mockoon/mockoon_manager.dart';
-import 'package:mockoon_proxy/request_info.dart';
-import 'package:mockoon_proxy/response_info.dart';
+import 'package:mockoon_proxy/models/request_info.dart';
+import 'package:mockoon_proxy/models/response_info.dart';
 
 const mockoonFile = 'mockoon.json';
 
