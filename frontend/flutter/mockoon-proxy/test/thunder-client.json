@@ -1,0 +1,153 @@
+{
+    "client": "Thunder Client",
+    "collectionName": "mockoon-proxy",
+    "dateExported": "2023-08-15T04:32:04.751Z",
+    "version": "1.1",
+    "folders": [],
+    "requests": [
+        {
+            "_id": "2e87151d-b8c3-4045-bcbc-1daf54e25472",
+            "colId": "7baf9794-8f5d-4944-ad73-e507599cae89",
+            "containerId": "",
+            "name": "Get Mode",
+            "url": "localhost:8080/mode",
+            "method": "GET",
+            "sortNum": 10000,
+            "created": "2023-08-15T04:03:05.845Z",
+            "modified": "2023-08-15T04:03:16.495Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        },
+        {
+            "_id": "a6e1c90d-d210-47dd-be19-0c9105c3c061",
+            "colId": "7baf9794-8f5d-4944-ad73-e507599cae89",
+            "containerId": "",
+            "name": "Set Mode Record",
+            "url": "localhost:8080/mode/record?scenario={{mockoon_scenario}}",
+            "method": "POST",
+            "sortNum": 20000,
+            "created": "2023-08-15T04:03:22.192Z",
+            "modified": "2023-08-15T04:20:34.594Z",
+            "headers": [],
+            "params": [
+                {
+                    "name": "scenario",
+                    "value": "{{mockoon_scenario}}",
+                    "isPath": false
+                }
+            ],
+            "tests": []
+        },
+        {
+            "_id": "93fc6676-c7d7-4a98-b664-06674b194a2c",
+            "colId": "7baf9794-8f5d-4944-ad73-e507599cae89",
+            "containerId": "",
+            "name": "Reset Scenario",
+            "url": "localhost:8080/scenarios/current/save?clear=true",
+            "method": "POST",
+            "sortNum": 20000,
+            "created": "2023-08-15T04:04:56.384Z",
+            "modified": "2023-08-15T04:25:17.335Z",
+            "headers": [],
+            "params": [
+                {
+                    "name": "scenario",
+                    "value": "foobar",
+                    "isDisabled": true,
+                    "isPath": false
+                },
+                {
+                    "name": "clear",
+                    "value": "true",
+                    "isPath": false
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"request\": {\n    \"method\": \"GET\",\n    \"headers\": {\n      \"x-from\": \"space\",\n      \"accept\": \"application/json\"\n    },\n    \"path\": \"/baz\"\n  },\n  \"statusCode\": 200,\n  \"headers\": {\n    \"Content-Type\": \"application/json\"\n  },\n  \"body\": \"{\\\"id\\\":1,\\\"name\\\":\\\"kidsz2\\\"}\"\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "a492b04e-2b55-412a-836f-a7b8c1448a66",
+            "colId": "7baf9794-8f5d-4944-ad73-e507599cae89",
+            "containerId": "",
+            "name": "Set Mode Replay",
+            "url": "localhost:8080/mode/replay?scenario={{mockoon_scenario}}",
+            "method": "POST",
+            "sortNum": 20000,
+            "created": "2023-08-15T04:13:24.067Z",
+            "modified": "2023-08-15T04:20:37.814Z",
+            "headers": [],
+            "params": [
+                {
+                    "name": "scenario",
+                    "value": "{{mockoon_scenario}}",
+                    "isPath": false
+                }
+            ],
+            "tests": []
+        },
+        {
+            "_id": "12606a1a-7ec4-490a-a103-14bf8041b1cd",
+            "colId": "7baf9794-8f5d-4944-ad73-e507599cae89",
+            "containerId": "",
+            "name": "Record Simple Request",
+            "url": "localhost:8080/scenarios/current/save",
+            "method": "POST",
+            "sortNum": 30000,
+            "created": "2023-08-15T04:06:28.038Z",
+            "modified": "2023-08-15T04:11:39.374Z",
+            "headers": [],
+            "params": [
+                {
+                    "name": "scenario",
+                    "value": "foobar",
+                    "isDisabled": true,
+                    "isPath": false
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"request\": {\n    \"method\": \"GET\",\n    \"headers\": {\n      \"x-from\": \"space\",\n      \"accept\": \"application/json\"\n    },\n    \"path\": \"/baz\"\n  },\n  \"statusCode\": 200,\n  \"headers\": {\n    \"Content-Type\": \"application/json\"\n  },\n  \"body\": \"{\\\"id\\\":1,\\\"name\\\":\\\"kidsz2\\\"}\"\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "2a2912f0-fcdf-4c07-a06c-4cb29f3cfa9e",
+            "colId": "7baf9794-8f5d-4944-ad73-e507599cae89",
+            "containerId": "",
+            "name": "Close Scenario",
+            "url": "localhost:8080/scenarios/current/close",
+            "method": "GET",
+            "sortNum": 40000,
+            "created": "2023-08-15T04:12:30.131Z",
+            "modified": "2023-08-15T04:12:40.315Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        },
+        {
+            "_id": "16a612e1-0966-41a7-aedc-4610e7557e83",
+            "colId": "7baf9794-8f5d-4944-ad73-e507599cae89",
+            "containerId": "",
+            "name": "Replay baz",
+            "url": "localhost:8080/scenarios/current/fetch",
+            "method": "POST",
+            "sortNum": 50000,
+            "created": "2023-08-15T04:13:59.972Z",
+            "modified": "2023-08-15T04:15:52.395Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n    \"method\": \"GET\",\n    \"headers\": {\n      \"x-from\": \"space\",\n      \"accept\": \"application/json\"\n    },\n    \"path\": \"/baz\"\n  }",
+                "form": []
+            },
+            "tests": []
+        }
+    ]
+}
