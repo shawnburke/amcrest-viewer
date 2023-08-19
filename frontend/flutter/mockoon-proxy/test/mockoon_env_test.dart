@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:mockoon_proxy/mockoon/mockoon_environment.dart';
 import 'package:mockoon_proxy/server/scenario_manager.dart';
 import 'package:test/test.dart';
 
@@ -9,7 +8,7 @@ void main() {
   test('loads files', () {
     print(Directory.current.path);
 
-    final mockoon = MockoonEnvironment.fromDirectory('test/data/test_scenario');
+    final mockoon = ScenarioManager.fromDirectory('test/data/test_scenario');
 
     final json = JsonEncoder.withIndent(" ").convert(mockoon.toJson());
 
@@ -21,7 +20,7 @@ void main() {
   test('loads files with path prefix', () {
     print(Directory.current.path);
 
-    final mockoon = MockoonEnvironment.fromDirectory('test/data/test_scenario',
+    final mockoon = ScenarioManager.fromDirectory('test/data/test_scenario',
         pathPrefix: 'test_scenario');
 
     final json = JsonEncoder.withIndent(" ").convert(mockoon.toJson());

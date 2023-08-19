@@ -1,1 +1,3 @@
 test_scenario_output.json
+test/tmp
+scenarios/private*

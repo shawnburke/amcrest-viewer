@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:logging/logging.dart';
 
 abstract class RequestCache {
   bool get enabled => true;
@@ -7,6 +8,8 @@ abstract class RequestCache {
 }
 
 class MemoryCache implements RequestCache {
+  final log = Logger('MemoryCache');
+
   String getRequestKey(RequestOptions options) {
     var key = '${options.method}+${options.baseUrl}${options.path}';
     var query = "";
@@ -28,7 +31,7 @@ class MemoryCache implements RequestCache {
   Future<Response?> fetch(RequestOptions options) async {
     final key = getRequestKey(options);
     if (cache.containsKey(key)) {
-      print('Cache hit: $key');
+      log.fine('Cache hit: $key');
       final cached = cache[key]!;
       final header = cached.headers.value('x-cache-replay');
       if (header == null) {
@@ -47,11 +50,11 @@ class MemoryCache implements RequestCache {
       'headers': response.headers,
       'data': response.data,
     };
-    print('Response: $info');
+    log.info('Response: $info');
     final key = getRequestKey(response.requestOptions);
     cache[key] = response;
   }
-  
+
   @override
   bool get enabled => true;
 }

@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:logging/logging.dart';
 
 import 'cache.dart';
 
 class TrafficInterceptor extends Interceptor {
+  final log = Logger('TrafficInterceptor');
+
   late final RequestCache cache;
 
   TrafficInterceptor(this.cache);
@@ -23,34 +26,41 @@ class TrafficInterceptor extends Interceptor {
       }
       super.onRequest(options, handler);
     }).onError((error, stackTrace) {
-      print('Error: $error');
+      log.severe('$error');
       super.onRequest(options, handler);
     });
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-
     if (!enabled) {
       super.onResponse(response, handler);
       return;
     }
 
-    if (response.headers.value('x-cache-replay') == null) {
-      cache.save(response);
+    // never save cache replay responses
+    if (response.headers.value('x-cache-replay') != null) {
+      super.onResponse(response, handler);
+      return;
     }
-    super.onResponse(response, handler);
+
+    cache.save(response).then((r) {
+      super.onResponse(response, handler);
+    }).onError((error, stackTrace) {
+      log.severe('$error');
+      super.onResponse(response, handler);
+    });
   }
 
   @override
   void onError(DioError err, ErrorInterceptorHandler handler) {
-
     if (!enabled) {
       super.onError(err, handler);
       return;
     }
 
-    print('Error: $err');
+    ;
+    log.severe('$err');
     super.onError(err, handler);
   }
 }
