@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -47,18 +48,33 @@ func newDriverFactory(perm ftps.Perm, logger *zap.Logger, bus common.EventBus) *
 }
 
 type userSpaces struct {
-	root   string
-	spaces map[string]*userSpace
-	logger *zap.Logger
+	root          string
+	spaces        map[string]*userSpace
+	logger        *zap.Logger
+	cleanupTicker *time.Ticker
 }
 
 func newUserSpaces(root string, logger *zap.Logger) userSpaces {
 
-	return userSpaces{
-		root:   root,
-		logger: logger,
-		spaces: map[string]*userSpace{},
+	us := userSpaces{
+		root:          root,
+		logger:        logger,
+		spaces:        map[string]*userSpace{},
+		cleanupTicker: time.NewTicker(time.Hour * 24),
 	}
+
+	go func() {
+
+		for range us.cleanupTicker.C {
+			us.cleanup(6 * time.Hour)
+		}
+	}()
+
+	return us
+}
+
+func (us *userSpaces) close() {
+	us.cleanupTicker.Stop()
 }
 
 func (us userSpaces) Get(user string) *userSpace {
@@ -72,6 +88,42 @@ func (us userSpaces) Get(user string) *userSpace {
 	us.logger.Info("Creating new user space", zap.String("user", user), zap.String("root", s.root))
 	us.spaces[user] = s
 	return s
+}
+
+func (us userSpaces) cleanup(maxAge time.Duration) {
+	// walk each of the user spaces, then all of the files
+	// under that userspace and clean up any files or directories older than
+	// max age
+	for _, u := range us.spaces {
+		us.logger.Debug("Cleaning up user space", zap.String("user", u.user))
+		// walk all files under u.root
+		err := filepath.Walk(u.root, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				us.logger.Error("Error walking", zap.Error(err))
+				return err
+			}
+
+			if info.IsDir() {
+				// list the files in this dir
+				files, err := os.ReadDir(info.Name())
+				if err != nil && len(files) == 0 {
+					return os.RemoveAll(info.Name())
+				}
+				return nil
+			}
+
+			age := time.Since(info.ModTime())
+			if age > maxAge {
+				us.logger.Debug("Cleaning up file", zap.String("path", path))
+				os.Remove(path)
+			}
+
+			return nil
+		})
+		if err != nil {
+			us.logger.Error("Error cleaning up user space", zap.Error(err))
+		}
+	}
 }
 
 func (factory *driverFactory) NewDriver() (ftps.Driver, error) {
