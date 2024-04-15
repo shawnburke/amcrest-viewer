@@ -3,9 +3,11 @@ package ftp
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path"
+	"sort"
 	"sync"
 	"time"
 
@@ -34,16 +36,85 @@ type driverFactory struct {
 	userSpaces userSpaces
 }
 
+const tempRoot = "amz-ftp"
+
 func newDriverFactory(perm ftps.Perm, logger *zap.Logger, bus common.EventBus) *driverFactory {
 	// add a subdir to make sure we use a new one each time we start,
 	// as an added measure against leaks.
+	tmpRoot := path.Join(os.TempDir(), tempRoot)
 	tempSubDir := "cams-" + time.Now().Format("2006-01-02")
-	return &driverFactory{
+	spaceDir := path.Join(tmpRoot, tempSubDir)
+	df := &driverFactory{
 		Perm:       perm,
 		logger:     logger,
 		bus:        bus,
-		userSpaces: newUserSpaces(path.Join(os.TempDir(), tempSubDir), logger),
+		userSpaces: newUserSpaces(spaceDir, logger),
 	}
+	go df.gc(tmpRoot, time.Hour*24)
+	return df
+}
+
+const maxFileAge = time.Hour * 6
+
+func (df *driverFactory) gc(dir string, period time.Duration) {
+
+	canDelete := func(dir string) []fs.DirEntry {
+		subdirs, err := os.ReadDir(dir)
+
+		if err == nil {
+			return subdirs
+		}
+
+		if os.IsNotExist(err) {
+			return nil
+		}
+		df.logger.Error("Error reding dir", zap.String("root-dir", dir), zap.Error(err))
+		return nil
+	}
+
+	for {
+
+		subdirs := canDelete(dir)
+
+		if subdirs != nil {
+			sort.Slice(subdirs, func(i, j int) bool {
+				di, _ := subdirs[i].Info()
+				dj, _ := subdirs[j].Info()
+				return di.ModTime().UTC().UnixMilli() < dj.ModTime().UTC().UnixMilli()
+			})
+
+			toDelete := subdirs[0 : len(subdirs)-2]
+
+			for _, delDir := range toDelete {
+				df.logger.Warn("Cleaning up: %s", zap.String("dir", delDir.Name()))
+				os.RemoveAll(delDir.Name())
+			}
+		}
+
+		err := fs.WalkDir(os.DirFS(dir), ".",
+			func(path string, d fs.DirEntry, err error) error {
+				switch path {
+				case ".", "..":
+					return nil
+				}
+				stat, _ := d.Info()
+				age := time.Since(stat.ModTime())
+				if age > maxFileAge {
+					return os.Remove(path)
+				}
+				return nil
+			})
+
+		if err != nil {
+			df.logger.Error("Error cleaning files", zap.Error(err))
+		}
+
+		time.Sleep(period)
+	}
+}
+
+func DirFS(dir string) {
+	panic("unimplemented")
 }
 
 type userSpaces struct {
