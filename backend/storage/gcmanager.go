@@ -3,6 +3,9 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io/fs"
+	"os"
+	"path"
 	"sync"
 	"time"
 
@@ -162,19 +165,68 @@ func (gc *gcManager) runCleanup() {
 
 	for {
 
+		gc.cleanupCore()
+		gc.gcDirs(common.GetTempDir(), time.Hour*24)
+
 		select {
 		case <-ticker.C:
-			break
 		case <-gc.done:
 			gc.logger.Info("Exiting GC loop")
 			return
 		}
-
-		gc.cleanupCore()
 	}
 
 }
 
+func (gc *gcManager) findNewestFile(dir string) time.Time {
+	var newest time.Time
+	fs.WalkDir(os.DirFS(dir), ".",
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				gc.logger.Error("Error walking dir", zap.Error(err))
+				return err
+			}
+			stat, _ := d.Info()
+			if stat.ModTime().UTC().UnixMilli() > newest.UTC().UnixMilli() {
+				newest = stat.ModTime()
+			}
+			return nil
+		})
+	return newest
+}
+
+func (gc *gcManager) gcDirs(
+	dir string,
+	maxAge time.Duration,
+) {
+
+	// get the subdirectories of the temp root)
+	subDirs, err := os.ReadDir(dir)
+	if err != nil {
+		gc.logger.Error("Error reading temp root", zap.Error(err))
+		return
+	}
+
+	// for each directory, find the newest file and delete
+	// the whole directory if it's older than the max age
+	for _, d := range subDirs {
+
+		if !d.IsDir() {
+			continue
+		}
+
+		fullPath := path.Join(dir, d.Name())
+
+		newest := gc.findNewestFile(fullPath)
+
+		if time.Since(newest) > maxAge {
+			gc.logger.Info("Deleting old temp dir", zap.String("dir", d.Name()))
+			if err = os.RemoveAll(fullPath); err != nil {
+				gc.logger.Error("Error deleting old temp dir", zap.Error(err))
+			}
+		}
+	}
+}
 func (gc *gcManager) Cleanup() error {
 	return gc.cleanupCore()
 }

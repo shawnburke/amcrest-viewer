@@ -120,7 +120,7 @@ func (ac *amcrestCameraType) Snapshot(cam *entities.Camera) (io.ReadCloser, erro
 		return nil, fmt.Errorf("snapshot requires camera host, user, password")
 	}
 
-	tempPath := os.TempDir()
+	tempPath := gcommon.GetTempDir()
 	tempPath = path.Join(tempPath, cam.CameraID())
 	err := os.MkdirAll(tempPath, os.ModeDir|os.ModePerm)
 	if err != nil {
