@@ -18,6 +18,7 @@ import (
 	"github.com/Roverr/rtsp-stream/core/config"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
+	"github.com/shawnburke/amcrest-viewer/common"
 	"github.com/shawnburke/amcrest-viewer/storage/data"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -88,7 +89,7 @@ func (r *rtspServer) start() error {
 		EndpointYML: endpoints,
 	}
 
-	r.tempDir = path.Join(os.TempDir(), "rtsp")
+	r.tempDir = path.Join(common.GetTempDir(), "rtsp")
 	err := os.MkdirAll(r.tempDir, os.ModeDir|os.ModePerm)
 	if err != nil {
 		return err
