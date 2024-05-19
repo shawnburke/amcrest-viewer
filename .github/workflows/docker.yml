@@ -31,7 +31,7 @@ jobs:
       - run: make test-backend
       - run: make server
       - run: make server-arm64
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v4
         with:
           name: server
           path: build/server
@@ -45,7 +45,7 @@ jobs:
             with:
               node-version: 16.x
           - run: make frontend-js
-          - uses: actions/upload-artifact@master
+          - uses: actions/upload-artifact@v4
             with:
               name: js
               path: build/js
@@ -67,7 +67,7 @@ jobs:
           run: make frontend-flutter
     
         - name: Upload Client
-          uses: actions/upload-artifact@v3
+          uses: actions/upload-artifact@v4
           with:
             name: flutter-web
             path: build/flutter/
@@ -97,19 +97,19 @@ jobs:
             images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
         - name: Download Server
-          uses: actions/download-artifact@v3
+          uses: actions/download-artifact@v4
           with:
             name: server
             path: build/server
 
         - name: Download Flutter
-          uses: actions/download-artifact@v3
+          uses: actions/download-artifact@v4
           with:
             name: flutter-web
             path: build/flutter
 
         - name: Download Flutter
-          uses: actions/download-artifact@v3
+          uses: actions/download-artifact@v4
           with:
             name: js
             path: build/js

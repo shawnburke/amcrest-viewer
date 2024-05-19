@@ -3,6 +3,7 @@ package ftp
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path"
@@ -34,16 +35,83 @@ type driverFactory struct {
 	userSpaces userSpaces
 }
 
+const tempRoot = "amz-ftp"
+
+func getTempRoot() string {
+	return path.Join(os.TempDir(), tempRoot)
+}
+
 func newDriverFactory(perm ftps.Perm, logger *zap.Logger, bus common.EventBus) *driverFactory {
 	// add a subdir to make sure we use a new one each time we start,
 	// as an added measure against leaks.
+	tmpRoot := getTempRoot()
 	tempSubDir := "cams-" + time.Now().Format("2006-01-02")
-	return &driverFactory{
+	spaceDir := path.Join(tmpRoot, tempSubDir)
+	df := &driverFactory{
 		Perm:       perm,
 		logger:     logger,
 		bus:        bus,
-		userSpaces: newUserSpaces(path.Join(os.TempDir(), tempSubDir), logger),
+		userSpaces: newUserSpaces(spaceDir, logger),
 	}
+	go func() {
+		df.gc(tmpRoot, time.Hour*24)
+		time.Sleep(time.Hour * 24)
+	}()
+	return df
+}
+
+func (df *driverFactory) findNewestFile(dir string) time.Time {
+	var newest time.Time
+	fs.WalkDir(os.DirFS(dir), ".",
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				df.logger.Error("Error walking dir", zap.Error(err))
+				return err
+			}
+			stat, _ := d.Info()
+			if stat.ModTime().UTC().UnixMilli() > newest.UTC().UnixMilli() {
+				newest = stat.ModTime()
+			}
+			return nil
+		})
+	return newest
+}
+
+func (df *driverFactory) gc(
+	dir string,
+	maxAge time.Duration,
+) {
+
+	// get the subdirectories of the temp root)
+	subDirs, err := os.ReadDir(dir)
+	if err != nil {
+		df.logger.Error("Error reading temp root", zap.Error(err))
+		return
+	}
+
+	// for each directory, find the newest file and delete
+	// the whole directory if it's older than the max age
+	for _, d := range subDirs {
+
+		if !d.IsDir() {
+			continue
+		}
+
+		fullPath := path.Join(dir, d.Name())
+
+		newest := df.findNewestFile(fullPath)
+
+		if time.Since(newest) > maxAge {
+			df.logger.Info("Deleting old temp dir", zap.String("dir", d.Name()))
+			if err = os.RemoveAll(fullPath); err != nil {
+				df.logger.Error("Error deleting old temp dir", zap.Error(err))
+			}
+		}
+	}
+}
+
+func DirFS(dir string) {
+	panic("unimplemented")
 }
 
 type userSpaces struct {
