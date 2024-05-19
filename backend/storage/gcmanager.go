@@ -3,9 +3,8 @@ package storage
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -166,7 +165,7 @@ func (gc *gcManager) runCleanup() {
 	for {
 
 		gc.cleanupCore()
-		gc.gcDirs(common.GetTempDir(), time.Hour*24)
+		gc.gcFiles(common.GetTempDir(), time.Hour*24)
 
 		select {
 		case <-ticker.C:
@@ -178,54 +177,50 @@ func (gc *gcManager) runCleanup() {
 
 }
 
-func (gc *gcManager) findNewestFile(dir string) time.Time {
-	var newest time.Time
-	fs.WalkDir(os.DirFS(dir), ".",
-		func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				gc.logger.Error("Error walking dir", zap.Error(err))
-				return err
-			}
-			stat, _ := d.Info()
-			if stat.ModTime().UTC().UnixMilli() > newest.UTC().UnixMilli() {
-				newest = stat.ModTime()
-			}
-			return nil
-		})
-	return newest
-}
-
-func (gc *gcManager) gcDirs(
+func (gc *gcManager) gcFiles(
 	dir string,
 	maxAge time.Duration,
 ) {
 
-	// get the subdirectories of the temp root)
-	subDirs, err := os.ReadDir(dir)
-	if err != nil {
-		gc.logger.Error("Error reading temp root", zap.Error(err))
-		return
-	}
+	// walk the directory tree and delete any files
+	// older than maxAge
 
-	// for each directory, find the newest file and delete
-	// the whole directory if it's older than the max age
-	for _, d := range subDirs {
+	cutoff := gc.time.Now().Add(maxAge * -1)
 
-		if !d.IsDir() {
-			continue
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
 
-		fullPath := path.Join(dir, d.Name())
+		if (dir == path) || (info == nil) {
+			return nil
+		}
 
-		newest := gc.findNewestFile(fullPath)
+		// Skip if not a file (i.e., is a directory)
+		if info.IsDir() {
+			files, err := os.ReadDir(path)
+			if err == nil && len(files) == 0 {
+				if err := os.RemoveAll(path); err != nil {
+					gc.logger.Error("Error deleting empty temp dir", zap.String("path", path), zap.Error(err))
+				}
+			}
+			return nil
+		}
 
-		if time.Since(newest) > maxAge {
-			gc.logger.Info("Deleting old temp dir", zap.String("dir", d.Name()))
-			if err = os.RemoveAll(fullPath); err != nil {
-				gc.logger.Error("Error deleting old temp dir", zap.Error(err))
+		// Delete the file if it's older than cutoff
+		if info.ModTime().Before(cutoff) {
+			if err := os.Remove(path); err != nil {
+				gc.logger.Error("Error deleting temp file", zap.String("path", path), zap.Error(err))
 			}
 		}
+
+		return nil
+	})
+
+	if err != nil {
+		gc.logger.Error("Error cleaning up temp dir", zap.Error(err))
 	}
+
 }
 func (gc *gcManager) Cleanup() error {
 	return gc.cleanupCore()
