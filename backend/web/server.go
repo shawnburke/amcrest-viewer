@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path"
 	"time"
