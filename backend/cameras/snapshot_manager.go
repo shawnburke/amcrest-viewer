@@ -3,7 +3,6 @@ package cameras
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"sync"
 	"time"
 
@@ -125,12 +124,6 @@ func (sm *snapshotManager) snapshotCamera(ct cc.Type, cam *entities.Camera) erro
 
 	defer reader.Close()
 
-	bytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		sm.logger.Error("Error reading file", zap.Error(err))
-		return err
-	}
-
 	ts := time.Now()
 	mediaFile := &models.MediaFile{
 		Name:      fmt.Sprintf("snapshot-%s-%d.jpg", cam.CameraID(), ts.Unix()),
@@ -139,7 +132,7 @@ func (sm *snapshotManager) snapshotCamera(ct cc.Type, cam *entities.Camera) erro
 		Timestamp: ts,
 	}
 
-	event := storage.NewMediaFileAvailableEvent(mediaFile, bytes)
+	event := storage.NewMediaFileAvailableEvent(mediaFile, reader)
 
 	err = sm.bus.Send(event)
 	if err != nil {

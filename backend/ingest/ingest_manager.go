@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/shawnburke/amcrest-viewer/cameras"
 	"github.com/shawnburke/amcrest-viewer/common"
@@ -80,7 +81,7 @@ func (im *ingestManager) OnEvent(e common.Event) error {
 	case *ftp.FileRenameEvent:
 		return im.ingestFtp(ev.File)
 	case *storage.MediaFileAvailableEvent:
-		return im.ingest(ev.File, ev.Data)
+		return im.ingest(ev.File, ev.Reader)
 	}
 	return nil
 }
@@ -134,7 +135,7 @@ func (im *ingestManager) ingestFtp(f *ftp.File) error {
 	// This is a bit more complicated but allows other systems to hook to this event,
 	// and allows us to move the FTP stuff out w/o breaking this.
 	//
-	err = im.bus.Send(storage.NewMediaFileAvailableEvent(mf, f.Data))
+	err = im.bus.Send(storage.NewMediaFileAvailableEvent(mf, f.Reader))
 	if err != nil {
 		im.logger.Error("Error sending new file to bus", zap.Error(err), zap.String("path", f.FullName))
 		return err
@@ -142,7 +143,7 @@ func (im *ingestManager) ingestFtp(f *ftp.File) error {
 	return nil
 }
 
-func (im *ingestManager) ingest(mf *models.MediaFile, data []byte) error {
+func (im *ingestManager) ingest(mf *models.MediaFile, reader io.Reader) error {
 
 	// make sure we always persist UTC
 	mf.Timestamp = mf.Timestamp.UTC()
@@ -163,6 +164,7 @@ func (im *ingestManager) ingest(mf *models.MediaFile, data []byte) error {
 		return fmt.Errorf("unknown file type: %v", mf.Type)
 	}
 
+	data, err := io.ReadAll(reader)
 	relPath, err := im.fm.AddFile(mf.CameraID, data, mf.Timestamp, fileType)
 
 	if err != nil {

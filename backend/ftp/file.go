@@ -1,6 +1,7 @@
 package ftp
 
 import (
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -13,9 +14,9 @@ type File struct {
 	sync.Mutex
 	User       string
 	IP         string
-	Data       []byte
 	Name       string
 	FullName   string
+	Reader     io.Reader
 	ReceivedAt time.Time
 	fullPath   string
 	logger     *zap.Logger
@@ -24,6 +25,14 @@ type File struct {
 func (f *File) Close() {
 	f.Lock()
 	defer f.Unlock()
+
+	if f.Reader != nil {
+		if closer, ok := f.Reader.(io.Closer); ok {
+			closer.Close()
+		}
+		f.Reader = nil
+	}
+
 	if f.fullPath != "" {
 		_, err := os.Stat(f.fullPath)
 		if os.IsNotExist(err) {

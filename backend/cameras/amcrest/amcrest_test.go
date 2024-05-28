@@ -1,6 +1,7 @@
 package amcrest
 
 import (
+	"bytes"
 	"fmt"
 	"path"
 	"testing"
@@ -78,7 +79,7 @@ func TestIngestParse(t *testing.T) {
 		t.Run(fmt.Sprintf("Test %d: %s", i, tt.P), func(t *testing.T) {
 			f := &ftp.File{
 				User:     "amcrest-1",
-				Data:     []byte("abc"),
+				Reader:   bytes.NewReader([]byte("abc")),
 				Name:     path.Base(tt.P),
 				FullName: tt.P,
 			}

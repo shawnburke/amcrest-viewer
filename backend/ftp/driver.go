@@ -3,7 +3,6 @@ package ftp
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"sync"
@@ -145,11 +144,11 @@ func (us userSpace) stat(p string) (os.FileInfo, error) {
 	return os.Stat(fullPath)
 }
 
-func (us userSpace) getBytes(p string) ([]byte, error) {
-	fullPath := path.Join(us.root, p)
+// func (us userSpace) getBytes(p string) ([]byte, error) {
+// 	fullPath := path.Join(us.root, p)
 
-	return ioutil.ReadFile(fullPath)
-}
+// 	return os.ReadFile(fullPath)
+// }
 
 func (us userSpace) getReader(p string) (io.ReadCloser, error) {
 	fullPath := path.Join(us.root, p)
@@ -294,20 +293,21 @@ func (fd *proxyDriver) toFtpFile(p string) (*File, error) {
 		return nil, err
 	}
 
-	bytes, err := fd.userSpace.getBytes(p)
+	reader, err := fd.userSpace.getReader(p)
 	if err != nil {
+		fd.logger.Error("Error getting reader", zap.String("path", p), zap.Error(err))
 		return nil, err
 	}
 
 	f := &File{
 		User:       fd.conn.LoginUser(),
 		FullName:   fullPath,
-		Data:       bytes,
 		Name:       path.Base(fullPath),
 		IP:         fd.conn.PublicIp(),
 		ReceivedAt: info.ModTime(),
 		fullPath:   path.Join(fd.userSpace.root, fullPath),
 		logger:     fd.logger,
+		Reader:     reader,
 	}
 
 	f.AutoClose(cleanupTime)
