@@ -12,7 +12,15 @@ const EventFileDelete = "file_delete"
 
 type FileCreateEvent struct {
 	common.EventBase
-	File *File
+	File    *File
+	NoClose bool
+}
+
+func (e *FileCreateEvent) Close() error {
+	if e.NoClose {
+		return nil
+	}
+	return e.File.Close()
 }
 
 func NewFileCreateEvent(f *File) *FileCreateEvent {
@@ -26,6 +34,14 @@ type FileRenameEvent struct {
 	common.EventBase
 	File    *File
 	OldName string
+	NoClose bool
+}
+
+func (e *FileRenameEvent) Close() error {
+	if e.NoClose {
+		return nil
+	}
+	return e.File.Close()
 }
 
 func NewFileRenameEvent(f *File, oldName string) *FileRenameEvent {

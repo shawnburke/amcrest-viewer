@@ -11,7 +11,6 @@ import (
 
 type ftpFileSystem struct {
 	server   *ftps.Server
-	dir      string
 	password string
 	port     int
 	host     string

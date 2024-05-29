@@ -12,31 +12,28 @@ import (
 // File should be renamed to FtpFile
 type File struct {
 	sync.Mutex
+	io.ReadCloser
 	User       string
 	IP         string
 	Name       string
 	FullName   string
-	Reader     io.Reader
 	ReceivedAt time.Time
 	fullPath   string
 	logger     *zap.Logger
 }
 
-func (f *File) Close() {
+func (f *File) Close() error {
 	f.Lock()
 	defer f.Unlock()
 
-	if f.Reader != nil {
-		if closer, ok := f.Reader.(io.Closer); ok {
-			closer.Close()
-		}
-		f.Reader = nil
+	if f.ReadCloser != nil {
+		f.ReadCloser.Close()
 	}
 
 	if f.fullPath != "" {
 		_, err := os.Stat(f.fullPath)
 		if os.IsNotExist(err) {
-			return
+			return nil
 		}
 		err = os.Remove(f.fullPath)
 		if err != nil && f.logger != nil {
@@ -44,11 +41,5 @@ func (f *File) Close() {
 		}
 		f.fullPath = ""
 	}
-}
-
-func (f *File) AutoClose(t time.Duration) {
-	go func() {
-		time.Sleep(t)
-		f.Close()
-	}()
+	return nil
 }

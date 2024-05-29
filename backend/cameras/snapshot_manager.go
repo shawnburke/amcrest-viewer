@@ -122,8 +122,6 @@ func (sm *snapshotManager) snapshotCamera(ct cc.Type, cam *entities.Camera) erro
 		return err
 	}
 
-	defer reader.Close()
-
 	ts := time.Now()
 	mediaFile := &models.MediaFile{
 		Name:      fmt.Sprintf("snapshot-%s-%d.jpg", cam.CameraID(), ts.Unix()),

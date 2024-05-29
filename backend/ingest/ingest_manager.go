@@ -77,11 +77,13 @@ func (im *ingestManager) getIngesterCamera(user string) (*entities.Camera, error
 func (im *ingestManager) OnEvent(e common.Event) error {
 	switch ev := e.(type) {
 	case *ftp.FileCreateEvent:
+		ev.NoClose = true
 		return im.ingestFtp(ev.File)
 	case *ftp.FileRenameEvent:
+		ev.NoClose = true
 		return im.ingestFtp(ev.File)
 	case *storage.MediaFileAvailableEvent:
-		return im.ingest(ev.File, ev.Reader)
+		return im.ingest(ev.File, ev)
 	}
 	return nil
 }
@@ -135,7 +137,11 @@ func (im *ingestManager) ingestFtp(f *ftp.File) error {
 	// This is a bit more complicated but allows other systems to hook to this event,
 	// and allows us to move the FTP stuff out w/o breaking this.
 	//
-	err = im.bus.Send(storage.NewMediaFileAvailableEvent(mf, f.Reader))
+
+	// the file will get closed when the event does, so we reopen
+	// it here for the new event.
+
+	err = im.bus.Send(storage.NewMediaFileAvailableEvent(mf, f))
 	if err != nil {
 		im.logger.Error("Error sending new file to bus", zap.Error(err), zap.String("path", f.FullName))
 		return err
@@ -165,6 +171,11 @@ func (im *ingestManager) ingest(mf *models.MediaFile, reader io.Reader) error {
 	}
 
 	data, err := io.ReadAll(reader)
+	if err != nil {
+		im.logger.Error("Failed to read file",
+			zap.String("name", mf.Name), zap.String("camera", mf.CameraID), zap.Error(err))
+		return fmt.Errorf("failed to read file %v: %w", mf.Name, err)
+	}
 	relPath, err := im.fm.AddFile(mf.CameraID, data, mf.Timestamp, fileType)
 
 	if err != nil {

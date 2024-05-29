@@ -73,6 +73,10 @@ func (eb *eventBus) Send(e Event) error {
 	return nil
 }
 
+type Closer interface {
+	Close() error
+}
+
 func (eb *eventBus) consume() {
 	for e := range eb.ch {
 		eb.logger.Debug("Received bus event", zap.String("type", e.Name()))
@@ -80,6 +84,13 @@ func (eb *eventBus) consume() {
 			err := sub.OnEvent(e)
 			if err != nil {
 				eb.logger.Error("Error sending event", zap.Error(err))
+			}
+		}
+		closer, ok := e.(Closer)
+		if ok && closer != nil {
+			err := closer.Close()
+			if err != nil {
+				eb.logger.Error("Error closing event", zap.Error(err))
 			}
 		}
 	}

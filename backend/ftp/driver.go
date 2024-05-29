@@ -177,8 +177,6 @@ func (fd *proxyDriver) driver() ftps.Driver {
 	return fd.userDriver
 }
 
-const cleanupTime = time.Hour * 1
-
 // params  - a file path
 // returns - a time indicating when the requested path was last modified
 //   - an error if the file doesn't exist or the user lacks
@@ -300,6 +298,7 @@ func (fd *proxyDriver) toFtpFile(p string) (*File, error) {
 	}
 
 	f := &File{
+		ReadCloser: reader,
 		User:       fd.conn.LoginUser(),
 		FullName:   fullPath,
 		Name:       path.Base(fullPath),
@@ -307,9 +306,7 @@ func (fd *proxyDriver) toFtpFile(p string) (*File, error) {
 		ReceivedAt: info.ModTime(),
 		fullPath:   path.Join(fd.userSpace.root, fullPath),
 		logger:     fd.logger,
-		Reader:     reader,
 	}
 
-	f.AutoClose(cleanupTime)
 	return f, nil
 }

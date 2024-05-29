@@ -30,7 +30,7 @@
             "mode": "debug",
             "program": "${workspaceFolder}/backend/main.go",
             "env": {
-                "ENVIRONMENT": "test",
+                "ENVIRONMENT": "local",
                 "CONFIG_DIR" : "${workspaceFolder}/backend/config",
 
             },

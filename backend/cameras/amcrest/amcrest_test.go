@@ -3,6 +3,7 @@ package amcrest
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"testing"
 	"time"
@@ -78,10 +79,10 @@ func TestIngestParse(t *testing.T) {
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d: %s", i, tt.P), func(t *testing.T) {
 			f := &ftp.File{
-				User:     "amcrest-1",
-				Reader:   bytes.NewReader([]byte("abc")),
-				Name:     path.Base(tt.P),
-				FullName: tt.P,
+				ReadCloser: ioutil.NopCloser(bytes.NewReader([]byte("abc"))),
+				User:       "amcrest-1",
+				Name:       path.Base(tt.P),
+				FullName:   tt.P,
 			}
 
 			mf, err := ct.ParseFilePath(cam, f.FullName)
